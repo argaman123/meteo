@@ -1,0 +1,17 @@
+# OS
+Thumbs.db
+.DS_Store
+
+# Node / Angular (populated when the app is scaffolded in Slice 0)
+node_modules/
+dist/
+.angular/
+*.log
+npm-debug.log*
+coverage/
+
+# Editors
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
