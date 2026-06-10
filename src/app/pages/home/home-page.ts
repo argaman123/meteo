@@ -28,7 +28,7 @@ export class HomePage implements AfterViewInit, OnDestroy {
     { id: 'colorful', label: 'צבעוני' },
   ];
   basemap = signal<BasemapId>('dark');
-  viewMode = signal<ViewMode>('globe');
+  viewMode = signal<ViewMode>('flat');
   engineReady = signal(false);
 
   ngAfterViewInit(): void {
@@ -50,7 +50,7 @@ export class HomePage implements AfterViewInit, OnDestroy {
   }
 
   private async start(): Promise<void> {
-    await this.engine.init(this.container().nativeElement, this.basemap());
+    await this.engine.init(this.container().nativeElement, this.basemap(), this.viewMode());
     this.engineReady.set(true);
   }
 }

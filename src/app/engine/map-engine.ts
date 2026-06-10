@@ -28,7 +28,8 @@ export class MapEngine {
     });
   }
 
-  async init(container: HTMLElement, basemap: BasemapId): Promise<void> {
+  async init(container: HTMLElement, basemap: BasemapId, viewMode: ViewMode): Promise<void> {
+    this.viewMode = viewMode;
     const protocol = new Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
     void maplibregl.setRTLTextPlugin('/basemaps/rtl/mapbox-gl-rtl-text.js', true);
