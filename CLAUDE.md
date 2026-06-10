@@ -60,7 +60,7 @@ Three non-negotiables, in priority order:
 | Map engine | **MapLibre GL JS (globe) + deck.gl + WeatherLayers GL** | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
-| Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **Vitest for pure units/geo/time logic** | Wrong conversions are an operational hazard |
+| Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **no committed unit tests for now** — temporary Vitest checks verify pure units/geo/time logic during development, then are deleted | Lead 2026-06-10; wrong conversions remain a flagged hazard — revisit when Units/Geo modules land |
 | Rendering | **Client-side SPA, no SSR** | WebGL needs the browser |
 | Network | **Internal-only**; **dependencies vendored/offline** | Strict dependency budget |
 | Browser floor | **Chrome 112** (fleet-pinned) | `browserslist`-enforced; Chrome-for-Testing 113 smoke test; ratchet at cutover |

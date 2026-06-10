@@ -51,9 +51,10 @@ reporting, presets/dashboard. (Only the *minimum* of each needed to make the spi
 
 ## Inputs needed from the lead (at slice start)
 
-1. **Fixture data** in the exact real backend formats (field JSON grids + decode notes; a satellite
-   PNG example), placed as static files — no mock backend.
-2. **Old-app route list** (names/paths) for the cutover-ready route map — sanitized text is enough.
+1. ~~Fixture data files~~ **Amended 2026-06-10:** the lead instead specified the formats and approved
+   generating fixtures in-repo (see `docs/plans/2026-06-10-slice-0-foundation-and-spike.md`); a
+   public-domain satellite PNG fetched once stands in for the satellite example.
+2. ~~Old-app route list~~ **Amended 2026-06-10:** deferred — Slice 0 ships the front page only.
 3. **Photos/descriptions** of the old app's globe view for behavioral reference, as needed.
 
 ## Tasks (order)
