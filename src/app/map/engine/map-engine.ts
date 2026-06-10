@@ -1,4 +1,4 @@
-import { Service, inject } from '@angular/core';
+import { Service, effect, inject } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { MapboxOverlay } from '@deck.gl/mapbox';
@@ -18,6 +18,14 @@ export class MapEngine {
   private overlay: MapboxOverlay | null = null;
   private definitions = new Map<string, LayerDefinition>();
   private viewMode: ViewMode = 'globe';
+
+  constructor() {
+    effect(() => {
+      this.quality.particleCount();
+      this.quality.textureMaxDimension();
+      this.syncLayers();
+    });
+  }
 
   async init(container: HTMLElement, basemap: BasemapId): Promise<void> {
     const protocol = new Protocol();

@@ -8,6 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { BasemapId, MapEngine, ViewMode } from '../../map/engine/map-engine';
+import { PerfHud } from '../../map/perf/perf-hud';
 import {
   FieldGrid,
   convertKnotsToMetersPerSecond,
@@ -30,10 +31,12 @@ type ModelId = 'eaa' | 'mideast';
 
 @Component({
   selector: 'app-map-page',
+  imports: [PerfHud],
   host: { class: 'block h-full' },
   template: `
     <div class="relative h-full">
       <div #mapContainer class="h-full w-full"></div>
+      <app-perf-hud />
       <div
         class="absolute end-3 top-3 flex flex-col gap-2 rounded-md border border-panel-border bg-panel/90 p-2"
       >
