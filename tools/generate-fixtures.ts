@@ -45,7 +45,6 @@ interface PressureSystem {
 const PRESSURE_SYSTEMS: PressureSystem[] = [
   { lat: 56, lon: 6, strengthHpa: -9, latRadiusDeg: 5, lonRadiusDeg: 10, driftLonPerHour: 0.5 },
   { lat: 51, lon: 44, strengthHpa: -7, latRadiusDeg: 4, lonRadiusDeg: 9, driftLonPerHour: 0.45 },
-  { lat: 26, lon: 28, strengthHpa: 6, latRadiusDeg: 6, lonRadiusDeg: 18, driftLonPerHour: 0.1 },
 ];
 
 function jetLatitude(lon: number, hours: number): number {
@@ -56,7 +55,7 @@ function jetLatitude(lon: number, hours: number): number {
 
 function pressureAt(lat: number, lon: number, hours: number): number {
   const jet = jetLatitude(lon, hours);
-  let pressure = 1016 - 14 * Math.tanh((lat - jet) / 9);
+  let pressure = 1014 - 14 * Math.tanh((lat - jet) / 9) + 7 * Math.tanh((lat - 30) / 8);
   for (const system of PRESSURE_SYSTEMS) {
     const dLat = (lat - system.lat) / system.latRadiusDeg;
     const dLon = (lon - (system.lon + system.driftLonPerHour * hours)) / system.lonRadiusDeg;

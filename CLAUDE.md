@@ -211,8 +211,11 @@ render style = exactly one new file in `layers/model/`.
 
 ## 11. Current status
 
-**Slice 0 complete (2026-06-10): scaffold, shell, basemaps, engine adapter v1, fixtures, spike —
-go/no-go = GO** (see the spike-result section in [`docs/decisions.md`](docs/decisions.md)).
-**Next: Slice 1 — globe + first layers + time + hover.** Spec to be written per
-[`docs/roadmap.md`](docs/roadmap.md); plan template in
-[`docs/plans/`](docs/plans/).
+**Slice 0 complete (2026-06-10), spike = GO** (see [`docs/decisions.md`](docs/decisions.md)), and
+the lead's **post-review amendments are executed** — tree v4.1 locked (§5), realistic fixture
+fields, all reported issues fixed (see
+[`docs/plans/2026-06-10-slice-0-review-amendments.md`](docs/plans/2026-06-10-slice-0-review-amendments.md);
+only open thread: lead re-verifies the pan-misalignment fix by hand).
+**Next: write the Slice 1 spec** (globe + first layers + time + hover, per
+[`docs/roadmap.md`](docs/roadmap.md)) — remember the **viewport-windowed (bbox) backend contract**
+and the planned `dev/` HTTP mock when designing the data-access layer.
