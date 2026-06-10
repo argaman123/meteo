@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
-import { AppShell } from './shell/app-shell';
+import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
-  imports: [AppShell],
+  imports: [RouterOutlet],
   host: { class: 'block h-full' },
-  template: `<app-shell />`,
+  templateUrl: './app.html',
+  styleUrl: './app.css',
 })
 export class App {}

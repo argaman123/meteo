@@ -1,0 +1,26 @@
+<div class="relative h-full">
+  <div #mapContainer class="h-full w-full"></div>
+  <div
+    class="absolute end-3 top-3 flex flex-col gap-2 rounded-md border border-panel-border bg-panel/90 p-2"
+  >
+    @for (item of basemaps; track item.id) {
+      <button
+        class="rounded px-2 py-1 text-sm"
+        [class.bg-accent]="basemap() === item.id"
+        [class.text-app]="basemap() === item.id"
+        (click)="setBasemap(item.id)"
+      >
+        {{ item.label }}
+      </button>
+    }
+    <button class="rounded border-t border-panel-border px-2 py-1 text-sm" (click)="toggleView()">
+      {{ viewMode() === 'globe' ? 'מפה שטוחה' : 'גלובוס' }}
+    </button>
+  </div>
+  @if (engineReady()) {
+    <div class="absolute start-3 top-3">
+      <app-spike-controls />
+    </div>
+  }
+  <app-perf-hud />
+</div>

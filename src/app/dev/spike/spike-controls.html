@@ -1,0 +1,24 @@
+<div class="flex flex-col gap-2 rounded-md border border-panel-border bg-panel/90 p-2">
+  @for (item of models; track item.id) {
+    <button
+      class="rounded px-2 py-1 text-sm"
+      [class.bg-accent]="model() === item.id"
+      [class.text-app]="model() === item.id"
+      (click)="setModel(item.id)"
+    >
+      {{ item.label }}
+    </button>
+  }
+  <div class="flex gap-1 border-t border-panel-border pt-2" dir="ltr">
+    @for (hours of forecastHoursOptions; track hours) {
+      <button
+        class="rounded px-2 py-1 text-sm"
+        [class.bg-accent]="forecastHours() === hours"
+        [class.text-app]="forecastHours() === hours"
+        (click)="setForecastHours(hours)"
+      >
+        +{{ hours }}
+      </button>
+    }
+  </div>
+</div>

@@ -1,0 +1,37 @@
+@if (visible()) {
+  <div
+    class="absolute bottom-3 start-3 z-10 rounded-md border border-panel-border bg-panel/90 p-3 font-mono text-xs"
+    dir="ltr"
+  >
+    <div>FPS: {{ fps() }}</div>
+    <div>Heap: {{ heapMb() }} MB</div>
+    <label class="mt-2 block">
+      Particles
+      <select
+        class="ms-1 rounded border border-panel-border bg-app"
+        [value]="quality.particleCount()"
+        (change)="setParticles($event)"
+      >
+        @for (option of quality.particleCountOptions; track option) {
+          <option [value]="option" [selected]="option === quality.particleCount()">
+            {{ option }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="mt-1 block">
+      Texture cap
+      <select
+        class="ms-1 rounded border border-panel-border bg-app"
+        [value]="quality.textureMaxDimension()"
+        (change)="setTextureCap($event)"
+      >
+        @for (option of quality.textureMaxDimensionOptions; track option) {
+          <option [value]="option" [selected]="option === quality.textureMaxDimension()">
+            {{ option }}
+          </option>
+        }
+      </select>
+    </label>
+  </div>
+}

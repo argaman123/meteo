@@ -1,35 +1,4 @@
-export interface FieldGridDocument {
-  parameter: string;
-  level: string;
-  units: string;
-  runTime: string;
-  forecastHours: number;
-  startLat: number;
-  startLon: number;
-  deltaLat: number;
-  deltaLon: number;
-  rows: number;
-  cols: number;
-  values: number[][];
-}
-
-export interface FieldGrid {
-  parameter: string;
-  units: string;
-  runTime: string;
-  forecastHours: number;
-  bounds: [number, number, number, number];
-  width: number;
-  height: number;
-  data: Float32Array;
-}
-
-export interface VectorField {
-  bounds: [number, number, number, number];
-  width: number;
-  height: number;
-  data: Float32Array;
-}
+import { FieldGrid, FieldGridDocument, VectorField } from '../types/field-grid';
 
 export function parseFieldGrid(doc: FieldGridDocument): FieldGrid {
   const data = new Float32Array(doc.rows * doc.cols);
@@ -52,16 +21,6 @@ export function parseFieldGrid(doc: FieldGridDocument): FieldGrid {
     height: doc.rows,
     data,
   };
-}
-
-const KNOTS_TO_METERS_PER_SECOND = 0.514444;
-
-export function convertKnotsToMetersPerSecond(grid: FieldGrid): FieldGrid {
-  const data = new Float32Array(grid.data.length);
-  for (let i = 0; i < grid.data.length; i++) {
-    data[i] = grid.data[i] * KNOTS_TO_METERS_PER_SECOND;
-  }
-  return { ...grid, units: 'm/s', data };
 }
 
 export function toVectorField(speed: FieldGrid, direction: FieldGrid): VectorField {
