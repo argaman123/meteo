@@ -6,6 +6,7 @@ const params = new URLSearchParams(location.search);
 const projection = params.get('proj') ?? 'globe';
 const maxAge = Number(params.get('maxAge') ?? 10);
 const interleaved = (params.get('interleaved') ?? '1') === '1';
+const zoom = Number(params.get('zoom') ?? 4.5);
 
 const map = new maplibregl.Map({
   container: 'map',
@@ -15,7 +16,7 @@ const map = new maplibregl.Map({
     layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#0b0f17' } }],
   },
   center: [35, 31],
-  zoom: 4.5,
+  zoom,
   attributionControl: false,
 });
 

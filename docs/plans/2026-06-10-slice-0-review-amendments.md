@@ -131,15 +131,28 @@ The particle circle pinned to the display center was investigated to the lead's 
 - **Lead's constraints**: never patch the vendored bundle; older versions are not acceptable either
   (globe support only exists since 2025.1.0).
 
-Options for the lead:
-1. **Own particle layer** (recommended): first-party deck.gl layer in `engine/renderers/`,
-   implementing the same simulation with correct spawn math (no center hole). WeatherLayers stays
-   for Raster/Contour/HighLow (unaffected by this bug). Bounded effort (~1–2 days), kills the bug
-   in our own code, removes the last vendor risk on the most-visible layer.
-2. **Report upstream and wait** (do the report regardless): send the repro to
-   support@weatherlayers.com; timeline not under our control.
-3. **Replace the whole weather-rendering library**: no maplibre-globe-ready alternative with
-   comparable layer breadth exists (MapsGL is commercial/hosted); not recommended.
+Additional checks at the lead's insistence (all 2026-06-10):
+- **Non-interleaved overlay**: circle persists → not an integration-mode issue.
+- **Older versions**: the spawn-hole guard exists in every globe-capable version
+  (2025.1.0 → 2026.5.2, five versions unpacked and grepped); pre-2025.1.0 has no globe support.
+- **Low zoom (z1.8)**: a smaller but visible center clump persists → not zoom-masked.
+- **Vendor's own demo** (demo.weatherlayers.com): flat mercator only, no globe toggle → most users
+  never exercise the globe+particles path, explaining the silence.
+- **Public issue tracker exists** (github.com/weatherlayers/weatherlayers-gl) with multiple
+  globe/particle edge-case bugs (#27 globe perf, #29 globe pitch rendering, #9 particle high-zoom,
+  #31 GPU-specific particles, #1 shader artifacts). Our exact bug is unreported; the channel is
+  active and maintainer-responsive — that's where the report goes.
+- **No equivalent library**: maplibre-gl-wind = particles only, not globe-proven; MapsGL =
+  commercial/hosted; nothing else.
+
+Options for the lead (decision pending):
+1. **Report upstream (GitHub issue with our repro) + deadline**: if no fixed release before the
+   wind layer matters to users, fall back to option 2. Single library preserved if fixed.
+2. **Own particle renderer**: first-party deck.gl layer in `engine/renderers/`, same simulation
+   with correct spawn math; one contained file pair behind the existing renderer interface;
+   WeatherLayers stays for Raster/Contour/HighLow. ~1–2 days.
+3. **All-custom weather rendering** (scrape WeatherLayers): consistent but weeks of expert WebGL
+   work; not recommended for one understood bug.
 
 ```
 src/app/
