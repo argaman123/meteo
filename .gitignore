@@ -28,4 +28,4 @@ tools/cft/
 .idea/
 *.swp
 .playwright-mcp/
-\tools/repro/repro-bundle.js\
+tools/repro/repro-bundle.js
