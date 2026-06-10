@@ -110,7 +110,36 @@
 - Unit tests stay out for now (lead: simple conversions get checked at the backend level); the app
   will never go public (attribution note acknowledged).
 
-## Superseded: proposed tree v2
+## Center-circle investigation (2026-06-10) — proven upstream bug, lead decision pending
+
+The particle circle pinned to the display center was investigated to the lead's standard
+("make sure it doesn't have anything to do with the code"):
+
+- **Minimal reproduction with zero app code** (`tools/repro/particle-center-circle.html` +
+  `repro-entry.mjs`, bundle with
+  `npx esbuild tools/repro/repro-entry.mjs --bundle --format=iife --outfile=tools/repro/repro-bundle.js`,
+  serve repo root, open `?proj=globe`): bare MapLibre globe + deck.gl MapboxOverlay + WeatherLayers
+  ParticleLayer with **synthetic uniform wind** → the circle appears at the display center.
+  `?proj=mercator` → no circle. Conclusion: **weatherlayers-gl bug, globe projection only**;
+  not our code, not the data.
+- **Mechanism** (read from the shipped shader): in globe mode particles respawn at
+  `destinationPoint(viewportCenter, sqrt(random + 0.0001) · viewportRadius, randomBearing)` — the
+  `+0.0001` guard creates a permanent no-spawn disc (1% of viewport radius) at the display center,
+  which empties out after a few seconds and reads as a circle/rosette.
+- **Public-API mitigations tested**: `maxAge=40` (longer trails) only partially masks it — a bright
+  clump remains at center. No layer prop controls the respawn region.
+- **Lead's constraints**: never patch the vendored bundle; older versions are not acceptable either
+  (globe support only exists since 2025.1.0).
+
+Options for the lead:
+1. **Own particle layer** (recommended): first-party deck.gl layer in `engine/renderers/`,
+   implementing the same simulation with correct spawn math (no center hole). WeatherLayers stays
+   for Raster/Contour/HighLow (unaffected by this bug). Bounded effort (~1–2 days), kills the bug
+   in our own code, removes the last vendor risk on the most-visible layer.
+2. **Report upstream and wait** (do the report regardless): send the repro to
+   support@weatherlayers.com; timeline not under our control.
+3. **Replace the whole weather-rendering library**: no maplibre-globe-ready alternative with
+   comparable layer breadth exists (MapsGL is commercial/hosted); not recommended.
 
 ```
 src/app/
