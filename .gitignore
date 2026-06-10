@@ -27,3 +27,4 @@ tools/cft/
 !.vscode/mcp.json
 .idea/
 *.swp
+.playwright-mcp/
