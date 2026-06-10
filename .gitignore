@@ -2,16 +2,22 @@
 Thumbs.db
 .DS_Store
 
-# Node / Angular (populated when the app is scaffolded in Slice 0)
+# Node / Angular
 node_modules/
 dist/
 .angular/
+out-tsc/
 *.log
 npm-debug.log*
+yarn-error.log
 coverage/
 
 # Editors
 .vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
 !.vscode/extensions.json
+!.vscode/mcp.json
 .idea/
 *.swp
