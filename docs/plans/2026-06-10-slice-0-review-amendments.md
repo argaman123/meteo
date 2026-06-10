@@ -92,6 +92,24 @@
 - New standing rule (memory + applied from now on): when the lead asks for something that deviates
   from widely-agreed convention, say so — he wants to learn and choose well, not just be obeyed.
 
+## Round 6 notes from the lead (2026-06-10)
+
+- **Local model**: must be smaller than the wide model **in all directions** (inset margins on all
+  four sides), not sharing edges. → lat 52→24, lon 0→50 @0.25° (≈half the wide area, fully nested).
+- **Fields v2**: wind still unrealistic ("random flow + a perfect circle mid-globe" — the circular
+  gaussian high). Replace with a **wavy westerly belt** (subtropical high south / polar lows north,
+  meandering jet) + elongated drifting systems; temperature correlated with the wave (warm ridges /
+  cold troughs).
+- **Colorful basemap**: label text very hard to read → stronger white halos + darker text on all
+  symbol layers.
+- **For later (Slice 1+)**: a `dev/` mock that imitates the real HTTP requests behind the same
+  data-access interface; the real backend serves **viewport-only (bbox) grids for model
+  parameters** — recorded in `docs/decisions.md`.
+- **Memory in-repo**: project-durable working rules live in CLAUDE.md (auto-loaded on any machine);
+  machine-local memory keeps only machine-specific facts (installed skills, hardware quirks).
+- Unit tests stay out for now (lead: simple conversions get checked at the backend level); the app
+  will never go public (attribution note acknowledged).
+
 ## Superseded: proposed tree v2
 
 ```

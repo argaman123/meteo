@@ -14,8 +14,8 @@ const MODELS: Model[] = [
   { name: 'wide', startLat: 60, startLon: -10, deltaLat: -0.5, deltaLon: 0.5, rows: 81, cols: 141 },
   {
     name: 'local',
-    startLat: 48,
-    startLon: 10,
+    startLat: 52,
+    startLon: 0,
     deltaLat: -0.25,
     deltaLon: 0.25,
     rows: 113,
@@ -37,26 +37,30 @@ interface PressureSystem {
   lat: number;
   lon: number;
   strengthHpa: number;
-  radiusDeg: number;
+  latRadiusDeg: number;
+  lonRadiusDeg: number;
   driftLonPerHour: number;
 }
 
 const PRESSURE_SYSTEMS: PressureSystem[] = [
-  { lat: 52, lon: 5, strengthHpa: -16, radiusDeg: 9, driftLonPerHour: 0.35 },
-  { lat: 30, lon: 42, strengthHpa: 12, radiusDeg: 13, driftLonPerHour: 0.1 },
-  { lat: 38, lon: -5, strengthHpa: 8, radiusDeg: 10, driftLonPerHour: 0.15 },
-  { lat: 44, lon: 38, strengthHpa: -10, radiusDeg: 8, driftLonPerHour: 0.3 },
+  { lat: 56, lon: 6, strengthHpa: -9, latRadiusDeg: 5, lonRadiusDeg: 10, driftLonPerHour: 0.5 },
+  { lat: 51, lon: 44, strengthHpa: -7, latRadiusDeg: 4, lonRadiusDeg: 9, driftLonPerHour: 0.45 },
+  { lat: 26, lon: 28, strengthHpa: 6, latRadiusDeg: 6, lonRadiusDeg: 18, driftLonPerHour: 0.1 },
 ];
 
+function jetLatitude(lon: number, hours: number): number {
+  const longWave = 8 * Math.sin(((lon - 1.2 * hours - 15) / 55) * 2 * Math.PI);
+  const shortWave = 3 * Math.sin(((lon + 0.6 * hours) / 23) * 2 * Math.PI);
+  return 44 + longWave + shortWave;
+}
+
 function pressureAt(lat: number, lon: number, hours: number): number {
-  let pressure = 1013;
+  const jet = jetLatitude(lon, hours);
+  let pressure = 1016 - 14 * Math.tanh((lat - jet) / 9);
   for (const system of PRESSURE_SYSTEMS) {
-    const dLat = lat - system.lat;
-    const dLon =
-      (lon - (system.lon + system.driftLonPerHour * hours)) * Math.cos((lat * Math.PI) / 180);
-    const distanceSquared = dLat * dLat + dLon * dLon;
-    pressure +=
-      system.strengthHpa * Math.exp(-distanceSquared / (2 * system.radiusDeg * system.radiusDeg));
+    const dLat = (lat - system.lat) / system.latRadiusDeg;
+    const dLon = (lon - (system.lon + system.driftLonPerHour * hours)) / system.lonRadiusDeg;
+    pressure += system.strengthHpa * Math.exp(-(dLat * dLat + dLon * dLon) / 2);
   }
   return pressure;
 }
@@ -71,19 +75,20 @@ function windAt(
     (pressureAt(lat + step, lon, hours) - pressureAt(lat - step, lon, hours)) / (2 * step);
   const dPdLon =
     (pressureAt(lat, lon + step, hours) - pressureAt(lat, lon - step, hours)) / (2 * step);
-  const u = -dPdLat * 22;
-  const v = dPdLon * 22;
-  const speedKnots = Math.min(60, Math.hypot(u, v));
+  const u = -dPdLat * 24;
+  const v = dPdLon * 24;
+  const speedKnots = Math.min(65, Math.hypot(u, v));
   const directionDegrees = ((Math.atan2(-u, -v) * 180) / Math.PI + 360) % 360;
   return { speedKnots, directionDegrees };
 }
 
 function temperatureAt(lat: number, lon: number, hours: number): number {
-  const latitudinal = 36 - (lat - 18) * 0.85;
-  const regionalTexture = 2.2 * Math.sin(lon / 7) * Math.cos(lat / 5);
-  const pressureEffect = (1013 - pressureAt(lat, lon, hours)) * 0.25;
+  const jet = jetLatitude(lon, hours);
+  const latitudinal = 34 - 0.7 * (lat - 20);
+  const baroclinic = 5 * Math.tanh((jet - lat) / 8);
+  const regionalTexture = 1.5 * Math.sin(lon / 6 + 1) * Math.cos(lat / 4.5);
   const diurnal = 2 * Math.sin(((hours - 3) / 24) * 2 * Math.PI);
-  return latitudinal + regionalTexture + pressureEffect + diurnal;
+  return latitudinal + baroclinic + regionalTexture + diurnal;
 }
 
 function field(lat: number, lon: number, hours: number, kind: Parameter): number {

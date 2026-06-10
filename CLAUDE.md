@@ -31,6 +31,8 @@ Three non-negotiables, in priority order:
 
 - **Plan → approve → build.** Every non-trivial task gets a short spec and the user's sign-off
   *before* code. Ask many questions up front. **Do not assume** — verify even when fairly sure.
+- **Check the lead's ideas against convention.** When a request deviates from widely-agreed
+  practice, say so briefly at decision time — he wants to learn and choose well, not just be obeyed.
 - **Offer, don't choose.** Present ideas and options; the user approves — never silently pick, even
   with an obvious default. Keep summaries **concise**; explain only where a comparison needs it.
 - **Knowledge intake is iterative.** Domain knowledge comes from the lead as we build (descriptions,
