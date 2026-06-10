@@ -62,6 +62,22 @@
   Angular CLI MCP (`get_best_practices`, `search_documentation`; registered in `.mcp.json`);
   locked project conventions win on conflicts.
 
+## Naming decisions from the lead (2026-06-10, round 4)
+
+- **engine/** approved as proposed.
+- **layers/** grouped by *content category*, not render type: `layers/model/` (numerical-model
+  fields) now; later categories like imagery (satellite/radar) and textual — exact names decided
+  when they arrive. Reason: one layer (e.g. temperature) may later offer several presentations
+  (colors / contours / high-low), so a render-type split is wrong.
+- **types/** = backend data contracts (DAO shapes). Area-specific interfaces live *inside their
+  area* (e.g. layer interfaces in `layers/`). Convention confirmed: colocate with the owning
+  area; only shared/backend shapes go to `types/`.
+- **utils/** was over-split: similar functions share a file (`grids.ts`, `units.ts`); no topic
+  subfolders until vague; split later as files grow.
+- **"Breathing system" standing rule** (added to CLAUDE.md §2 + memory): place things generally
+  right; whenever a file/folder grows too big or cluttered, proactively suggest a reorganization —
+  the lead decides every single time.
+
 ## Superseded: proposed tree v2
 
 ```
@@ -97,7 +113,7 @@ reporting, theming) are added when their slice arrives, following the same hybri
 
 ~~Conventions from v2 superseded by v3 below.~~
 
-## Proposed tree v3 (pending lead approval)
+## Superseded: proposed tree v3
 
 ```
 src/app/
@@ -139,12 +155,49 @@ src/app/
       spike-data.ts                  fixture fetching + composing catalog entries with fixture grids
 ```
 
+~~Conventions from v3 superseded by v4 below.~~
+
+## Proposed tree v4 (pending lead approval)
+
+```
+src/app/
+  app.ts · app.html · app.css        the frame itself: header bar + page slot (router outlet)
+  app.config.ts                      app wiring (providers)
+  app.routes.ts                      URL → page map ('/' = the map page)
+  pages/                             one subfolder per page of the site
+    map/
+      map-page.ts · .html · .css     thin host: map container + product controls
+  engine/                            rendering machinery — ONLY importer of maplibre/deck/weatherlayers
+    map-engine.ts                    facade: init, basemap, view mode, add/remove layer
+    style-loader.ts                  basemap style fetch + URL absolutizing
+    renderers/                       one file per render style (engine-internal split — approved)
+      colormap-renderer.ts
+      particle-renderer.ts
+  layers/                            THE CATALOG — one file per layer, grouped by content category
+    layer-definition.ts              the layer interfaces (area-owned, so they live here)
+    model/                           layers fed by numerical weather models
+      temperature.ts                 palette, defaults, parameter binding
+      wind.ts
+  types/                             backend data contracts (DAO shapes) shared across areas
+    field-grid.ts                    FieldGridDocument (backend JSON) + decoded FieldGrid/VectorField
+  utils/                             pure functions; similar functions share a file, split when grown
+    grids.ts                         parse, downsample, wind→u/v vectors
+    units.ts                         kt→m/s (seed of the future Units module)
+  settings/                          injectable settings stores
+    quality-settings.ts
+  dev/                               QUARANTINE — not product code
+    perf-hud/
+      perf-hud.ts · .html · .css
+    spike/
+      spike-controls.ts · .html · .css
+      spike-data.ts                  fixture fetching + gluing catalog entries to fixture grids
+```
+
 Locked conventions (CLAUDE.md §4–6 updated on approval): every component = own folder + separate
-.ts/.html/.css (overrides the official "prefer inline templates" guidance); one function per file in
-`utils/`; `types/` and `utils/` and `layers/` get topic subfolders the moment a flat list would be
-vague; nothing in `dev/` imported by product code (page templates may mount dev widgets);
-engine-adapter rule path becomes `src/app/engine/`. Adding a layer of an existing type touches
-exactly one file in `layers/<type>/`.
+.ts/.html/.css; area-specific interfaces colocate with their area, backend contracts in `types/`;
+similar functions share a util file; subfolders appear only when flat turns vague (breathing rule);
+nothing in `dev/` imported by product code (page templates may mount dev widgets); engine-adapter
+rule path becomes `src/app/engine/`. Adding a model layer = one file in `layers/model/`.
 
 - Ask questions freely and often — he prefers answering many questions over re-explaining later.
 - Highest standards on readability/maintainability; that is where he focuses most.

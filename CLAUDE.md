@@ -38,6 +38,10 @@ Three non-negotiables, in priority order:
   closed network**; the lead supplies fixture data in the exact real formats — never fetch public
   substitutes or build mock infrastructure unasked.
 - **Don't over-fragment.** Verify often, but do not split a small task into ten micro-steps.
+- **The tree breathes.** Files and folders are placed "generally right", not over-split up front:
+  similar functions share a file; folders gain subfolders only when a flat list turns vague. The
+  moment a file grows too large or a folder too cluttered, **proactively flag it and suggest a
+  reorganization — the lead decides, every single time.** Never restructure silently.
 - **Consistency is law.** You may be creative when *choosing* a pattern. Once a pattern is chosen,
   it becomes the standard and is applied **everywhere** so a junior can copy an existing file and
   stay correct. Never let two ways of doing the same thing coexist.
