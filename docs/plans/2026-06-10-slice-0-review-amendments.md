@@ -1,8 +1,15 @@
 # Slice 0 review — lead's amendment list (2026-06-10)
 
-> **Status: pending tree approval, then execution.** The lead reviewed the Slice 0 result before
-> reading the code and gave the notes below. Code clarity/maintainability is the explicit top
-> priority ("the codebase must be perfect at all times; performance can be optimized later").
+> **Status: EXECUTED 2026-06-10** (tree v4.1 locked in CLAUDE.md §5). The lead reviewed the Slice 0
+> result before reading the code and gave the notes below. Code clarity/maintainability is the
+> explicit top priority ("the codebase must be perfect at all times; performance can be optimized
+> later").
+>
+> Execution notes: items 1–10 done. Pan misalignment (item 7) could **not be reproduced** after the
+> rebuild — it most likely shared a root cause with the 2D bug (deck overlay going stale on
+> projection change, now re-synced); the lead re-verifies by hand. Colorful water retuned to
+> `#c3d5da` (item 11); the overzoom blur is inherent to the prebuilt z6 terrain raster — options if
+> it bothers: cap zoom on colorful, find/build a deeper raster later, or accept.
 
 ## Code organization (top priority — tree must be clear before code review)
 
