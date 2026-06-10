@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 
-type Model = {
+interface Model {
   name: string;
   startLat: number;
   startLon: number;
@@ -8,18 +8,18 @@ type Model = {
   deltaLon: number;
   rows: number;
   cols: number;
-};
+}
 
 const MODELS: Model[] = [
-  { name: 'eaa', startLat: 72, startLon: -25, deltaLat: -0.5, deltaLon: 0.5, rows: 225, cols: 351 },
+  { name: 'wide', startLat: 60, startLon: -10, deltaLat: -0.5, deltaLon: 0.5, rows: 81, cols: 141 },
   {
-    name: 'mideast',
-    startLat: 42,
-    startLon: 24,
-    deltaLat: -0.05,
-    deltaLon: 0.05,
-    rows: 361,
-    cols: 481,
+    name: 'local',
+    startLat: 48,
+    startLon: 10,
+    deltaLat: -0.25,
+    deltaLon: 0.25,
+    rows: 113,
+    cols: 201,
   },
 ];
 const FORECAST_HOURS = [0, 6, 12];
@@ -33,21 +33,71 @@ const UNITS: Record<Parameter, string> = {
   windDirection: 'deg',
 };
 
-function field(lat: number, lon: number, hours: number, kind: Parameter): number {
-  const wave = Math.sin(lon / 14) * Math.cos(lat / 9) + Math.sin((lon + lat) / 23 + hours / 6);
-  if (kind === 'temperature') {
-    const seasonal = 32 - Math.abs(lat - 12) * 0.7;
-    return round1(seasonal + wave * 4 + Math.sin((hours / 12) * Math.PI) * 3);
+interface PressureSystem {
+  lat: number;
+  lon: number;
+  strengthHpa: number;
+  radiusDeg: number;
+  driftLonPerHour: number;
+}
+
+const PRESSURE_SYSTEMS: PressureSystem[] = [
+  { lat: 52, lon: 5, strengthHpa: -16, radiusDeg: 9, driftLonPerHour: 0.35 },
+  { lat: 30, lon: 42, strengthHpa: 12, radiusDeg: 13, driftLonPerHour: 0.1 },
+  { lat: 38, lon: -5, strengthHpa: 8, radiusDeg: 10, driftLonPerHour: 0.15 },
+  { lat: 44, lon: 38, strengthHpa: -10, radiusDeg: 8, driftLonPerHour: 0.3 },
+];
+
+function pressureAt(lat: number, lon: number, hours: number): number {
+  let pressure = 1013;
+  for (const system of PRESSURE_SYSTEMS) {
+    const dLat = lat - system.lat;
+    const dLon =
+      (lon - (system.lon + system.driftLonPerHour * hours)) * Math.cos((lat * Math.PI) / 180);
+    const distanceSquared = dLat * dLat + dLon * dLon;
+    pressure +=
+      system.strengthHpa * Math.exp(-distanceSquared / (2 * system.radiusDeg * system.radiusDeg));
   }
-  if (kind === 'windSpeed') return round1(Math.max(0, 16 + wave * 12));
-  return round1(
-    ((Math.atan2(Math.cos(lat / 11), Math.sin(lon / 17 + hours / 8)) * 180) / Math.PI + 360) % 360,
-  );
+  return pressure;
+}
+
+function windAt(
+  lat: number,
+  lon: number,
+  hours: number,
+): { speedKnots: number; directionDegrees: number } {
+  const step = 0.5;
+  const dPdLat =
+    (pressureAt(lat + step, lon, hours) - pressureAt(lat - step, lon, hours)) / (2 * step);
+  const dPdLon =
+    (pressureAt(lat, lon + step, hours) - pressureAt(lat, lon - step, hours)) / (2 * step);
+  const u = -dPdLat * 22;
+  const v = dPdLon * 22;
+  const speedKnots = Math.min(60, Math.hypot(u, v));
+  const directionDegrees = ((Math.atan2(-u, -v) * 180) / Math.PI + 360) % 360;
+  return { speedKnots, directionDegrees };
+}
+
+function temperatureAt(lat: number, lon: number, hours: number): number {
+  const latitudinal = 36 - (lat - 18) * 0.85;
+  const regionalTexture = 2.2 * Math.sin(lon / 7) * Math.cos(lat / 5);
+  const pressureEffect = (1013 - pressureAt(lat, lon, hours)) * 0.25;
+  const diurnal = 2 * Math.sin(((hours - 3) / 24) * 2 * Math.PI);
+  return latitudinal + regionalTexture + pressureEffect + diurnal;
+}
+
+function field(lat: number, lon: number, hours: number, kind: Parameter): number {
+  if (kind === 'temperature') return round1(temperatureAt(lat, lon, hours));
+  const wind = windAt(lat, lon, hours);
+  if (kind === 'windSpeed') return round1(wind.speedKnots);
+  return round1(wind.directionDegrees);
 }
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
+
+rmSync('public/fixtures/models', { recursive: true, force: true });
 
 for (const model of MODELS) {
   const dir = `public/fixtures/models/${model.name}`;
