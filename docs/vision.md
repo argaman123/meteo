@@ -40,7 +40,7 @@ build authoring/editing here. The on-map draw/measure tools are for the viewer's
 | **Globe + 2D toggle** | 3D sphere default ("globe as canvas"), one-line 2D toggle; tilt/terrain not central |
 | **Basemaps** | ArcGIS = background ground ONLY; + self-hosted local basemap (dark/light/colorful) as a fast, uncluttered fallback when ArcGIS is slow or satellite is too cluttered |
 | **Layer types** | colormap fills · animated particles · contours/isolines · wind barbs/arrows · raster (satellite/radar loops) · station/point obs (icons+values) · RTL text labels · polygons (incl. warnings) · lines/paths; all composite with order + opacity |
-| **Field data** | Encoded data tiles (Windy-style) — client renders colormaps/contours/particles in WebGL |
+| **Field data** | Whole-grid encoded textures (backend JSON grids → client textures for now) — client renders colormaps/contours/particles in WebGL |
 | **Level selector** | surface + pressure levels + heights in **kilofeet** (aviation) |
 | **Time controller** | global; real-time + forecast + history; scrubber + playback; **polling** for latest cycles; per-layer availability windows |
 | **Hover readout** | default on (toggleable): text tooltip of **all active layers' values** at the cursor |
@@ -52,8 +52,9 @@ build authoring/editing here. The on-map draw/measure tools are for the viewer's
 | **Warnings** | sidebar (current + near-future for AOIs, with green/yellow/red status) + warning polygons as a globe layer + active notifications (polling) |
 | **Tables / reports** | tabular forecasts · decoded obs (METAR/TAF/synoptic) · auto text summaries · custom reports/briefings (later) |
 | **Output** | screenshot-first (users screenshot globe/tables) + "frame AOI" button (auto-animate globe → 2D → zoom to AOI). PDF/print + data export = later |
+| **View links** | layers/time/camera/level encoded in the **URL** — the no-login share/bookmark mechanism (from Slice 1) |
 | **AOIs** | predefined per group + user-defined on the fly |
-| **Dashboard / wall mode** | always-on situational view for control-room walls |
+| **Dashboard / wall mode** | the main view running full-screen on control-room walls, **single map view**; operators reload daily — no special long-run engineering |
 | **Presets / theming** | tokens; modern/clean default + "classic/old-look" toggle (minimum) + per-group + possibly custom; bounded, never at the cost of maintainability; stored in localStorage, one per PC |
 | **UI/UX approach** | adaptive UI: simple by default, grouped advanced controls for specific groups; light per-user tweaks (pin layers). **UX needs its own design pass — not yet designed** |
 
@@ -63,7 +64,7 @@ build authoring/editing here. The on-map draw/measure tools are for the viewer's
 2. **Map Engine Adapter** — wraps MapLibre + deck.gl + WeatherLayers. Nothing else imports them.
 3. **Layer System (declarative registry)** — add a layer = add a definition, not engine code.
 4. **Global Time Controller** — signal-store; live/forecast/history; playback; polling.
-5. **Data Access Layer** — typed backend clients (polling); model-switch by zoom; encoded-tile, obs,
+5. **Data Access Layer** — typed backend clients (polling); model-switch by zoom; field-grid, obs,
    warnings endpoints; ArcGIS basemap config. Adapt to the existing contract; request only *additive* endpoints.
 6. **Units Module** — switchable conventions; every value flows through it.
 7. **Coordinate & Grid (Geo) Subsystem** — lat/lon, DMS, MGRS, grid overlay; Zulu/Local time.

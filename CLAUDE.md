@@ -31,6 +31,12 @@ Three non-negotiables, in priority order:
 
 - **Plan → approve → build.** Every non-trivial task gets a short spec and the user's sign-off
   *before* code. Ask many questions up front. **Do not assume** — verify even when fairly sure.
+- **Offer, don't choose.** Present ideas and options; the user approves — never silently pick, even
+  with an obvious default. Keep summaries **concise**; explain only where a comparison needs it.
+- **Knowledge intake is iterative.** Domain knowledge comes from the lead as we build (descriptions,
+  occasional unclassified phone photos of the old app). Old code and real data **stay inside the
+  closed network**; the lead supplies fixture data in the exact real formats — never fetch public
+  substitutes or build mock infrastructure unasked.
 - **Don't over-fragment.** Verify often, but do not split a small task into ten micro-steps.
 - **Consistency is law.** You may be creative when *choosing* a pattern. Once a pattern is chosen,
   it becomes the standard and is applied **everywhere** so a junior can copy an existing file and
@@ -54,9 +60,10 @@ Three non-negotiables, in priority order:
 | Map engine | **MapLibre GL JS (globe) + deck.gl + WeatherLayers GL** | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
-| Testing | **Light/manual** + strict TypeScript + ESLint/Prettier | Architecture is the safety net |
+| Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **Vitest for pure units/geo/time logic** | Wrong conversions are an operational hazard |
 | Rendering | **Client-side SPA, no SSR** | WebGL needs the browser |
 | Network | **Internal-only**; **dependencies vendored/offline** | Strict dependency budget |
+| Browser floor | **Chrome 112** (fleet-pinned) | `browserslist`-enforced; Chrome-for-Testing 113 smoke test; ratchet at cutover |
 
 **PrimeNG checkpoint:** As of June 2026 PrimeNG supports Angular 21 only (v21.x); Angular-22 support
 is not yet released. We start on Angular 22 with CDK + Tailwind for the minimal early chrome. **The
@@ -77,7 +84,8 @@ The system is built as small units, each with one responsibility and a clear int
    the junior boundary. If you need a map capability elsewhere, expose it through the adapter.
 2. **A layer is a declarative definition, not engine code.** Adding a weather layer = adding a
    *definition* (id, type, data source, style/colormap, temporal behavior, defaults) to the layer
-   registry. The adapter turns definitions into rendered layers. (Definition shape finalized in Slice 0.)
+   registry. The adapter turns definitions into rendered layers. (Definition v1 in Slice 0;
+   finalized with the registry in Slice 1.)
 3. **All values flow through the Units module.** No raw numbers rendered anywhere (hover, tables,
    charts, readouts) without going through unit conversion/formatting.
 4. **All coordinates/time flow through the Geo module.** Lat/Lon, DMS, MGRS, and Zulu/Local are
@@ -150,8 +158,11 @@ assets/
 
 - Target **60 fps** with **≤ 5 layers + 1 animation** on an **integrated GPU @ 1080p** (4K only on
   stronger hardware; resolution scales with the machine).
-- Adaptive particle counts. **Match or beat the current Cesium app's responsiveness.**
-- The Slice 0 spike proves this on a real baseline iGPU **before** we build deep.
+- **Adaptive quality knobs** (particle counts, texture caps) + a dev-toggleable **perf HUD**
+  (FPS/memory) ship from Slice 0 — the target fleet isn't directly testable, so tuning is config-only.
+- **Match or beat the current Cesium app's responsiveness.**
+- The Slice 0 spike validates the engine by **best-effort measurement + reasoned assessment**
+  (no direct target-hardware access) before we build deep.
 
 ---
 
@@ -177,5 +188,6 @@ assets/
 
 ## 11. Current status
 
-**Planning complete. Next: Slice 0 — Foundation & spike.** See
+**Planning complete (independently reviewed & amended 2026-06-10). Next: Slice 0 — Foundation &
+spike.** See
 [`docs/specs/slice-0.md`](docs/specs/slice-0.md). No application code exists yet.

@@ -11,17 +11,23 @@ Scaffold + prove the engine before building deep. Spec: [`specs/slice-0.md`](spe
 - Project structure (per `CLAUDE.md` §5), design tokens + one default theme.
 - Vendored-dependency workflow documented.
 - App shell + routing skeleton (cutover-ready).
-- **Map Engine Adapter** interface + thin MapLibre init: self-hosted basemap (dark/light/colorful)
-  on a globe with a 2D toggle.
-- **iGPU spike:** animated particles + a colormap from encoded tiles via deck.gl/WeatherLayers on
-  the MapLibre globe, measured on a **baseline integrated GPU**. **Go/no-go on the engine.**
+- **Map Engine Adapter** interface + thin MapLibre init: self-hosted **Protomaps PMTiles** basemap
+  (dark/light/+) on a globe with a 2D toggle; **RTL text plugin vendored** + Hebrew glyphs.
+- **Layer-definition v1** (the minimum shape the spike's two layers need).
+- **Perf HUD** (dev-toggleable FPS/memory) + adaptive quality knobs.
+- **Engine spike:** animated particles + a colormap from **lead-provided fixture data (exact real
+  backend formats)** via deck.gl/WeatherLayers on the MapLibre globe. **Go/no-go** by best-effort
+  measurement + reasoned assessment (no target-hardware access) + a **Chrome-for-Testing 113**
+  smoke test (browser floor).
 
 ## Slice 1 — Globe + first layers + time + hover (core MVP)
 
-- Layer registry + 1–2 encoded-tile layers (a colormap + wind particles).
+- Layer registry (definition shape finalized) + 1–2 field layers (a colormap + wind particles).
 - Global time controller + scrubber (live/forecast/history); layer on/off/opacity/order.
 - **Hover readout** (all active layers' values).
-- Basemap presets; **"frame AOI" button** (animate globe → 2D → zoom to AOI).
+- **URL view state** (layers/time/camera/level).
+- Basemap presets; **"frame AOI" button** (animate globe → 2D → zoom to AOI; predefined config
+  AOIs — drawing comes in Slice 3).
 
 ## Slice 2 — Full layer system + panel + levels
 
@@ -52,8 +58,9 @@ Scaffold + prove the engine before building deep. Spec: [`specs/slice-0.md`](spe
 
 ## Verification (per slice)
 
-- Run locally; globe + basemap presets render on a baseline-iGPU profile.
-- Slice 0 spike: measure particle + colormap FPS/memory on 8 GB iGPU @ 1080p vs the perf budget.
+- Run locally; globe + basemap presets render.
+- Slice 0 spike: best-effort FPS/memory measurement vs the perf budget + Chrome-for-Testing 113
+  smoke test; go/no-go recorded as a reasoned assessment (no target-hardware access).
 - Slice 1: scrub time across live/forecast/history; toggle layers/opacity/order; hover shows all
   active layers; match-or-beat current Cesium responsiveness; RTL spot-check (Hebrew).
 - Lint + typecheck clean; manual smoke of key flows.

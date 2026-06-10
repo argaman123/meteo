@@ -9,6 +9,10 @@ request classified detail.** Specifics marked *(TBD)* are filled in iteratively 
 - **Regional high-res model** — over the area of responsibility; the view **auto-switches** to the
   better/regional model on zoom-in. Resolution is **consistent** within a source.
 - **Observations** — radar, satellite, surface stations, lightning, soundings.
+- **Current backend formats:** field data arrives as **JSON grids** (several formats); satellite as
+  **PNG imagery** — never tiles. (See `decisions.md` → Field data delivery.)
+- **Model identity** (model/run) is an internal **layer parameter**: auto-switch by zoom is the only
+  behavior now; a user-facing model selector is possible later; side-by-side comparison — **never**.
 - Exact model names/sources: *(TBD — provided by the lead as needed.)*
 
 ## Spatial & vertical structure
