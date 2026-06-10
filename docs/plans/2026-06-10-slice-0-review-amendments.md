@@ -49,7 +49,20 @@
 - The machinery folder is **`engine/`** at top level (kills the map-page/map-domain collision).
 - `dev/` quarantine approved as proposed.
 
-## Proposed tree v2 (pending lead approval)
+## Naming decisions from the lead (2026-06-10, round 3)
+
+- `layers/` is the **catalog**: one file per actual layer, **sub-foldered by layer type**
+  (`layers/colormap/temperature.ts`…). Adding "relative humidity" = adding one catalog file;
+  no engine work (its type's renderer already exists).
+- Pure functions → **`utils/`**, sub-foldered by topic the moment it would otherwise be vague
+  (`utils/grids/`, `utils/wind/`, `utils/units/`).
+- Shared interfaces → **`types/`** (NOT `models/` — clashes with *meteorological* models),
+  sub-foldered as it grows.
+- Standing rule added to CLAUDE.md §2: always consult the official `angular-developer` skill +
+  Angular CLI MCP (`get_best_practices`, `search_documentation`; registered in `.mcp.json`);
+  locked project conventions win on conflicts.
+
+## Superseded: proposed tree v2
 
 ```
 src/app/
@@ -82,10 +95,56 @@ Reserved names (created when first needed, not as empty folders): `components/` 
 widgets), `utils/` (shared pure helpers). Future domain folders (units, geo, warnings, charts,
 reporting, theming) are added when their slice arrives, following the same hybrid rule.
 
-Conventions locked on approval: every component = own folder + separate .ts/.html/.css; one concept
-per file; interfaces colocated with their domain; nothing in `dev/` imported by product code —
-only page templates may mount dev widgets. CLAUDE.md §4.1 + §5 updated accordingly
-(engine-adapter path becomes `src/app/engine/`).
+~~Conventions from v2 superseded by v3 below.~~
+
+## Proposed tree v3 (pending lead approval)
+
+```
+src/app/
+  app.ts · app.html · app.css        the frame itself: header bar + page slot (router outlet)
+  app.config.ts                      app wiring (providers)
+  app.routes.ts                      URL → page map ('/' = the map page)
+  pages/                             one subfolder per page of the site
+    map/
+      map-page.ts · .html · .css     thin host: map container + product controls
+  engine/                            rendering machinery — ONLY importer of maplibre/deck/weatherlayers
+    map-engine.ts                    facade: init, basemap, view mode, add/remove layer
+    style-loader.ts                  basemap style fetch + URL absolutizing
+    renderers/                       one file per layer TYPE
+      colormap-renderer.ts
+      particle-renderer.ts
+  layers/                            THE CATALOG — one file per layer, grouped by type
+    colormap/
+      temperature.ts                 palette, defaults, parameter binding
+    particles/
+      wind.ts
+  types/                             shared interfaces (NOT "models" — clashes with met. models)
+    layer-definition.ts              LayerDefinition, ColorStop, catalog-entry shapes
+    field-grid.ts                    FieldGridDocument, FieldGrid, VectorField
+  utils/                             pure functions, sub-foldered by topic, one function per file
+    grids/
+      parse-field-grid.ts
+      downsample-grid.ts
+    wind/
+      wind-to-vector-field.ts
+    units/
+      knots-to-meters-per-second.ts
+  settings/                          injectable settings stores
+    quality-settings.ts
+  dev/                               QUARANTINE — not product code
+    perf-hud/
+      perf-hud.ts · .html · .css
+    spike/
+      spike-controls.ts · .html · .css
+      spike-data.ts                  fixture fetching + composing catalog entries with fixture grids
+```
+
+Locked conventions (CLAUDE.md §4–6 updated on approval): every component = own folder + separate
+.ts/.html/.css (overrides the official "prefer inline templates" guidance); one function per file in
+`utils/`; `types/` and `utils/` and `layers/` get topic subfolders the moment a flat list would be
+vague; nothing in `dev/` imported by product code (page templates may mount dev widgets);
+engine-adapter rule path becomes `src/app/engine/`. Adding a layer of an existing type touches
+exactly one file in `layers/<type>/`.
 
 - Ask questions freely and often — he prefers answering many questions over re-explaining later.
 - Highest standards on readability/maintainability; that is where he focuses most.

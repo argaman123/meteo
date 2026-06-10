@@ -41,6 +41,10 @@ Three non-negotiables, in priority order:
 - **Consistency is law.** You may be creative when *choosing* a pattern. Once a pattern is chosen,
   it becomes the standard and is applied **everywhere** so a junior can copy an existing file and
   stay correct. Never let two ways of doing the same thing coexist.
+- **Angular guidance comes from the official sources, always.** For any Angular work consult the
+  official `angular-developer` skill and the Angular CLI MCP tools (`get_best_practices`,
+  `search_documentation` — registered in `.mcp.json`), alongside the custom `angular-v22` skill.
+  Where our locked conventions differ (e.g. separate template/style files), ours win.
 - **Persist everything to `.md`.** Decisions and domain knowledge go into `CLAUDE.md` / `docs/`,
   never only in chat. The project must be resumable from any machine or session.
 - **No code comments for now.** Clear names, small units, and the docs carry the meaning. Comments
