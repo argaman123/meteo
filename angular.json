@@ -26,7 +26,7 @@
               }
             ],
             "styles": ["src/styles.css"],
-            "allowedCommonJsDependencies": ["maplibre-gl"]
+            "allowedCommonJsDependencies": ["maplibre-gl", "earcut"]
           },
           "configurations": {
             "production": {
