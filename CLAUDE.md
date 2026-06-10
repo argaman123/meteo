@@ -189,6 +189,8 @@ public/         # static assets (Angular 22 convention; served from /)
 
 ## 11. Current status
 
-**Planning complete (independently reviewed & amended 2026-06-10). Next: Slice 0 — Foundation &
-spike.** See
-[`docs/specs/slice-0.md`](docs/specs/slice-0.md). No application code exists yet.
+**Slice 0 complete (2026-06-10): scaffold, shell, basemaps, engine adapter v1, fixtures, spike —
+go/no-go = GO** (see the spike-result section in [`docs/decisions.md`](docs/decisions.md)).
+**Next: Slice 1 — globe + first layers + time + hover.** Spec to be written per
+[`docs/roadmap.md`](docs/roadmap.md); plan template in
+[`docs/plans/`](docs/plans/).

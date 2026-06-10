@@ -39,6 +39,12 @@ machine and hand-carried inside. Adding a dependency is a deliberate act requiri
 | RTL text plugin | `public/basemaps/rtl/` | `@mapbox/mapbox-gl-rtl-text` (npm, dev-only) | Copy the dist `.js` from `node_modules` |
 | Satellite fixture PNG | `public/fixtures/satellite/` | NASA Worldview snapshot (public domain) | One-time fetch; sidecar `.json` records bbox/time/source |
 | `pmtiles` CLI | `tools/bin/pmtiles.exe` (gitignored) | github.com/protomaps/go-pmtiles releases | Download the Windows x86_64 release binary |
+| Chrome for Testing 113 (browser-floor smoke tests) | `tools/cft/` (gitignored) | `npx @puppeteer/browsers install chrome@113 --path tools/cft` | Re-run the same command |
+
+Note: `weatherlayers-gl` pulls `@scarf/scarf` transitively (install-time download telemetry via
+`geotiff`). npm's `allow-scripts` blocks its install script from running, and it never enters the
+runtime bundle — no phone-home ships in the app. Leave it unapproved when reviewing
+`npm approve-scripts` prompts.
 
 ### Style JSON self-hosting patches
 

@@ -15,6 +15,7 @@ coverage/
 # Vendored build artifacts (recreated by npm run basemap:fetch)
 public/basemaps/*.pmtiles
 tools/bin/
+tools/cft/
 .npm-cache/
 
 # Editors

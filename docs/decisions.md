@@ -66,6 +66,36 @@ unreleased. Plan: build early chrome on **CDK + Tailwind**, wrap components thin
 otherwise brief wait or interim CDK. Also evaluate **Angular Aria** at the checkpoint (stable in
 v22; official headless accessible patterns) — it may shrink the heavy-component need.
 
+## Slice 0 spike result (2026-06-10) — **GO**
+
+The engine spike (temperature colormap + animated wind particle layer from fixture grids, rendered
+via WeatherLayers GL 2026.5.2 / deck.gl 9.3.3 interleaved on the MapLibre GL 5.24 globe) was
+measured on the production build (`ng build`, served statically) per the Slice 0 spec.
+
+**Hardware (dev machine — best-effort proxy, no target-fleet access):** i7-12700, 16 GB RAM,
+rendering on **NVIDIA T400 4 GB** (entry-level discrete; same broad class as a good integrated GPU,
+but not identical — the machine's Intel UHD 770 was not the adapter Chrome picked). Window
+~1327×1243 (~1.65 MP, near-1080p).
+
+| Scenario | Result |
+|---|---|
+| 7.8 min continuous animation + churn (forecast-hour switch every 40 s, basemap switch every 2 min, globe↔2D toggle every ~2.7 min), default knobs (5 000 particles / 2048 texture cap) | **60 fps constant** (min = avg = max = 60 across 48 samples) |
+| Heap over the same run | 34–107 MB oscillating with GC, **ended lower than it started** (83 → 38 MB) — no leak/creep |
+| Knobs at maximum (20 000 particles / 4096 cap) | 51 fps — knobs measurably matter |
+| Knobs at minimum (1 000 particles / 512 cap) | 60 fps — scale-down works |
+| **Chrome-for-Testing 113.0.5672.63** (browser-floor proxy for fleet Chrome 112) | App boots, globe + all basemaps + both data layers render, HUD reports **60 fps**, **zero console/page errors** (verified via CDP) |
+| 2D ↔ globe | Both data layers render correctly in both projections; layers survive basemap `setStyle` |
+| Hebrew/RTL | Hebrew labels render correctly (vendored RTL plugin + glyph range 1280-1535) in app UI and map labels |
+
+**Reasoned assessment vs the §8 budget (60 fps, ≤5 layers + 1 animation, iGPU @ 1080p):** the spike
+ran 2 layers + 1 animation at a locked 60 fps with large headroom (heap < 110 MB, 51 fps even at 4×
+the default particle load) on a GPU roughly one class above the target iGPUs. The quality knobs
+demonstrably trade load for fps and persist per-PC, which is the designed mitigation for the
+unmeasurable fleet. Browser-floor risk is retired for this stack (CfT 113 clean). **Decision: GO —
+proceed to Slice 1 on MapLibre + deck.gl + WeatherLayers.** Residual risk: true iGPU + 8 GB-RAM
+behavior is still unverified; re-measure on a representative mini-PC at first opportunity inside
+(the perf HUD ships with the app — Ctrl+Alt+P or `?hud=1`).
+
 ## Open items to confirm (non-blocking)
 
 - **Backend contract:** field-grid JSON shapes (lead provides fixture files in the exact real

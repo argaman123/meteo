@@ -19,6 +19,23 @@ developers to maintain for years**.
 - **[`docs/domain/`](docs/domain/)** — meteorology, units, coordinates, conventions.
 - **[`docs/specs/`](docs/specs/)** — the spec for each slice.
 
+## Quickstart (dev machine, online)
+
+```powershell
+npm install            # restore dependencies
+npm run fixtures       # generate sample model/observation data into public/fixtures
+npm run basemap:fetch  # download basemap tiles (needs tools/bin/pmtiles.exe, see docs/dev/vendored-dependencies.md)
+npm start              # dev server on http://localhost:4200
+```
+
+Other commands: `npm run build` (production build), `npm run serve:dist` (serve the built app on
+:8080), `npm run lint`, `npm run typecheck`, `npm run format`.
+
+Dev perf HUD: **Ctrl+Alt+P** or open the app with `?hud=1`.
+
 ## Status
 
-Planning complete; **Slice 0 (foundation + engine spike)** is next. No application code yet.
+**Slice 0 complete (2026-06-10)** — Angular 22 scaffold, RTL shell, self-hosted basemaps
+(dark/light/colorful), map-engine adapter v1, fixtures, and the engine spike (temperature colormap +
+wind particles at a measured 60 fps; Chrome-for-Testing 113 clean). Go/no-go: **GO** — see
+[`docs/decisions.md`](docs/decisions.md). Next: **Slice 1**.

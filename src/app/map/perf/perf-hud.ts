@@ -50,7 +50,7 @@ interface MemoryInfo {
 })
 export class PerfHud {
   quality = inject(QualitySettings);
-  visible = signal(false);
+  visible = signal(new URLSearchParams(location.search).get('hud') === '1');
   fps = signal(0);
   heapMb = signal(0);
 
