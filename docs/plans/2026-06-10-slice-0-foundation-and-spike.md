@@ -1,5 +1,8 @@
 # Slice 0 — Foundation & Engine Spike Implementation Plan
 
+> **Status: EXECUTED 2026-06-10.** All tasks complete; spike verdict **GO** (measurements in
+> `docs/decisions.md`). Kept as the record of how Slice 0 was built.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 >
 > **Also required:** consult the `angular-v22` skill (the lead's custom-built v22 accuracy layer —
