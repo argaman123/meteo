@@ -10,7 +10,8 @@
     "lint": "ng lint",
     "format": "prettier --write \"src/**/*.{ts,html,css}\" \"tools/**/*.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "basemap:fetch": "powershell -ExecutionPolicy Bypass -File tools/fetch-basemap.ps1"
+    "basemap:fetch": "powershell -ExecutionPolicy Bypass -File tools/fetch-basemap.ps1",
+    "fixtures": "node tools/generate-fixtures.ts"
   },
   "private": true,
   "packageManager": "npm@11.16.0",

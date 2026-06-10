@@ -1,0 +1,9 @@
+{
+  "bbox": [24, 24, 48, 42],
+  "bboxOrder": "west, south, east, north",
+  "time": "2026-06-08",
+  "source": "NASA Worldview / GIBS, VIIRS SNPP Corrected Reflectance True Color (public domain)",
+  "crs": "EPSG:4326",
+  "width": 4096,
+  "height": 3072
+}
