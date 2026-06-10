@@ -53,6 +53,9 @@ sprite                 →  "/basemaps/sprites/v4/<flavor>"
 After any style re-download, grep the JSON for `http` — nothing in committed code or assets may
 point at a CDN or external host.
 
+Committed styles keep **root-relative** URLs (host-agnostic); MapLibre requires absolute sprite
+URLs, so the engine adapter absolutizes them against `location.origin` when loading a style.
+
 ## Rules recap
 
 - No CDN URLs anywhere in code, styles, or committed assets.

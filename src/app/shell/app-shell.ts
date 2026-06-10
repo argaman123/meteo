@@ -4,6 +4,7 @@ import { RouterOutlet } from '@angular/router';
 @Component({
   selector: 'app-shell',
   imports: [RouterOutlet],
+  host: { class: 'block h-full' },
   template: `
     <div class="flex h-full flex-col">
       <header class="flex items-center gap-3 border-b border-panel-border bg-panel px-4 py-2">

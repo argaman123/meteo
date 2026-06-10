@@ -19,6 +19,20 @@
       "source": "terrain"
     },
     {
+      "id": "water",
+      "type": "fill",
+      "filter": [
+        "==",
+        "$type",
+        "Polygon"
+      ],
+      "source": "protomaps",
+      "source-layer": "water",
+      "paint": {
+        "fill-color": "#a7c4da"
+      }
+    },
+    {
       "id": "boundaries_country",
       "type": "line",
       "source": "protomaps",
