@@ -1,3 +1,46 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import 'tailwindcss';
+
+@font-face {
+  font-family: 'Heebo';
+  src: url('/fonts/heebo/heebo-hebrew-wght-normal.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  unicode-range: U+0590-05FF;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Heebo';
+  src: url('/fonts/heebo/heebo-latin-ext-wght-normal.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  unicode-range: U+0100-024F, U+1E00-1EFF, U+20A0-20AB, U+20AD-20C0;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Heebo';
+  src: url('/fonts/heebo/heebo-latin-wght-normal.woff2') format('woff2-variations');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Heebo', sans-serif;
+  --color-app: #0b0f17;
+  --color-panel: #151b27;
+  --color-panel-border: #2a3344;
+  --color-text: #e8ecf4;
+  --color-text-muted: #9aa6ba;
+  --color-accent: #38bdf8;
+  --color-status-ok: #4ade80;
+  --color-status-warn: #facc15;
+  --color-status-danger: #f87171;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-app);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+}

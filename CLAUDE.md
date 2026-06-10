@@ -116,9 +116,10 @@ src/app/
   reporting/    # tabular forecasts, decoded obs, summaries (later)
   theming/      # design tokens, presets
   features/     # route-level pages (the cutover targets)
-assets/
+public/         # static assets (Angular 22 convention; served from /)
   basemaps/     # self-hosted styles + tiles (vendored)
   fonts/        # self-hosted Hebrew+Latin font
+  fixtures/     # sample data in the real backend formats
   icons/
 ```
 
