@@ -1,4 +1,4 @@
-export type FieldGridDocument = {
+export interface FieldGridDocument {
   parameter: string;
   level: string;
   units: string;
@@ -11,9 +11,9 @@ export type FieldGridDocument = {
   rows: number;
   cols: number;
   values: number[][];
-};
+}
 
-export type FieldGrid = {
+export interface FieldGrid {
   parameter: string;
   units: string;
   runTime: string;
@@ -22,14 +22,14 @@ export type FieldGrid = {
   width: number;
   height: number;
   data: Float32Array;
-};
+}
 
-export type VectorField = {
+export interface VectorField {
   bounds: [number, number, number, number];
   width: number;
   height: number;
   data: Float32Array;
-};
+}
 
 export function parseFieldGrid(doc: FieldGridDocument): FieldGrid {
   const data = new Float32Array(doc.rows * doc.cols);

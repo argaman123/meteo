@@ -1,20 +1,23 @@
 import { FieldGrid, VectorField } from './field-grid';
 
-export type ColorStop = { value: number; color: string };
+export interface ColorStop {
+  value: number;
+  color: string;
+}
 
-export type ColormapLayerDefinition = {
+export interface ColormapLayerDefinition {
   id: string;
   type: 'colormap';
   grid: FieldGrid;
   palette: ColorStop[];
   opacity: number;
-};
+}
 
-export type ParticleLayerDefinition = {
+export interface ParticleLayerDefinition {
   id: string;
   type: 'particles';
   wind: VectorField;
   opacity: number;
-};
+}
 
 export type LayerDefinition = ColormapLayerDefinition | ParticleLayerDefinition;
