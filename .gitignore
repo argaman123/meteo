@@ -12,6 +12,11 @@ npm-debug.log*
 yarn-error.log
 coverage/
 
+# Vendored build artifacts (recreated by npm run basemap:fetch)
+public/basemaps/*.pmtiles
+tools/bin/
+.npm-cache/
+
 # Editors
 .vscode/*
 !.vscode/settings.json
