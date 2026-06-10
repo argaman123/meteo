@@ -78,6 +78,13 @@
   right; whenever a file/folder grows too big or cluttered, proactively suggest a reorganization —
   the lead decides every single time.
 
+## Final decisions (2026-06-10, round 5) — TREE APPROVED
+
+- The map page is the **front/home page**: `pages/home/` (`HomePage`), routed at `/`. Not "map".
+- Tree v4 with that rename = **approved and locked** into CLAUDE.md §5.
+- New standing rule (memory + applied from now on): when the lead asks for something that deviates
+  from widely-agreed convention, say so — he wants to learn and choose well, not just be obeyed.
+
 ## Superseded: proposed tree v2
 
 ```

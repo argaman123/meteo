@@ -88,7 +88,7 @@ The system is built as small units, each with one responsibility and a clear int
 (full list in [`docs/vision.md`](docs/vision.md) §pillars). The rules that must never be broken:
 
 1. **The engine-adapter rule.** `MapLibre`, `deck.gl`, and `WeatherLayers` may be imported **only**
-   inside `src/app/map/engine/`. Nothing else in the app touches them. This is the lock-in hedge and
+   inside `src/app/engine/`. Nothing else in the app touches them. This is the lock-in hedge and
    the junior boundary. If you need a map capability elsewhere, expose it through the adapter.
 2. **A layer is a declarative definition, not engine code.** Adding a weather layer = adding a
    *definition* (id, type, data source, style/colormap, temporal behavior, defaults) to the layer
@@ -105,31 +105,36 @@ The system is built as small units, each with one responsibility and a clear int
 
 ---
 
-## 5. Proposed project structure (confirmed/adjusted during Slice 0)
+## 5. Project structure (locked with the lead, 2026-06-10 — "tree v4")
+
+Hybrid grouping: junior-obvious type folders + dedicated folders only for the big machinery.
+**The tree breathes** (§2): subfolders appear when a flat list turns vague — propose, lead decides.
 
 ```
 src/app/
-  core/         # app-wide singletons: config, http client, polling, error handling
-  shared/       # reusable atoms, pipes, directives; thin wrappers over CDK/PrimeNG
-  shell/        # app shell + routing (cutover-ready route map)
-  map/
-    engine/     # THE adapter — ONLY place importing maplibre/deck.gl/weatherlayers
-    layers/     # layer registry + layer-type definitions
-    time/        # global time controller (signal-store)
-    interaction/ # hover readout, click detail panel, draw/measure/AOI/search
-  units/        # switchable units module
-  geo/          # coordinates (lat/lon, DMS, MGRS), grid overlay, Zulu/Local time
-  warnings/     # sidebar + polygon layer + notifications
-  charts/       # meteogram, Skew-T sounding, cross-section
-  reporting/    # tabular forecasts, decoded obs, summaries (later)
-  theming/      # design tokens, presets
-  features/     # route-level pages (the cutover targets)
-public/         # static assets (Angular 22 convention; served from /)
-  basemaps/     # self-hosted styles + tiles (vendored)
-  fonts/        # self-hosted Hebrew+Latin font
-  fixtures/     # sample data in the real backend formats
+  app.ts/.html/.css   # the frame itself: header bar + page slot (no separate "shell" concept)
+  app.config.ts       # app wiring (providers)
+  app.routes.ts       # URL → page map ('/' = the home page)
+  pages/              # one subfolder per page of the site
+    home/             # the front page: the map view
+  engine/             # rendering machinery — ONLY place importing maplibre/deck.gl/weatherlayers
+    renderers/        # one file per render style (colormap, particles; later contours, barbs…)
+  layers/             # THE CATALOG: one file per layer, grouped by content category
+    model/            # layers fed by numerical weather models (temperature, wind, …)
+  types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
+  utils/              # pure functions; similar functions share a file, split when grown
+  settings/           # injectable settings stores
+  dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
+public/               # static assets (Angular 22 convention; served from /)
+  basemaps/           # self-hosted styles + tiles (vendored)
+  fonts/              # self-hosted Hebrew+Latin font
+  fixtures/           # sample data in the real backend formats
   icons/
 ```
+
+Future domain folders (units, geo, warnings, charts, reporting, theming — see vision §pillars) are
+added when their slice arrives, following the same hybrid rule. Adding a model layer of an existing
+render style = exactly one new file in `layers/model/`.
 
 ---
 
@@ -137,6 +142,13 @@ public/         # static assets (Angular 22 convention; served from /)
 
 - **Components:** standalone, `OnPush` (default in v22), signals for state, `input()`/`output()`
   functions, native control flow (`@if`/`@for`/`@switch`).
+- **Every component lives in its own folder with three separate files** (`.ts` + `.html` + `.css`)
+  — no inline templates/styles, even for tiny components (lead-locked; overrides the official
+  "prefer inline for small components" guidance).
+- **Interfaces colocate with the area that owns them** (e.g. layer interfaces in `layers/`);
+  backend contracts go in `types/`. No global interface dump.
+- **`dev/` is quarantined:** product code (`engine/`, `layers/`, `utils/`, `settings/`, the frame)
+  must never import from `dev/`; only page templates may mount dev widgets.
 - **Naming:** descriptive, no abbreviations a junior wouldn't know. One concept = one name everywhere.
 - **Files stay small and focused.** If a file is doing two things, split it. (Old codebase pain.)
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
