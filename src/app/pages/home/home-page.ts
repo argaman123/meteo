@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { PerfHud } from '../../dev/perf-hud/perf-hud';
 import { SpikeControls } from '../../dev/spike/spike-controls';
-import { BasemapId, MapEngine, ViewMode } from '../../engine/map-engine';
+import { BasemapId, MapEngine } from '../../engine/map-engine';
 
 @Component({
   selector: 'app-home-page',
@@ -28,7 +28,6 @@ export class HomePage implements AfterViewInit, OnDestroy {
     { id: 'colorful', label: 'צבעוני' },
   ];
   basemap = signal<BasemapId>('dark');
-  viewMode = signal<ViewMode>('flat');
   engineReady = signal(false);
 
   ngAfterViewInit(): void {
@@ -40,17 +39,12 @@ export class HomePage implements AfterViewInit, OnDestroy {
     void this.engine.setBasemap(id);
   }
 
-  toggleView(): void {
-    this.viewMode.update((mode) => (mode === 'globe' ? 'flat' : 'globe'));
-    this.engine.setViewMode(this.viewMode());
-  }
-
   ngOnDestroy(): void {
     this.engine.destroy();
   }
 
   private async start(): Promise<void> {
-    await this.engine.init(this.container().nativeElement, this.basemap(), this.viewMode());
+    await this.engine.init(this.container().nativeElement, this.basemap());
     this.engineReady.set(true);
   }
 }

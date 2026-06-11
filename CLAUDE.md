@@ -211,11 +211,12 @@ render style = exactly one new file in `layers/model/`.
 
 ## 11. Current status
 
-**Slice 0 complete (2026-06-10), spike = GO** (see [`docs/decisions.md`](docs/decisions.md)), and
-the lead's **post-review amendments are executed** — tree v4.1 locked (§5), realistic fixture
-fields, all reported issues fixed (see
-[`docs/plans/2026-06-10-slice-0-review-amendments.md`](docs/plans/2026-06-10-slice-0-review-amendments.md);
-only open thread: lead re-verifies the pan-misalignment fix by hand).
-**Next: write the Slice 1 spec** (globe + first layers + time + hover, per
+**Slice 0 complete (2026-06-10), spike = GO**, post-review amendments executed (tree v4.1 locked in
+§5; see [`docs/plans/2026-06-10-slice-0-review-amendments.md`](docs/plans/2026-06-10-slice-0-review-amendments.md)).
+**Globe/3D is temporarily REMOVED — the app is 2D-only** until the wind-particle rendering path is
+trustworthy (upstream WeatherLayers bug; report draft in
+[`docs/dev/weatherlayers-issue-draft.md`](docs/dev/weatherlayers-issue-draft.md), the lead posts it).
+**Open decision: keep WeatherLayers vs build first-party weather layers** (assessment given to the
+lead 2026-06-11). **Next: write the Slice 1 spec** (first layers + time + hover, per
 [`docs/roadmap.md`](docs/roadmap.md)) — remember the **viewport-windowed (bbox) backend contract**
 and the planned `dev/` HTTP mock when designing the data-access layer.

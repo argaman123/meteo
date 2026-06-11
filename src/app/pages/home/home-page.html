@@ -13,9 +13,6 @@
         {{ item.label }}
       </button>
     }
-    <button class="rounded border-t border-panel-border px-2 py-1 text-sm" (click)="toggleView()">
-      {{ viewMode() === 'globe' ? 'מפה שטוחה' : 'גלובוס' }}
-    </button>
   </div>
   @if (engineReady()) {
     <div class="absolute start-3 top-3">

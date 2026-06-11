@@ -10,7 +10,6 @@ import { renderParticleLayer } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
 export type { BasemapId } from './style-loader';
-export type ViewMode = 'globe' | 'flat';
 
 @Service()
 export class MapEngine {
@@ -18,7 +17,6 @@ export class MapEngine {
   private map: maplibregl.Map | null = null;
   private overlay: MapboxOverlay | null = null;
   private definitions = new Map<string, LayerDefinition>();
-  private viewMode: ViewMode = 'globe';
 
   constructor() {
     effect(() => {
@@ -28,8 +26,7 @@ export class MapEngine {
     });
   }
 
-  async init(container: HTMLElement, basemap: BasemapId, viewMode: ViewMode): Promise<void> {
-    this.viewMode = viewMode;
+  async init(container: HTMLElement, basemap: BasemapId): Promise<void> {
     const protocol = new Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
     void maplibregl.setRTLTextPlugin('/basemaps/rtl/mapbox-gl-rtl-text.js', true);
@@ -41,21 +38,12 @@ export class MapEngine {
       zoom: 4,
       attributionControl: false,
     });
-    this.map.on('style.load', () => {
-      this.applyProjection();
-      this.syncLayers();
-    });
+    this.map.on('style.load', () => this.syncLayers());
   }
 
   async setBasemap(id: BasemapId): Promise<void> {
     const style = await loadBasemapStyle(id);
     this.map?.setStyle(style);
-  }
-
-  setViewMode(mode: ViewMode): void {
-    this.viewMode = mode;
-    this.applyProjection();
-    this.syncLayers();
   }
 
   addLayer(definition: LayerDefinition): void {
@@ -92,9 +80,5 @@ export class MapEngine {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
     return renderParticleLayer(definition, this.quality.particleCount());
-  }
-
-  private applyProjection(): void {
-    this.map?.setProjection({ type: this.viewMode === 'globe' ? 'globe' : 'mercator' });
   }
 }
