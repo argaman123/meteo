@@ -9,7 +9,7 @@ const TRAIL_SAMPLE_SECONDS = 0.05;
 const MIN_LIFETIME_SECONDS = 0.8;
 const MAX_LIFETIME_SECONDS = 1.6;
 const FADE_SECONDS = 0.25;
-const DEGREES_PER_SECOND_PER_METER_PER_SECOND = 0.02;
+const SCREEN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -86,7 +86,8 @@ export class ParticleSystem {
       this.history.copyWithin(stride, 0, stride * (TRAIL_POINTS - 1));
       this.sinceTrailSample = 0;
     }
-    const speedScale = DEGREES_PER_SECOND_PER_METER_PER_SECOND * deltaSeconds;
+    const lonSpan = this.spawnBounds[2] - this.spawnBounds[0];
+    const speedScale = SCREEN_FRACTION_PER_SECOND_PER_METER_PER_SECOND * lonSpan * deltaSeconds;
     for (let i = 0; i < this.count; i++) {
       const lon = this.history[i * 2];
       const lat = this.history[i * 2 + 1];

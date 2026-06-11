@@ -13,7 +13,7 @@ export const waveHeightLayer: ColormapLayerCatalogEntry = {
     { value: 4, color: '#f97316' },
     { value: 5, color: '#dc2626' },
   ],
-  paletteStyle: 'stepped',
+  paletteStyle: 'smooth',
   defaultActive: false,
   defaultOpacity: 0.6,
   visibleRange: { min: 0.2, max: 99 },

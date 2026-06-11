@@ -21,8 +21,8 @@ function colorizeGrid(definition: ColormapLayerDefinition, textureCap: number): 
   const grid = definition.grid;
   const cached = colorizedImages.get(grid);
   if (cached && cached.textureCap === textureCap) return cached.image;
-  const width = Math.max(2, Math.min(grid.width * 6, textureCap));
-  const height = Math.max(2, Math.min(grid.height * 6, textureCap));
+  const width = Math.max(2, Math.min(Math.max(grid.width * 8, 512), textureCap));
+  const height = Math.max(2, Math.min(Math.max(grid.height * 8, 512), textureCap));
   const [west, south, east, north] = grid.bounds;
   const latitudes = mercatorLatitudes(north, south, height);
   const rgba = new Uint8ClampedArray(width * height * 4);

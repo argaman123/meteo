@@ -11,7 +11,7 @@ import {
   FixtureManifest,
   fixtureFileName,
   nearestFrameHours,
-  sliceGridDocument,
+  resampleGridDocument,
 } from './grid-window';
 
 const ARTIFICIAL_LATENCY_MS = 150;
@@ -36,7 +36,7 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
   const manifest = await loadManifest();
   const hours = nearestFrameHours(time, manifest);
   const doc = await loadDocument(model, parameter, hours);
-  const windowed = sliceGridDocument(doc, bounds);
+  const windowed = resampleGridDocument(doc, bounds);
   if (!windowed) {
     throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Outside coverage' });
   }

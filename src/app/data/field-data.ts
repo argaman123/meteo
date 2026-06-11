@@ -13,6 +13,7 @@ import { mapGridValues, parseFieldGrid, toVectorField } from '../utils/grids';
 const LOCAL_MODEL_COVERAGE: Bounds = [0, 24, 50, 52];
 const LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE = 0.8;
 const BBOX_PADDING_FACTOR = 0.25;
+const REFETCH_SHRINK_RATIO = 0.5;
 
 export interface LoadedLayer {
   entry: LayerCatalogEntry;
@@ -71,7 +72,9 @@ export class FieldData {
       const visible = this.engine.viewBounds();
       if (!visible) return;
       const current = untracked(this.requestBounds);
-      if (!current || !containsBounds(current, visible)) {
+      const zoomedInPastDetail =
+        current !== null && visible[2] - visible[0] < (current[2] - current[0]) * REFETCH_SHRINK_RATIO;
+      if (!current || !containsBounds(current, visible) || zoomedInPastDetail) {
         this.requestBounds.set(expandBounds(visible, BBOX_PADDING_FACTOR));
       }
     });
