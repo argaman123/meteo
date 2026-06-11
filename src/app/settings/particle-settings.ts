@@ -19,9 +19,9 @@ interface StoredTuning extends ParticleTuning {
 
 @Service()
 export class ParticleSettings {
-  speedReference = signal<SpeedReference>('view');
-  latitudeCorrection = signal(true);
-  speedCurve = signal<SpeedCurve>('linear');
+  speedReference = signal<SpeedReference>('data');
+  latitudeCorrection = signal(false);
+  speedCurve = signal<SpeedCurve>('floor');
   speedFactor = signal(1);
   lifetimeScale = signal(1);
 
