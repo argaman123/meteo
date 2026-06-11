@@ -8,7 +8,7 @@ import { ParticleSettings } from '../settings/particle-settings';
 import { QualitySettings } from '../settings/quality-settings';
 import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
-import { ParticleSystem, renderParticleLayer } from './renderers/particle-renderer';
+import { ParticleSystem, renderParticleLayer, windyLineWidth } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
 export type { BasemapId } from './style-loader';
@@ -132,7 +132,10 @@ export class MapEngine {
     if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
-    return renderParticleLayer(definition, this.particleSystem(definition));
+    const widthPixels = this.particleSettings.windyMode()
+      ? windyLineWidth(this.zoom() ?? 4)
+      : 1;
+    return renderParticleLayer(definition, this.particleSystem(definition), widthPixels);
   }
 
   private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
@@ -162,7 +165,7 @@ export class MapEngine {
         continue;
       }
       if (bounds) system.setSpawnBounds(bounds);
-      system.step(deltaSeconds, tuning);
+      system.step(deltaSeconds, tuning, this.zoom() ?? 4);
     }
     this.syncLayers();
     this.animationFrame = requestAnimationFrame(this.animate);

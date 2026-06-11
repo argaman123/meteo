@@ -34,6 +34,14 @@
       </select>
     </label>
     <div class="mt-2 border-t border-panel-border pt-2 font-bold">Particle tuning</div>
+    <label class="mt-1 flex items-center gap-1 font-bold">
+      <input
+        type="checkbox"
+        [checked]="particles.windyMode()"
+        (change)="particles.windyMode.set(!particles.windyMode())"
+      />
+      Windy preset (overrides below)
+    </label>
     <label class="mt-1 block">
       Speed ref
       <select

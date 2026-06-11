@@ -17,6 +17,13 @@ const FLOOR_CURVE_MINIMUM_METERS_PER_SECOND = 3;
 const WINDY_CURVE_POWER = 0.7;
 const WINDY_CURVE_MINIMUM_METERS_PER_SECOND = 1.5;
 const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
+const WINDY_ZOOM_SPEED_FACTORS = [
+  0.5, 0.5, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+];
+const WINDY_LINE_WIDTHS = [
+  0.6, 0.6, 0.6, 1, 1.2, 1.6, 1.8, 2, 2.2, 2.4, 2.4, 2.4, 2.4, 2.6, 2.8, 3, 3, 3, 3, 3, 3, 3, 3,
+  3,
+];
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -87,7 +94,7 @@ export class ParticleSystem {
     }
   }
 
-  step(deltaSeconds: number, tuning: ParticleTuning): void {
+  step(deltaSeconds: number, tuning: ParticleTuning, zoom: number): void {
     this.lifetimeScale = tuning.lifetimeScale;
     const stride = this.count * 2;
     this.sinceTrailSample += deltaSeconds;
@@ -95,11 +102,16 @@ export class ParticleSystem {
       this.history.copyWithin(stride, 0, stride * (TRAIL_POINTS - 1));
       this.sinceTrailSample = 0;
     }
-    const referenceSpan = this.referenceSpan(tuning.speedReference);
+    const speedReference = tuning.windyMode ? 'view' : tuning.speedReference;
+    const speedCurve = tuning.windyMode ? 'windy' : tuning.speedCurve;
+    const latitudeCorrection = tuning.windyMode ? false : tuning.latitudeCorrection;
+    const zoomFactor = tuning.windyMode ? windyZoomFactor(zoom) : 1;
+    const referenceSpan = this.referenceSpan(speedReference);
     const spanScale =
       SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND *
       referenceSpan *
       tuning.speedFactor *
+      zoomFactor *
       deltaSeconds;
     for (let i = 0; i < this.count; i++) {
       const lon = this.history[i * 2];
@@ -112,9 +124,9 @@ export class ParticleSystem {
       }
       const speed = Math.hypot(u, v);
       if (speed === 0) continue;
-      const curvedSpeed = curveSpeed(speed, tuning.speedCurve);
+      const curvedSpeed = curveSpeed(speed, speedCurve);
       const stepDegrees = curvedSpeed * spanScale;
-      const latitudeCosine = tuning.latitudeCorrection
+      const latitudeCosine = latitudeCorrection
         ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
         : 1;
       this.history[i * 2] = lon + ((u / speed) * stepDegrees) / latitudeCosine;
@@ -195,6 +207,19 @@ export class ParticleSystem {
   }
 }
 
+function windyZoomFactor(zoom: number): number {
+  const index = Math.min(
+    WINDY_ZOOM_SPEED_FACTORS.length - 1,
+    Math.max(0, Math.floor(zoom)),
+  );
+  return WINDY_ZOOM_SPEED_FACTORS[index];
+}
+
+export function windyLineWidth(zoom: number): number {
+  const index = Math.min(WINDY_LINE_WIDTHS.length - 1, Math.max(0, Math.floor(zoom)));
+  return WINDY_LINE_WIDTHS[index];
+}
+
 function curveSpeed(speed: number, curve: ParticleTuning['speedCurve']): number {
   if (curve === 'sqrt') return Math.sqrt(speed * SQRT_CURVE_PIVOT_METERS_PER_SECOND);
   if (curve === 'floor') return Math.max(speed, FLOOR_CURVE_MINIMUM_METERS_PER_SECOND);
@@ -213,11 +238,12 @@ function curveSpeed(speed: number, curve: ParticleTuning['speedCurve']): number 
 export function renderParticleLayer(
   definition: ParticleLayerDefinition,
   system: ParticleSystem,
+  widthPixels: number,
 ): Layer {
   return new LineLayer({
     id: definition.entry.id,
     data: system.layerData(),
-    getWidth: 1,
+    getWidth: widthPixels,
     widthUnits: 'pixels',
     opacity: definition.opacity,
   });
