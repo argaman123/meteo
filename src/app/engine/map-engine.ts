@@ -7,7 +7,7 @@ import { LayerDefinition, ParticleLayerDefinition } from '../layers/layer-defini
 import { QualitySettings } from '../settings/quality-settings';
 import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
-import { ParticleSystem, renderParticleLayer } from './renderers/particle-renderer';
+import { WindDashField, renderParticleLayer } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
 export type { BasemapId } from './style-loader';
@@ -18,9 +18,8 @@ export class MapEngine {
   private map: maplibregl.Map | null = null;
   private overlay: MapboxOverlay | null = null;
   private definitions = new Map<string, LayerDefinition>();
-  private particleSystems = new Map<string, ParticleSystem>();
+  private dashFields = new Map<string, WindDashField>();
   private animationFrame: number | null = null;
-  private lastTickMs = 0;
 
   readonly viewBounds = signal<Bounds | null>(null);
   readonly zoom = signal<number | null>(null);
@@ -89,7 +88,7 @@ export class MapEngine {
   destroy(): void {
     if (this.animationFrame !== null) cancelAnimationFrame(this.animationFrame);
     this.animationFrame = null;
-    this.particleSystems.clear();
+    this.dashFields.clear();
     this.overlay = null;
     this.definitions.clear();
     this.map?.remove();
@@ -129,36 +128,35 @@ export class MapEngine {
     if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
-    return renderParticleLayer(definition, this.particleSystem(definition));
+    return renderParticleLayer(definition, this.dashField(definition));
   }
 
-  private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
+  private dashField(definition: ParticleLayerDefinition): WindDashField {
     const id = definition.entry.id;
-    const existing = this.particleSystems.get(id);
-    const count = this.quality.particleCount();
-    if (existing && existing.wind === definition.wind && existing.count === count) {
+    const existing = this.dashFields.get(id);
+    const maxDashCount = this.quality.particleCount();
+    if (existing && existing.wind === definition.wind && existing.maxDashCount === maxDashCount) {
       return existing;
     }
-    const system = new ParticleSystem(
-      definition.wind,
-      count,
-      this.viewBounds() ?? definition.wind.bounds,
-    );
-    this.particleSystems.set(id, system);
-    return system;
+    const field = new WindDashField(definition.wind, maxDashCount);
+    this.updateDashField(field, performance.now());
+    this.dashFields.set(id, field);
+    return field;
+  }
+
+  private updateDashField(field: WindDashField, nowMs: number): void {
+    const view = this.viewBounds() ?? field.wind.bounds;
+    const widthPixels = this.map?.getCanvas().clientWidth ?? 1;
+    field.update(view, widthPixels, nowMs / 1000);
   }
 
   private animate = (nowMs: number): void => {
-    const deltaSeconds = Math.min(0.1, (nowMs - this.lastTickMs) / 1000 || 0.016);
-    this.lastTickMs = nowMs;
-    const bounds = this.viewBounds();
-    for (const [id, system] of this.particleSystems) {
+    for (const [id, field] of this.dashFields) {
       if (!this.definitions.has(id)) {
-        this.particleSystems.delete(id);
+        this.dashFields.delete(id);
         continue;
       }
-      if (bounds) system.setSpawnBounds(bounds);
-      system.step(deltaSeconds);
+      this.updateDashField(field, nowMs);
     }
     this.syncLayers();
     this.animationFrame = requestAnimationFrame(this.animate);
@@ -167,7 +165,6 @@ export class MapEngine {
   private updateAnimationLoop(): void {
     const hasParticles = [...this.definitions.values()].some((definition) => 'wind' in definition);
     if (hasParticles && this.animationFrame === null) {
-      this.lastTickMs = performance.now();
       this.animationFrame = requestAnimationFrame(this.animate);
     }
     if (!hasParticles && this.animationFrame !== null) {

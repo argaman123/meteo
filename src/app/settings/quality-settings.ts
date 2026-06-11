@@ -1,6 +1,6 @@
 import { Service, effect, signal } from '@angular/core';
 
-const STORAGE_KEY = 'meteo.quality.v3';
+const STORAGE_KEY = 'meteo.quality.v5';
 
 interface StoredQuality {
   particleCount: number;
@@ -9,7 +9,7 @@ interface StoredQuality {
 
 @Service()
 export class QualitySettings {
-  particleCount = signal(2000);
+  particleCount = signal(5000);
   textureMaxDimension = signal(2048);
   particleCountOptions = [500, 2000, 5000, 20000];
   textureMaxDimensionOptions = [512, 1024, 2048, 4096];
