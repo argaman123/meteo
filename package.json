@@ -30,8 +30,7 @@
     "maplibre-gl": "^5.24.0",
     "pmtiles": "^4.4.1",
     "rxjs": "~7.8.0",
-    "tslib": "^2.3.0",
-    "weatherlayers-gl": "^2026.5.2"
+    "tslib": "^2.3.0"
   },
   "devDependencies": {
     "@angular/build": "^22.0.0",
