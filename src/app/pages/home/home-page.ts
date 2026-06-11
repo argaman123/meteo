@@ -7,19 +7,20 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { FieldData } from '../../data/field-data';
 import { PerfHud } from '../../dev/perf-hud/perf-hud';
-import { SpikeControls } from '../../dev/spike/spike-controls';
 import { BasemapId, MapEngine } from '../../engine/map-engine';
 
 @Component({
   selector: 'app-home-page',
-  imports: [PerfHud, SpikeControls],
+  imports: [PerfHud],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
   styleUrl: './home-page.css',
 })
 export class HomePage implements AfterViewInit, OnDestroy {
   private engine = inject(MapEngine);
+  protected fieldData = inject(FieldData);
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
 
   basemaps: { id: BasemapId; label: string }[] = [

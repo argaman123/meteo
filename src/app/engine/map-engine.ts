@@ -1,10 +1,11 @@
-import { Service, effect, inject } from '@angular/core';
+import { Service, effect, inject, signal } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer } from '@deck.gl/core';
 import { LayerDefinition } from '../layers/layer-definition';
 import { QualitySettings } from '../settings/quality-settings';
+import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
 import { renderParticleLayer } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
@@ -17,6 +18,10 @@ export class MapEngine {
   private map: maplibregl.Map | null = null;
   private overlay: MapboxOverlay | null = null;
   private definitions = new Map<string, LayerDefinition>();
+
+  readonly viewBounds = signal<Bounds | null>(null);
+  readonly zoom = signal<number | null>(null);
+  readonly cursor = signal<{ point: [number, number]; lngLat: [number, number] } | null>(null);
 
   constructor() {
     effect(() => {
@@ -39,6 +44,15 @@ export class MapEngine {
       attributionControl: false,
     });
     this.map.on('style.load', () => this.syncLayers());
+    this.map.on('move', () => this.publishView());
+    this.map.on('mousemove', (event) => {
+      this.cursor.set({
+        point: [event.point.x, event.point.y],
+        lngLat: [event.lngLat.lng, event.lngLat.lat],
+      });
+    });
+    this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
+    this.publishView();
   }
 
   async setBasemap(id: BasemapId): Promise<void> {
@@ -56,12 +70,37 @@ export class MapEngine {
     this.syncLayers();
   }
 
+  flyToBounds(bounds: Bounds): void {
+    this.map?.fitBounds(
+      [
+        [bounds[0], bounds[1]],
+        [bounds[2], bounds[3]],
+      ],
+      { padding: 40 },
+    );
+  }
+
   destroy(): void {
     this.overlay = null;
     this.definitions.clear();
     this.map?.remove();
     this.map = null;
+    this.viewBounds.set(null);
+    this.zoom.set(null);
+    this.cursor.set(null);
     maplibregl.removeProtocol('pmtiles');
+  }
+
+  private publishView(): void {
+    if (!this.map) return;
+    const bounds = this.map.getBounds();
+    this.viewBounds.set([
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ]);
+    this.zoom.set(this.map.getZoom());
   }
 
   private syncLayers(): void {
