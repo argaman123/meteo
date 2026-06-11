@@ -1,4 +1,4 @@
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 interface Model {
   name: string;
@@ -98,28 +98,64 @@ function temperatureAt(lat: number, lon: number, hours: number): number {
   return latitudinal + baroclinic + regionalTexture + diurnal;
 }
 
-function isSea(lat: number, lon: number): boolean {
-  if (lon < -6 && lat < 44) return true;
-  if (lat > 30 && lat < 36.5 && lon >= -6 && lon < 0) return true;
-  if (lat > 30 && lat < 43 && lon >= 0 && lon < 12) return true;
-  if (lat > 30 && lat < 40 && lon >= 12 && lon < 22) return true;
-  if (lat > 40 && lat < 45.5 && lon >= 13 && lon < 19) return true;
-  if (lat > 31 && lat < 40.5 && lon >= 22 && lon < 28) return true;
-  if (lat > 31 && lat < 36.5 && lon >= 28 && lon < 36.5) return true;
-  if (lat > 41 && lat < 47 && lon > 27.5 && lon < 41.5) return true;
-  if (lat > 36.5 && lat < 47 && lon > 46.5 && lon < 54.5) return true;
-  if (lat <= 30 && lat >= 12.5) {
-    const redSeaCenter = 32.5 + ((30 - lat) / 17.5) * 10.5;
-    if (Math.abs(lon - redSeaCenter) < 1.6) return true;
-  }
-  if (lat > 23.5 && lat < 30.5 && lon > 47.5 && lon < 56.5) return true;
-  if (lat < 25 && lon > 56.5) return true;
-  if (lat < 13 && lon > 43) return true;
-  return false;
+interface LandPolygon {
+  rings: number[][][];
+  west: number;
+  south: number;
+  east: number;
+  north: number;
 }
 
+function loadLandPolygons(): LandPolygon[] {
+  const geojson = JSON.parse(readFileSync('tools/data/ne_50m_land.geojson', 'utf8')) as {
+    features: { geometry: { type: string; coordinates: unknown } }[];
+  };
+  const polygons: LandPolygon[] = [];
+  for (const feature of geojson.features) {
+    const { type, coordinates } = feature.geometry;
+    const polygonList =
+      type === 'Polygon'
+        ? [coordinates as number[][][]]
+        : type === 'MultiPolygon'
+          ? (coordinates as number[][][][])
+          : [];
+    for (const rings of polygonList) {
+      let west = Infinity;
+      let south = Infinity;
+      let east = -Infinity;
+      let north = -Infinity;
+      for (const [lon, lat] of rings[0]) {
+        west = Math.min(west, lon);
+        south = Math.min(south, lat);
+        east = Math.max(east, lon);
+        north = Math.max(north, lat);
+      }
+      polygons.push({ rings, west, south, east, north });
+    }
+  }
+  return polygons;
+}
+
+const LAND_POLYGONS = loadLandPolygons();
+
 function isLand(lat: number, lon: number): boolean {
-  return !isSea(lat, lon);
+  for (const polygon of LAND_POLYGONS) {
+    if (lon < polygon.west || lon > polygon.east || lat < polygon.south || lat > polygon.north) {
+      continue;
+    }
+    let crossings = 0;
+    for (const ring of polygon.rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const [xi, yi] = ring[i];
+        const [xj, yj] = ring[j];
+        if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+          crossings++;
+        }
+      }
+    }
+    if (crossings % 2 === 1) return true;
+  }
+  return false;
 }
 
 function waveHeightAt(lat: number, lon: number, hours: number): number {
@@ -129,14 +165,25 @@ function waveHeightAt(lat: number, lon: number, hours: number): number {
   return Math.max(0, swell + storm);
 }
 
-function field(lat: number, lon: number, hours: number, kind: Parameter): number | null {
-  if (kind === 'waveHeight') {
-    return isLand(lat, lon) ? null : round1(waveHeightAt(lat, lon, hours));
-  }
+function field(lat: number, lon: number, hours: number, kind: Parameter): number {
+  if (kind === 'waveHeight') return round1(waveHeightAt(lat, lon, hours));
   if (kind === 'temperature') return round1(temperatureAt(lat, lon, hours));
   const wind = windAt(lat, lon, hours);
   if (kind === 'windSpeed') return round1(wind.speedKnots);
   return round1(wind.directionDegrees);
+}
+
+function landMaskFor(geometry: Model): Uint8Array {
+  const mask = new Uint8Array(geometry.rows * geometry.cols);
+  for (let r = 0; r < geometry.rows; r++) {
+    const lat = geometry.startLat + geometry.deltaLat * r;
+    for (let c = 0; c < geometry.cols; c++) {
+      if (isLand(lat, geometry.startLon + geometry.deltaLon * c)) {
+        mask[r * geometry.cols + c] = 1;
+      }
+    }
+  }
+  return mask;
 }
 
 function fixtureFileName(parameter: string, hours: number): string {
@@ -170,13 +217,18 @@ for (const model of MODELS) {
   mkdirSync(dir, { recursive: true });
   for (const parameter of Object.keys(UNITS) as Parameter[]) {
     const geometry = gridGeometry(model, parameter);
+    const landMask = parameter === 'waveHeight' ? landMaskFor(geometry) : null;
     for (const hours of FRAME_HOURS) {
       const values: (number | null)[][] = [];
       for (let r = 0; r < geometry.rows; r++) {
         const row: (number | null)[] = [];
         const lat = geometry.startLat + geometry.deltaLat * r;
         for (let c = 0; c < geometry.cols; c++) {
-          row.push(field(lat, geometry.startLon + geometry.deltaLon * c, hours, parameter));
+          if (landMask && landMask[r * geometry.cols + c]) {
+            row.push(null);
+          } else {
+            row.push(field(lat, geometry.startLon + geometry.deltaLon * c, hours, parameter));
+          }
         }
         values.push(row);
       }
