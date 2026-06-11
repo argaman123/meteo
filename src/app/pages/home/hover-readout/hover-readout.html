@@ -4,8 +4,8 @@
     [style.left.px]="hover.point[0] + 14"
     [style.top.px]="hover.point[1] + 14"
   >
-    @for (line of hover.lines; track line) {
-      <div>{{ line }}</div>
+    @for (line of hover.lines; track line.label) {
+      <div>{{ line.label }}: <span dir="ltr">{{ line.value }}</span></div>
     }
   </div>
 }

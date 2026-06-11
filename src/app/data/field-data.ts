@@ -7,10 +7,11 @@ import { LayersStore } from '../stores/layers-store';
 import { TimeStore } from '../stores/time-store';
 import { Bounds, FieldGrid, FieldGridDocument, VectorField } from '../types/field-grid';
 import { knotsToMetersPerSecond } from '../units/units';
-import { containsBounds, expandBounds } from '../utils/bbox';
+import { containsBounds, coveredFraction, expandBounds } from '../utils/bbox';
 import { mapGridValues, parseFieldGrid, toVectorField } from '../utils/grids';
 
-const MODEL_ZOOM_THRESHOLD = 5;
+const LOCAL_MODEL_COVERAGE: Bounds = [0, 24, 50, 52];
+const LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE = 0.8;
 const BBOX_PADDING_FACTOR = 0.25;
 
 export interface LoadedLayer {
@@ -31,9 +32,12 @@ export class FieldData {
   private requestBounds = signal<Bounds | null>(null);
   private resources = new Map<string, HttpResourceRef<FieldGridDocument | undefined>>();
 
-  private model = computed(() =>
-    (this.engine.zoom() ?? 0) >= MODEL_ZOOM_THRESHOLD ? 'local' : 'wide',
-  );
+  private model = computed(() => {
+    const view = this.engine.viewBounds();
+    if (!view) return 'wide';
+    const covered = coveredFraction(view, LOCAL_MODEL_COVERAGE);
+    return covered >= LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE ? 'local' : 'wide';
+  });
 
   readonly loadedLayers = computed<LoadedLayer[]>(() => {
     const loaded: LoadedLayer[] = [];

@@ -25,11 +25,14 @@ export class HoverReadout {
       .map((layer) => {
         if (layer.entry.type === 'colormap') {
           const value = sampleGrid(layer.grids[layer.entry.parameter], lon, lat);
-          return `${layer.entry.label}: ${formatParameterValue(layer.entry.parameter, value)}`;
+          return {
+            label: layer.entry.label,
+            value: formatParameterValue(layer.entry.parameter, value),
+          };
         }
         const speed = sampleGrid(layer.grids[layer.entry.speedParameter], lon, lat);
         const direction = sampleGrid(layer.grids[layer.entry.directionParameter], lon, lat);
-        return `${layer.entry.label}: ${formatWind(speed, direction)}`;
+        return { label: layer.entry.label, value: formatWind(speed, direction) };
       });
     if (!lines.length) return null;
     return { point: cursor.point, lines };

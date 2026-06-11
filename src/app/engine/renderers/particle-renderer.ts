@@ -5,13 +5,16 @@ import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 
 const TRAIL_POINTS = 8;
-const MIN_LIFETIME_SECONDS = 1.5;
-const MAX_LIFETIME_SECONDS = 3;
-const FADE_SECONDS = 0.4;
-const SCREEN_FRACTION_PER_METER_PER_SECOND = 0.005;
+const TRAIL_SAMPLE_SECONDS = 0.05;
+const MIN_LIFETIME_SECONDS = 0.8;
+const MAX_LIFETIME_SECONDS = 1.6;
+const FADE_SECONDS = 0.25;
+const DEGREES_PER_SECOND_PER_METER_PER_SECOND = 0.02;
 const MIN_LATITUDE_COSINE = 0.2;
-const RESEED_SPAN_RATIO = 1.3;
-const RESEED_CENTER_SHIFT_FRACTION = 0.5;
+const VIEW_MARGIN_FRACTION = 0.02;
+const REDISTRIBUTE_SPAN_RATIO = 1.2;
+const REDISTRIBUTE_CENTER_SHIFT_FRACTION = 0.2;
+const REDISTRIBUTE_FRACTION = 0.25;
 
 export class ParticleSystem {
   private history: Float32Array;
@@ -22,6 +25,8 @@ export class ParticleSystem {
   private colors: Uint8Array;
   private trailAlphas: Float32Array;
   private spawnBounds: Bounds;
+  private seedBounds: Bounds;
+  private sinceTrailSample = 0;
 
   constructor(
     readonly wind: VectorField,
@@ -45,43 +50,49 @@ export class ParticleSystem {
       this.colors[i + 2] = 255;
     }
     this.spawnBounds = initialBounds;
-    this.reseedAll();
+    this.seedBounds = initialBounds;
+    for (let i = 0; i < count; i++) this.respawn(i, Math.random());
   }
 
   setSpawnBounds(bounds: Bounds): void {
-    const previous = this.spawnBounds;
     this.spawnBounds = bounds;
-    const previousSpan = previous[2] - previous[0];
+    const seedSpan = this.seedBounds[2] - this.seedBounds[0];
     const span = bounds[2] - bounds[0];
-    const ratio = span / previousSpan;
-    const centerShiftLon = Math.abs((bounds[0] + bounds[2]) / 2 - (previous[0] + previous[2]) / 2);
-    const centerShiftLat = Math.abs((bounds[1] + bounds[3]) / 2 - (previous[1] + previous[3]) / 2);
-    const shiftLimit = Math.max(span, previousSpan) * RESEED_CENTER_SHIFT_FRACTION;
+    const ratio = span / seedSpan;
+    const shiftLimit = Math.max(span, seedSpan) * REDISTRIBUTE_CENTER_SHIFT_FRACTION;
+    const centerShiftLon = Math.abs(
+      (bounds[0] + bounds[2]) / 2 - (this.seedBounds[0] + this.seedBounds[2]) / 2,
+    );
+    const centerShiftLat = Math.abs(
+      (bounds[1] + bounds[3]) / 2 - (this.seedBounds[1] + this.seedBounds[3]) / 2,
+    );
     if (
-      ratio > RESEED_SPAN_RATIO ||
-      ratio < 1 / RESEED_SPAN_RATIO ||
+      ratio > REDISTRIBUTE_SPAN_RATIO ||
+      ratio < 1 / REDISTRIBUTE_SPAN_RATIO ||
       centerShiftLon > shiftLimit ||
       centerShiftLat > shiftLimit
     ) {
-      this.reseedAll();
+      for (let i = 0; i < this.count; i++) {
+        if (Math.random() < REDISTRIBUTE_FRACTION) this.respawn(i, Math.random() * 0.5);
+      }
+      this.seedBounds = bounds;
     }
   }
 
   step(deltaSeconds: number): void {
     const stride = this.count * 2;
-    const lonSpan = this.spawnBounds[2] - this.spawnBounds[0];
-    const speedScale = SCREEN_FRACTION_PER_METER_PER_SECOND * lonSpan * deltaSeconds;
-    this.history.copyWithin(stride, 0, stride * (TRAIL_POINTS - 1));
+    this.sinceTrailSample += deltaSeconds;
+    if (this.sinceTrailSample >= TRAIL_SAMPLE_SECONDS) {
+      this.history.copyWithin(stride, 0, stride * (TRAIL_POINTS - 1));
+      this.sinceTrailSample = 0;
+    }
+    const speedScale = DEGREES_PER_SECOND_PER_METER_PER_SECOND * deltaSeconds;
     for (let i = 0; i < this.count; i++) {
-      const lon = this.history[stride + i * 2];
-      const lat = this.history[stride + i * 2 + 1];
+      const lon = this.history[i * 2];
+      const lat = this.history[i * 2 + 1];
       const [u, v] = sampleVectorField(this.wind, lon, lat);
       this.ages[i] += deltaSeconds;
-      if (
-        Number.isNaN(u) ||
-        this.ages[i] > this.lifetimes[i] ||
-        this.outsideSpawnArea(lon, lat)
-      ) {
+      if (Number.isNaN(u) || this.ages[i] > this.lifetimes[i] || this.outsideView(lon, lat)) {
         this.respawn(i, 0);
         continue;
       }
@@ -104,10 +115,7 @@ export class ParticleSystem {
     for (let i = 0; i < this.count; i++) {
       const age = this.ages[i];
       const lifetime = this.lifetimes[i];
-      const fade = Math.max(
-        0,
-        Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS),
-      );
+      const fade = Math.max(0, Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS));
       for (let t = 0; t < TRAIL_POINTS - 1; t++) {
         this.sources[segment * 2] = this.history[t * stride + i * 2];
         this.sources[segment * 2 + 1] = this.history[t * stride + i * 2 + 1];
@@ -127,16 +135,10 @@ export class ParticleSystem {
     };
   }
 
-  private reseedAll(): void {
-    for (let i = 0; i < this.count; i++) {
-      this.respawn(i, Math.random());
-    }
-  }
-
-  private outsideSpawnArea(lon: number, lat: number): boolean {
+  private outsideView(lon: number, lat: number): boolean {
     const [west, south, east, north] = this.spawnBounds;
-    const lonMargin = (east - west) * 0.1;
-    const latMargin = (north - south) * 0.1;
+    const lonMargin = (east - west) * VIEW_MARGIN_FRACTION;
+    const latMargin = (north - south) * VIEW_MARGIN_FRACTION;
     return (
       lon < west - lonMargin ||
       lon > east + lonMargin ||
@@ -173,7 +175,7 @@ export function renderParticleLayer(
   return new LineLayer({
     id: definition.entry.id,
     data: system.layerData(),
-    getWidth: 1.5,
+    getWidth: 1,
     widthUnits: 'pixels',
     opacity: definition.opacity,
   });
