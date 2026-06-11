@@ -21,8 +21,18 @@ export async function loadSpikeLayers(
   ]);
   const speedMetersPerSecond =
     speed.units === 'kt' ? mapGridValues(speed, knotsToMetersPerSecond, 'm/s') : speed;
-  engine.addLayer({ ...temperatureLayer, grid: temperature });
-  engine.addLayer({ ...windLayer, wind: toVectorField(speedMetersPerSecond, direction) });
+  engine.addLayer({
+    entry: temperatureLayer,
+    grid: temperature,
+    opacity: temperatureLayer.defaultOpacity,
+    order: 0,
+  });
+  engine.addLayer({
+    entry: windLayer,
+    wind: toVectorField(speedMetersPerSecond, direction),
+    opacity: windLayer.defaultOpacity,
+    order: 1,
+  });
 }
 
 async function fetchGrid(url: string): Promise<FieldGrid> {

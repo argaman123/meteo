@@ -47,7 +47,7 @@ export class MapEngine {
   }
 
   addLayer(definition: LayerDefinition): void {
-    this.definitions.set(definition.id, definition);
+    this.definitions.set(definition.entry.id, definition);
     this.syncLayers();
   }
 
@@ -71,12 +71,14 @@ export class MapEngine {
       this.map.addControl(this.overlay as unknown as maplibregl.IControl);
     }
     this.overlay.setProps({
-      layers: [...this.definitions.values()].map((definition) => this.toDeckLayer(definition)),
+      layers: [...this.definitions.values()]
+        .sort((a, b) => a.order - b.order)
+        .map((definition) => this.toDeckLayer(definition)),
     });
   }
 
   private toDeckLayer(definition: LayerDefinition): Layer {
-    if (definition.type === 'colormap') {
+    if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
     return renderParticleLayer(definition, this.quality.particleCount());

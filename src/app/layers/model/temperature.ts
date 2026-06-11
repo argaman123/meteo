@@ -2,6 +2,7 @@ import { ColormapLayerCatalogEntry } from '../layer-definition';
 
 export const temperatureLayer: ColormapLayerCatalogEntry = {
   id: 'temperature',
+  label: 'טמפרטורה',
   type: 'colormap',
   parameter: 'temperature',
   palette: [
@@ -13,5 +14,8 @@ export const temperatureLayer: ColormapLayerCatalogEntry = {
     { value: 30, color: '#f97316' },
     { value: 40, color: '#dc2626' },
   ],
-  opacity: 0.45,
+  paletteStyle: 'smooth',
+  defaultActive: true,
+  defaultOpacity: 0.45,
+  timeWindow: { backHours: 24, forwardHours: 96, stepHours: 3 },
 };

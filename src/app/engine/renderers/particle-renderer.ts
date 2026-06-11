@@ -8,7 +8,7 @@ export function renderParticleLayer(
 ): Layer {
   const wind = definition.wind;
   return new ParticleLayer({
-    id: definition.id,
+    id: definition.entry.id,
     image: { data: wind.data, width: wind.width, height: wind.height },
     imageType: 'VECTOR',
     bounds: wind.bounds,
