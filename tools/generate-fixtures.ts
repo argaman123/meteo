@@ -22,15 +22,23 @@ const MODELS: Model[] = [
     cols: 201,
   },
 ];
-const FORECAST_HOURS = [0, 6, 12];
-const RUN_TIME = '2026-06-10T00:00Z';
+const STEP_HOURS = 3;
+const BACK_HOURS = 24;
+const FORWARD_HOURS = 96;
+const FRAME_HOURS: number[] = [];
+for (let h = -BACK_HOURS; h <= FORWARD_HOURS; h += STEP_HOURS) FRAME_HOURS.push(h);
 
-type Parameter = 'temperature' | 'windSpeed' | 'windDirection';
+const RUN_TIME_UNIX_SECONDS =
+  Math.floor(Date.now() / 1000 / (STEP_HOURS * 3600)) * (STEP_HOURS * 3600);
+const RUN_TIME_ISO = new Date(RUN_TIME_UNIX_SECONDS * 1000).toISOString();
+
+type Parameter = 'temperature' | 'windSpeed' | 'windDirection' | 'waveHeight';
 
 const UNITS: Record<Parameter, string> = {
   temperature: 'C',
   windSpeed: 'kt',
   windDirection: 'deg',
+  waveHeight: 'm',
 };
 
 interface PressureSystem {
@@ -90,11 +98,30 @@ function temperatureAt(lat: number, lon: number, hours: number): number {
   return latitudinal + baroclinic + regionalTexture + diurnal;
 }
 
-function field(lat: number, lon: number, hours: number, kind: Parameter): number {
+function isLand(lat: number, lon: number): boolean {
+  return Math.sin((lat - 10) / 8) * Math.cos((lon - 20) / 14) > 0.45;
+}
+
+function waveHeightAt(lat: number, lon: number, hours: number): number {
+  const jet = jetLatitude(lon, hours);
+  const swell = 1.6 + 1.4 * Math.sin(lon / 15 + hours / 12) * Math.cos(lat / 20);
+  const storm = 1.8 * Math.exp(-Math.abs(lat - jet) / 6);
+  return Math.max(0, swell + storm);
+}
+
+function field(lat: number, lon: number, hours: number, kind: Parameter): number | null {
+  if (kind === 'waveHeight') {
+    return isLand(lat, lon) ? null : round1(waveHeightAt(lat, lon, hours));
+  }
   if (kind === 'temperature') return round1(temperatureAt(lat, lon, hours));
   const wind = windAt(lat, lon, hours);
   if (kind === 'windSpeed') return round1(wind.speedKnots);
   return round1(wind.directionDegrees);
+}
+
+function fixtureFileName(parameter: string, hours: number): string {
+  const sign = hours < 0 ? '-' : '+';
+  return `${parameter}_${sign}${String(Math.abs(hours)).padStart(3, '0')}.json`;
 }
 
 function round1(value: number): number {
@@ -107,10 +134,10 @@ for (const model of MODELS) {
   const dir = `public/fixtures/models/${model.name}`;
   mkdirSync(dir, { recursive: true });
   for (const parameter of Object.keys(UNITS) as Parameter[]) {
-    for (const hours of FORECAST_HOURS) {
-      const values: number[][] = [];
+    for (const hours of FRAME_HOURS) {
+      const values: (number | null)[][] = [];
       for (let r = 0; r < model.rows; r++) {
-        const row: number[] = [];
+        const row: (number | null)[] = [];
         const lat = model.startLat + model.deltaLat * r;
         for (let c = 0; c < model.cols; c++) {
           row.push(field(lat, model.startLon + model.deltaLon * c, hours, parameter));
@@ -121,7 +148,7 @@ for (const model of MODELS) {
         parameter,
         level: 'surface',
         units: UNITS[parameter],
-        runTime: RUN_TIME,
+        runTime: RUN_TIME_ISO,
         forecastHours: hours,
         startLat: model.startLat,
         startLon: model.startLon,
@@ -131,13 +158,20 @@ for (const model of MODELS) {
         cols: model.cols,
         values,
       };
-      writeFileSync(
-        `${dir}/${parameter}_+${String(hours).padStart(3, '0')}.json`,
-        JSON.stringify(doc),
-      );
+      writeFileSync(`${dir}/${fixtureFileName(parameter, hours)}`, JSON.stringify(doc));
     }
   }
 }
+
+writeFileSync(
+  'public/fixtures/models/manifest.json',
+  JSON.stringify({
+    runTimeUnixSeconds: RUN_TIME_UNIX_SECONDS,
+    stepHours: STEP_HOURS,
+    backHours: BACK_HOURS,
+    forwardHours: FORWARD_HOURS,
+  }),
+);
 
 mkdirSync('public/fixtures/observations', { recursive: true });
 const stations: [number, number][] = [
