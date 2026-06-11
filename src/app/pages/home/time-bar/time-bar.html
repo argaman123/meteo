@@ -1,0 +1,19 @@
+<div
+  class="flex items-center gap-3 rounded-md border border-panel-border bg-panel/90 px-3 py-2 text-sm"
+>
+  <button class="rounded bg-accent px-2 py-1 text-app" (click)="store.jumpToNow()">עכשיו</button>
+  <div class="flex flex-1 items-center gap-2" dir="ltr">
+    <span class="text-xs">{{ backLabel() }}</span>
+    <input
+      type="range"
+      class="flex-1"
+      [min]="store.window().start"
+      [max]="store.window().end"
+      [step]="stepSeconds()"
+      [value]="store.currentTime()"
+      (input)="onScrub($event)"
+    />
+    <span class="text-xs">{{ forwardLabel() }}</span>
+  </div>
+  <span class="min-w-28 text-end font-medium">{{ currentLabel() }}</span>
+</div>
