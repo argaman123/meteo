@@ -67,7 +67,7 @@ Three non-negotiables, in priority order:
 | Framework | **Angular 22** (standalone, **zoneless**, signals-first) | |
 | Components | **Angular CDK** + **Tailwind** now; **add PrimeNG 22 when it ships** | See checkpoint below |
 | State | **Signals + small injectable signal-stores** per domain | No NgRx |
-| Map engine | **MapLibre GL JS (globe) + deck.gl + WeatherLayers GL** | Always behind the engine adapter |
+| Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL being phased out; globe/3D temporarily removed — returns after first-party particles are verified) | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
 | Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **no committed unit tests for now** — temporary Vitest checks verify pure units/geo/time logic during development, then are deleted | Lead 2026-06-10; wrong conversions remain a flagged hazard — revisit when Units/Geo modules land |
@@ -216,7 +216,7 @@ render style = exactly one new file in `layers/model/`.
 **Globe/3D is temporarily REMOVED — the app is 2D-only** until the wind-particle rendering path is
 trustworthy (upstream WeatherLayers bug; report draft in
 [`docs/dev/weatherlayers-issue-draft.md`](docs/dev/weatherlayers-issue-draft.md), the lead posts it).
-**Open decision: keep WeatherLayers vs build first-party weather layers** (assessment given to the
-lead 2026-06-11). **Next: write the Slice 1 spec** (first layers + time + hover, per
+**Decided 2026-06-11: first-party weather renderers** (colormap + CPU particles in Slice 1; no
+high/low layer; see decisions.md). **Next: write the Slice 1 spec** (first layers + time + hover, per
 [`docs/roadmap.md`](docs/roadmap.md)) — remember the **viewport-windowed (bbox) backend contract**
 and the planned `dev/` HTTP mock when designing the data-access layer.
