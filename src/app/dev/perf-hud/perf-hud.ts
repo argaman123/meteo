@@ -23,7 +23,7 @@ export class PerfHud {
   fps = signal(0);
   heapMb = signal(0);
   speedReferenceOptions: SpeedReference[] = ['view', 'data', 'fixed'];
-  speedCurveOptions: SpeedCurve[] = ['linear', 'floor', 'sqrt'];
+  speedCurveOptions: SpeedCurve[] = ['linear', 'floor', 'sqrt', 'windy'];
 
   constructor() {
     let frames = 0;

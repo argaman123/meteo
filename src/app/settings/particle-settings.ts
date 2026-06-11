@@ -3,7 +3,7 @@ import { Service, effect, signal } from '@angular/core';
 const STORAGE_KEY = 'meteo.particle-tuning.v1';
 
 export type SpeedReference = 'view' | 'data' | 'fixed';
-export type SpeedCurve = 'linear' | 'floor' | 'sqrt';
+export type SpeedCurve = 'linear' | 'floor' | 'sqrt' | 'windy';
 
 export interface ParticleTuning {
   speedReference: SpeedReference;

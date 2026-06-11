@@ -14,6 +14,9 @@ const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
 const FLOOR_CURVE_MINIMUM_METERS_PER_SECOND = 3;
+const WINDY_CURVE_POWER = 0.7;
+const WINDY_CURVE_MINIMUM_METERS_PER_SECOND = 1.5;
+const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -109,12 +112,7 @@ export class ParticleSystem {
       }
       const speed = Math.hypot(u, v);
       if (speed === 0) continue;
-      const curvedSpeed =
-        tuning.speedCurve === 'sqrt'
-          ? Math.sqrt(speed * SQRT_CURVE_PIVOT_METERS_PER_SECOND)
-          : tuning.speedCurve === 'floor'
-            ? Math.max(speed, FLOOR_CURVE_MINIMUM_METERS_PER_SECOND)
-            : speed;
+      const curvedSpeed = curveSpeed(speed, tuning.speedCurve);
       const stepDegrees = curvedSpeed * spanScale;
       const latitudeCosine = tuning.latitudeCorrection
         ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
@@ -195,6 +193,21 @@ export class ParticleSystem {
       this.history[t * this.count * 2 + index * 2 + 1] = lat;
     }
   }
+}
+
+function curveSpeed(speed: number, curve: ParticleTuning['speedCurve']): number {
+  if (curve === 'sqrt') return Math.sqrt(speed * SQRT_CURVE_PIVOT_METERS_PER_SECOND);
+  if (curve === 'floor') return Math.max(speed, FLOOR_CURVE_MINIMUM_METERS_PER_SECOND);
+  if (curve === 'windy') {
+    const clamped = Math.min(
+      WINDY_CURVE_MAXIMUM_METERS_PER_SECOND,
+      Math.max(WINDY_CURVE_MINIMUM_METERS_PER_SECOND, speed),
+    );
+    return (
+      SQRT_CURVE_PIVOT_METERS_PER_SECOND ** (1 - WINDY_CURVE_POWER) * clamped ** WINDY_CURVE_POWER
+    );
+  }
+  return speed;
 }
 
 export function renderParticleLayer(
