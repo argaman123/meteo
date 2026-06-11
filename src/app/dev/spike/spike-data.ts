@@ -2,8 +2,8 @@ import { MapEngine } from '../../engine/map-engine';
 import { temperatureLayer } from '../../layers/model/temperature';
 import { windLayer } from '../../layers/model/wind';
 import { FieldGrid, FieldGridDocument } from '../../types/field-grid';
-import { parseFieldGrid, toVectorField } from '../../utils/grids';
-import { convertKnotsToMetersPerSecond } from '../../utils/units';
+import { knotsToMetersPerSecond } from '../../units/units';
+import { mapGridValues, parseFieldGrid, toVectorField } from '../../utils/grids';
 
 export type SpikeModelId = 'wide' | 'local';
 
@@ -19,7 +19,8 @@ export async function loadSpikeLayers(
     fetchGrid(`${base}/${windLayer.speedParameter}_+${hour}.json`),
     fetchGrid(`${base}/${windLayer.directionParameter}_+${hour}.json`),
   ]);
-  const speedMetersPerSecond = speed.units === 'kt' ? convertKnotsToMetersPerSecond(speed) : speed;
+  const speedMetersPerSecond =
+    speed.units === 'kt' ? mapGridValues(speed, knotsToMetersPerSecond, 'm/s') : speed;
   engine.addLayer({ ...temperatureLayer, grid: temperature });
   engine.addLayer({ ...windLayer, wind: toVectorField(speedMetersPerSecond, direction) });
 }
