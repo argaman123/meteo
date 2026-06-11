@@ -1,3 +1,5 @@
+export type Bounds = [number, number, number, number];
+
 export interface FieldGridDocument {
   parameter: string;
   level: string;
@@ -10,22 +12,20 @@ export interface FieldGridDocument {
   deltaLon: number;
   rows: number;
   cols: number;
-  values: number[][];
+  values: (number | null)[][];
 }
 
 export interface FieldGrid {
   parameter: string;
   units: string;
-  runTime: string;
-  forecastHours: number;
-  bounds: [number, number, number, number];
+  bounds: Bounds;
   width: number;
   height: number;
   data: Float32Array;
 }
 
 export interface VectorField {
-  bounds: [number, number, number, number];
+  bounds: Bounds;
   width: number;
   height: number;
   data: Float32Array;
