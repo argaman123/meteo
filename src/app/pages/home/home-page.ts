@@ -10,14 +10,13 @@ import {
 import { FieldData } from '../../data/field-data';
 import { PerfHud } from '../../dev/perf-hud/perf-hud';
 import { BasemapId, MapEngine } from '../../engine/map-engine';
-import { FrameAoi } from './frame-aoi/frame-aoi';
 import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { TimeBar } from './time-bar/time-bar';
 
 @Component({
   selector: 'app-home-page',
-  imports: [PerfHud, TimeBar, LayerBar, HoverReadout, FrameAoi],
+  imports: [PerfHud, TimeBar, LayerBar, HoverReadout],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
   styleUrl: './home-page.css',

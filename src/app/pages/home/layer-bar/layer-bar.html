@@ -1,49 +1,23 @@
 <div
-  class="flex h-full w-56 flex-col gap-3 overflow-y-auto border-s border-panel-border bg-panel/90 p-3 text-sm"
+  class="flex h-full w-44 flex-col gap-2 border-s border-panel-border bg-panel/90 p-3 text-sm"
 >
   <h2 class="font-medium">שכבות</h2>
   @for (row of rows(); track row.state.id) {
-    <div class="flex flex-col gap-1 rounded-md border border-panel-border p-2">
-      <div class="flex items-center justify-between gap-2">
-        <label class="flex items-center gap-2">
-          <input
-            type="checkbox"
-            [checked]="row.state.active"
-            (change)="store.toggle(row.state.id)"
-          />
-          {{ row.entry.label }}
-        </label>
-        <span class="flex gap-1">
-          <button
-            class="rounded border border-panel-border px-1"
-            (click)="store.move(row.state.id, -1)"
-          >
-            ↑
-          </button>
-          <button
-            class="rounded border border-panel-border px-1"
-            (click)="store.move(row.state.id, 1)"
-          >
-            ↓
-          </button>
-        </span>
-      </div>
-      <input
-        type="range"
-        min="0"
-        max="1"
-        step="0.05"
-        [value]="row.state.opacity"
-        (input)="onOpacity(row.state.id, $event)"
-      />
-    </div>
+    <button
+      class="rounded px-2 py-1 text-start"
+      [class.bg-accent]="row.state.active"
+      [class.text-app]="row.state.active"
+      (click)="store.toggle(row.state.id)"
+    >
+      {{ row.entry.label }}
+    </button>
   }
-  <label class="mt-auto flex items-center gap-2 border-t border-panel-border pt-2">
-    <input
-      type="checkbox"
-      [checked]="store.hoverReadoutEnabled()"
-      (change)="store.toggleHoverReadout()"
-    />
-    קריאת ערכים בריחוף
-  </label>
+  <button
+    class="mt-auto rounded border border-panel-border px-2 py-1"
+    [class.bg-accent]="store.hoverReadoutEnabled()"
+    [class.text-app]="store.hoverReadoutEnabled()"
+    (click)="store.toggleHoverReadout()"
+  >
+    קריאת ערכים
+  </button>
 </div>

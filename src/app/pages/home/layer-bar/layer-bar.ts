@@ -14,8 +14,4 @@ export class LayerBar {
       .sort((a, b) => a.order - b.order)
       .map((state) => ({ state, entry: layerRegistry.find((entry) => entry.id === state.id)! })),
   );
-
-  onOpacity(id: string, event: Event): void {
-    this.store.setOpacity(id, Number((event.target as HTMLInputElement).value));
-  }
 }

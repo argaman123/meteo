@@ -46,6 +46,7 @@ export class MapEngine {
       zoom: 4,
       attributionControl: false,
     });
+    this.map.keyboard.disable();
     this.map.on('style.load', () => this.syncLayers());
     this.map.on('move', () => this.publishView());
     this.map.on('mousemove', (event) => {

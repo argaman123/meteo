@@ -98,8 +98,28 @@ function temperatureAt(lat: number, lon: number, hours: number): number {
   return latitudinal + baroclinic + regionalTexture + diurnal;
 }
 
+function isSea(lat: number, lon: number): boolean {
+  if (lon < -6 && lat < 44) return true;
+  if (lat > 30 && lat < 36.5 && lon >= -6 && lon < 0) return true;
+  if (lat > 30 && lat < 43 && lon >= 0 && lon < 12) return true;
+  if (lat > 30 && lat < 40 && lon >= 12 && lon < 22) return true;
+  if (lat > 40 && lat < 45.5 && lon >= 13 && lon < 19) return true;
+  if (lat > 31 && lat < 40.5 && lon >= 22 && lon < 28) return true;
+  if (lat > 31 && lat < 36.5 && lon >= 28 && lon < 36.5) return true;
+  if (lat > 41 && lat < 47 && lon > 27.5 && lon < 41.5) return true;
+  if (lat > 36.5 && lat < 47 && lon > 46.5 && lon < 54.5) return true;
+  if (lat <= 30 && lat >= 12.5) {
+    const redSeaCenter = 32.5 + ((30 - lat) / 17.5) * 10.5;
+    if (Math.abs(lon - redSeaCenter) < 1.6) return true;
+  }
+  if (lat > 23.5 && lat < 30.5 && lon > 47.5 && lon < 56.5) return true;
+  if (lat < 25 && lon > 56.5) return true;
+  if (lat < 13 && lon > 43) return true;
+  return false;
+}
+
 function isLand(lat: number, lon: number): boolean {
-  return Math.sin((lat - 10) / 8) * Math.cos((lon - 20) / 14) > 0.45;
+  return !isSea(lat, lon);
 }
 
 function waveHeightAt(lat: number, lon: number, hours: number): number {
@@ -124,6 +144,21 @@ function fixtureFileName(parameter: string, hours: number): string {
   return `${parameter}_${sign}${String(Math.abs(hours)).padStart(3, '0')}.json`;
 }
 
+const WAVE_DELTA_DEGREES = 0.3;
+
+function gridGeometry(model: Model, parameter: Parameter): Model {
+  if (parameter !== 'waveHeight') return model;
+  const endLat = model.startLat + model.deltaLat * (model.rows - 1);
+  const endLon = model.startLon + model.deltaLon * (model.cols - 1);
+  return {
+    ...model,
+    deltaLat: -WAVE_DELTA_DEGREES,
+    deltaLon: WAVE_DELTA_DEGREES,
+    rows: Math.floor((model.startLat - endLat) / WAVE_DELTA_DEGREES) + 1,
+    cols: Math.floor((endLon - model.startLon) / WAVE_DELTA_DEGREES) + 1,
+  };
+}
+
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
 }
@@ -134,13 +169,14 @@ for (const model of MODELS) {
   const dir = `public/fixtures/models/${model.name}`;
   mkdirSync(dir, { recursive: true });
   for (const parameter of Object.keys(UNITS) as Parameter[]) {
+    const geometry = gridGeometry(model, parameter);
     for (const hours of FRAME_HOURS) {
       const values: (number | null)[][] = [];
-      for (let r = 0; r < model.rows; r++) {
+      for (let r = 0; r < geometry.rows; r++) {
         const row: (number | null)[] = [];
-        const lat = model.startLat + model.deltaLat * r;
-        for (let c = 0; c < model.cols; c++) {
-          row.push(field(lat, model.startLon + model.deltaLon * c, hours, parameter));
+        const lat = geometry.startLat + geometry.deltaLat * r;
+        for (let c = 0; c < geometry.cols; c++) {
+          row.push(field(lat, geometry.startLon + geometry.deltaLon * c, hours, parameter));
         }
         values.push(row);
       }
@@ -150,12 +186,12 @@ for (const model of MODELS) {
         units: UNITS[parameter],
         runTime: RUN_TIME_ISO,
         forecastHours: hours,
-        startLat: model.startLat,
-        startLon: model.startLon,
-        deltaLat: model.deltaLat,
-        deltaLon: model.deltaLon,
-        rows: model.rows,
-        cols: model.cols,
+        startLat: geometry.startLat,
+        startLon: geometry.startLon,
+        deltaLat: geometry.deltaLat,
+        deltaLon: geometry.deltaLon,
+        rows: geometry.rows,
+        cols: geometry.cols,
         values,
       };
       writeFileSync(`${dir}/${fixtureFileName(parameter, hours)}`, JSON.stringify(doc));

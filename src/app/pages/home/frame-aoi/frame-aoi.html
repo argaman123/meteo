@@ -1,8 +1,0 @@
-<div class="flex flex-col gap-2 rounded-md border border-panel-border bg-panel/90 p-2">
-  <button class="rounded px-2 py-1 text-sm" (click)="open.set(!open())">מסגור אזור</button>
-  @if (open()) {
-    @for (area of areas; track area.id) {
-      <button class="rounded px-2 py-1 text-sm" (click)="frame(area)">{{ area.label }}</button>
-    }
-  }
-</div>
