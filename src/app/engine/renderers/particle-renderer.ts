@@ -21,6 +21,9 @@ const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
 const LINE_WIDTH_PER_ZOOM = 0.2;
 const MIN_LINE_WIDTH_PIXELS = 0.6;
 const MAX_LINE_WIDTH_PIXELS = 3;
+const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 10;
+const FAST_DIMMING_MINIMUM_ALPHA = 0.4;
+const SLOW_SPAWN_BIAS_METERS_PER_SECOND = 8;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -31,6 +34,7 @@ export class ParticleSystem {
   private history: Float32Array;
   private ages: Float32Array;
   private lifetimes: Float32Array;
+  private speedAlphas: Float32Array;
   private sources: Float32Array;
   private targets: Float32Array;
   private colors: Uint8Array;
@@ -48,6 +52,7 @@ export class ParticleSystem {
     this.history = new Float32Array(TRAIL_POINTS * count * 2);
     this.ages = new Float32Array(count);
     this.lifetimes = new Float32Array(count);
+    this.speedAlphas = new Float32Array(count).fill(1);
     const segments = count * (TRAIL_POINTS - 1);
     this.sources = new Float32Array(segments * 2);
     this.targets = new Float32Array(segments * 2);
@@ -116,6 +121,10 @@ export class ParticleSystem {
       }
       const speed = Math.hypot(u, v);
       if (speed === 0) continue;
+      this.speedAlphas[i] = Math.max(
+        FAST_DIMMING_MINIMUM_ALPHA,
+        Math.min(1, FAST_DIMMING_PIVOT_METERS_PER_SECOND / speed),
+      );
       const curvedSpeed = curveSpeed(speed, tuning.speedCurve);
       const stepDegrees = curvedSpeed * spanScale;
       const latitudeCosine = tuning.latitudeCorrection
@@ -145,7 +154,9 @@ export class ParticleSystem {
     for (let i = 0; i < this.count; i++) {
       const age = this.ages[i];
       const lifetime = this.lifetimes[i];
-      const fade = Math.max(0, Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS));
+      const fade =
+        Math.max(0, Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS)) *
+        this.speedAlphas[i];
       for (let t = 0; t < TRAIL_POINTS - 1; t++) {
         this.sources[segment * 2] = this.history[t * stride + i * 2];
         this.sources[segment * 2 + 1] = this.history[t * stride + i * 2 + 1];
@@ -179,13 +190,19 @@ export class ParticleSystem {
 
   private respawn(index: number, ageFraction: number): void {
     const [west, south, east, north] = this.spawnBounds;
-    let lon = 0;
-    let lat = 0;
+    let lon = west + Math.random() * (east - west);
+    let lat = south + Math.random() * (north - south);
     for (let attempt = 0; attempt < 8; attempt++) {
-      lon = west + Math.random() * (east - west);
-      lat = south + Math.random() * (north - south);
-      const [u] = sampleVectorField(this.wind, lon, lat);
-      if (!Number.isNaN(u)) break;
+      const candidateLon = west + Math.random() * (east - west);
+      const candidateLat = south + Math.random() * (north - south);
+      const [u, v] = sampleVectorField(this.wind, candidateLon, candidateLat);
+      if (Number.isNaN(u)) continue;
+      lon = candidateLon;
+      lat = candidateLat;
+      const speed = Math.hypot(u, v);
+      const acceptProbability =
+        SLOW_SPAWN_BIAS_METERS_PER_SECOND / (SLOW_SPAWN_BIAS_METERS_PER_SECOND + speed);
+      if (Math.random() < acceptProbability) break;
     }
     const lifetime =
       (MIN_LIFETIME_SECONDS + Math.random() * (MAX_LIFETIME_SECONDS - MIN_LIFETIME_SECONDS)) *
