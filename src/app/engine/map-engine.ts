@@ -44,6 +44,7 @@ export class MapEngine {
       style,
       center: [35, 31],
       zoom: 4,
+      minZoom: Math.max(0, Math.log2(container.clientWidth / 512)),
       attributionControl: false,
     });
     this.map.keyboard.disable();
