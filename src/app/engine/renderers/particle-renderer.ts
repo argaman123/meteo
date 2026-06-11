@@ -1,6 +1,7 @@
 import type { Layer } from '@deck.gl/core';
 import { LineLayer } from '@deck.gl/layers';
 import { ParticleLayerDefinition } from '../../layers/layer-definition';
+import { ParticleTuning } from '../../settings/particle-settings';
 import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 
@@ -9,7 +10,9 @@ const TRAIL_SAMPLE_SECONDS = 0.05;
 const MIN_LIFETIME_SECONDS = 0.8;
 const MAX_LIFETIME_SECONDS = 1.6;
 const FADE_SECONDS = 0.25;
-const SCREEN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
+const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
+const FIXED_REFERENCE_SPAN_DEGREES = 40;
+const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -27,6 +30,7 @@ export class ParticleSystem {
   private spawnBounds: Bounds;
   private seedBounds: Bounds;
   private sinceTrailSample = 0;
+  private lifetimeScale = 1;
 
   constructor(
     readonly wind: VectorField,
@@ -79,15 +83,20 @@ export class ParticleSystem {
     }
   }
 
-  step(deltaSeconds: number): void {
+  step(deltaSeconds: number, tuning: ParticleTuning): void {
+    this.lifetimeScale = tuning.lifetimeScale;
     const stride = this.count * 2;
     this.sinceTrailSample += deltaSeconds;
     if (this.sinceTrailSample >= TRAIL_SAMPLE_SECONDS) {
       this.history.copyWithin(stride, 0, stride * (TRAIL_POINTS - 1));
       this.sinceTrailSample = 0;
     }
-    const lonSpan = this.spawnBounds[2] - this.spawnBounds[0];
-    const speedScale = SCREEN_FRACTION_PER_SECOND_PER_METER_PER_SECOND * lonSpan * deltaSeconds;
+    const referenceSpan = this.referenceSpan(tuning.speedReference);
+    const spanScale =
+      SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND *
+      referenceSpan *
+      tuning.speedFactor *
+      deltaSeconds;
     for (let i = 0; i < this.count; i++) {
       const lon = this.history[i * 2];
       const lat = this.history[i * 2 + 1];
@@ -97,10 +106,25 @@ export class ParticleSystem {
         this.respawn(i, 0);
         continue;
       }
-      const latitudeCosine = Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180));
-      this.history[i * 2] = lon + (u * speedScale) / latitudeCosine;
-      this.history[i * 2 + 1] = lat + v * speedScale;
+      const speed = Math.hypot(u, v);
+      if (speed === 0) continue;
+      const curvedSpeed =
+        tuning.speedCurve === 'sqrt'
+          ? Math.sqrt(speed * SQRT_CURVE_PIVOT_METERS_PER_SECOND)
+          : speed;
+      const stepDegrees = curvedSpeed * spanScale;
+      const latitudeCosine = tuning.latitudeCorrection
+        ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
+        : 1;
+      this.history[i * 2] = lon + ((u / speed) * stepDegrees) / latitudeCosine;
+      this.history[i * 2 + 1] = lat + (v / speed) * stepDegrees;
     }
+  }
+
+  private referenceSpan(reference: ParticleTuning['speedReference']): number {
+    if (reference === 'fixed') return FIXED_REFERENCE_SPAN_DEGREES;
+    if (reference === 'data') return this.wind.bounds[2] - this.wind.bounds[0];
+    return this.spawnBounds[2] - this.spawnBounds[0];
   }
 
   layerData(): {
@@ -159,7 +183,8 @@ export class ParticleSystem {
       if (!Number.isNaN(u)) break;
     }
     const lifetime =
-      MIN_LIFETIME_SECONDS + Math.random() * (MAX_LIFETIME_SECONDS - MIN_LIFETIME_SECONDS);
+      (MIN_LIFETIME_SECONDS + Math.random() * (MAX_LIFETIME_SECONDS - MIN_LIFETIME_SECONDS)) *
+      this.lifetimeScale;
     this.lifetimes[index] = lifetime;
     this.ages[index] = ageFraction * lifetime;
     for (let t = 0; t < TRAIL_POINTS; t++) {

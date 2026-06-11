@@ -4,6 +4,7 @@ import { Protocol } from 'pmtiles';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer } from '@deck.gl/core';
 import { LayerDefinition, ParticleLayerDefinition } from '../layers/layer-definition';
+import { ParticleSettings } from '../settings/particle-settings';
 import { QualitySettings } from '../settings/quality-settings';
 import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
@@ -15,6 +16,7 @@ export type { BasemapId } from './style-loader';
 @Service()
 export class MapEngine {
   private quality = inject(QualitySettings);
+  private particleSettings = inject(ParticleSettings);
   private map: maplibregl.Map | null = null;
   private overlay: MapboxOverlay | null = null;
   private definitions = new Map<string, LayerDefinition>();
@@ -153,13 +155,14 @@ export class MapEngine {
     const deltaSeconds = Math.min(0.1, (nowMs - this.lastTickMs) / 1000 || 0.016);
     this.lastTickMs = nowMs;
     const bounds = this.viewBounds();
+    const tuning = this.particleSettings.tuning();
     for (const [id, system] of this.particleSystems) {
       if (!this.definitions.has(id)) {
         this.particleSystems.delete(id);
         continue;
       }
       if (bounds) system.setSpawnBounds(bounds);
-      system.step(deltaSeconds);
+      system.step(deltaSeconds, tuning);
     }
     this.syncLayers();
     this.animationFrame = requestAnimationFrame(this.animate);

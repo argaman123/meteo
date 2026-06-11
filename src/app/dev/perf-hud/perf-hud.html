@@ -1,6 +1,6 @@
 @if (visible()) {
   <div
-    class="absolute start-48 top-3 z-10 rounded-md border border-panel-border bg-panel/90 p-3 font-mono text-xs"
+    class="absolute start-48 top-3 z-10 w-56 rounded-md border border-panel-border bg-panel/90 p-3 font-mono text-xs"
     dir="ltr"
   >
     <div>FPS: {{ fps() }}</div>
@@ -32,6 +32,67 @@
           </option>
         }
       </select>
+    </label>
+    <div class="mt-2 border-t border-panel-border pt-2 font-bold">Particle tuning</div>
+    <label class="mt-1 block">
+      Speed ref
+      <select
+        class="ms-1 rounded border border-panel-border bg-app"
+        [value]="particles.speedReference()"
+        (change)="setSpeedReference($event)"
+      >
+        @for (option of speedReferenceOptions; track option) {
+          <option [value]="option" [selected]="option === particles.speedReference()">
+            {{ option }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="mt-1 block">
+      Curve
+      <select
+        class="ms-1 rounded border border-panel-border bg-app"
+        [value]="particles.speedCurve()"
+        (change)="setSpeedCurve($event)"
+      >
+        @for (option of speedCurveOptions; track option) {
+          <option [value]="option" [selected]="option === particles.speedCurve()">
+            {{ option }}
+          </option>
+        }
+      </select>
+    </label>
+    <label class="mt-1 flex items-center gap-1">
+      <input
+        type="checkbox"
+        [checked]="particles.latitudeCorrection()"
+        (change)="particles.latitudeCorrection.set(!particles.latitudeCorrection())"
+      />
+      Latitude correction (1/cos)
+    </label>
+    <label class="mt-1 block">
+      Speed x{{ particles.speedFactor() }}
+      <input
+        type="range"
+        class="w-full"
+        min="0.25"
+        max="4"
+        step="0.25"
+        [value]="particles.speedFactor()"
+        (input)="setSpeedFactor($event)"
+      />
+    </label>
+    <label class="mt-1 block">
+      Lifetime x{{ particles.lifetimeScale() }}
+      <input
+        type="range"
+        class="w-full"
+        min="0.5"
+        max="4"
+        step="0.25"
+        [value]="particles.lifetimeScale()"
+        (input)="setLifetimeScale($event)"
+      />
     </label>
   </div>
 }
