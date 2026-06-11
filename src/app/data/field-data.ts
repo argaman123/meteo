@@ -32,6 +32,7 @@ export class FieldData {
   private timeStore = inject(TimeStore);
   private requestBounds = signal<Bounds | null>(null);
   private resources = new Map<string, HttpResourceRef<FieldGridDocument | undefined>>();
+  private lastCompleteGrids = new Map<string, Record<string, FieldGrid>>();
 
   private model = computed(() => {
     const view = this.engine.viewBounds();
@@ -44,11 +45,19 @@ export class FieldData {
     const loaded: LoadedLayer[] = [];
     for (const entry of layerRegistry) {
       const state = this.layersStore.stateOf(entry.id);
-      if (!state?.active) continue;
+      if (!state?.active) {
+        this.lastCompleteGrids.delete(entry.id);
+        continue;
+      }
       const grids: Record<string, FieldGrid> = {};
       let complete = true;
+      let failed = false;
       for (const parameter of layerParameters(entry)) {
         const resource = this.resources.get(resourceKey(entry.id, parameter));
+        if (resource?.status() === 'error') {
+          failed = true;
+          break;
+        }
         if (!resource?.hasValue()) {
           complete = false;
           break;
@@ -60,8 +69,18 @@ export class FieldData {
         }
         grids[parameter] = parseDocument(document);
       }
+      if (failed) {
+        this.lastCompleteGrids.delete(entry.id);
+        continue;
+      }
       if (complete) {
+        this.lastCompleteGrids.set(entry.id, grids);
         loaded.push({ entry, opacity: state.opacity, order: state.order, grids });
+        continue;
+      }
+      const stale = this.lastCompleteGrids.get(entry.id);
+      if (stale) {
+        loaded.push({ entry, opacity: state.opacity, order: state.order, grids: stale });
       }
     }
     return loaded;

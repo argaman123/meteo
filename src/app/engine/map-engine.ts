@@ -104,9 +104,9 @@ export class MapEngine {
     if (!this.map) return;
     const bounds = this.map.getBounds();
     this.viewBounds.set([
-      bounds.getWest(),
+      Math.max(-180, bounds.getWest()),
       bounds.getSouth(),
-      bounds.getEast(),
+      Math.min(180, bounds.getEast()),
       bounds.getNorth(),
     ]);
     this.zoom.set(this.map.getZoom());

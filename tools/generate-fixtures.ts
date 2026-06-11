@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 
 interface Model {
   name: string;
@@ -72,11 +72,54 @@ function pressureAt(lat: number, lon: number, hours: number): number {
   return pressure;
 }
 
+interface GfsRecord {
+  header: { nx: number; ny: number; lo1: number; la1: number; dx: number; dy: number };
+  data: number[];
+}
+
+function loadRealWind(): { u: GfsRecord; v: GfsRecord } | null {
+  const path = 'tools/data/gfs-surface-wind.json';
+  if (!existsSync(path)) return null;
+  const records = JSON.parse(readFileSync(path, 'utf8')) as (GfsRecord & {
+    header: { parameterNumber: number };
+  })[];
+  const u = records.find((record) => record.header.parameterNumber === 2);
+  const v = records.find((record) => record.header.parameterNumber === 3);
+  return u && v ? { u, v } : null;
+}
+
+const REAL_WIND = loadRealWind();
+
+function sampleGfs(record: GfsRecord, lat: number, lon: number): number {
+  const { nx, ny, lo1, la1, dx, dy } = record.header;
+  const col = (((lon - lo1) / dx) % nx + nx) % nx;
+  const row = Math.min(ny - 1, Math.max(0, (la1 - lat) / dy));
+  const c0 = Math.floor(col);
+  const c1 = (c0 + 1) % nx;
+  const r0 = Math.floor(row);
+  const r1 = Math.min(r0 + 1, ny - 1);
+  const fc = col - c0;
+  const fr = row - r0;
+  const top = record.data[r0 * nx + c0] * (1 - fc) + record.data[r0 * nx + c1] * fc;
+  const bottom = record.data[r1 * nx + c0] * (1 - fc) + record.data[r1 * nx + c1] * fc;
+  return top * (1 - fr) + bottom * fr;
+}
+
+const KNOTS_PER_METER_PER_SECOND = 1.94384;
+
 function windAt(
   lat: number,
   lon: number,
   hours: number,
 ): { speedKnots: number; directionDegrees: number } {
+  if (REAL_WIND) {
+    const u = sampleGfs(REAL_WIND.u, lat, lon);
+    const v = sampleGfs(REAL_WIND.v, lat, lon);
+    return {
+      speedKnots: Math.hypot(u, v) * KNOTS_PER_METER_PER_SECOND,
+      directionDegrees: ((Math.atan2(-u, -v) * 180) / Math.PI + 360) % 360,
+    };
+  }
   const step = 0.5;
   const dPdLat =
     (pressureAt(lat + step, lon, hours) - pressureAt(lat - step, lon, hours)) / (2 * step);
