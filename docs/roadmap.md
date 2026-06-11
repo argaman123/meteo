@@ -3,7 +3,7 @@
 The platform is built in **shippable slices**, each with its own spec → plan → build cycle. Routes
 cut over from the old site as slices complete. **Don't build later-slice features speculatively.**
 
-## Slice 0 — Foundation & spike ⭐ (current)
+## Slice 0 — Foundation & spike ✅ (complete 2026-06-10, spike = GO)
 
 Scaffold + prove the engine before building deep. Spec: [`specs/slice-0.md`](specs/slice-0.md).
 
@@ -20,14 +20,19 @@ Scaffold + prove the engine before building deep. Spec: [`specs/slice-0.md`](spe
   measurement + reasoned assessment (no target-hardware access) + a **Chrome-for-Testing 113**
   smoke test (browser floor).
 
-## Slice 1 — Globe + first layers + time + hover (core MVP)
+## Slice 1 — First layers + time + hover (core MVP, 2D) ⭐ (current)
 
-- Layer registry (definition shape finalized) + 1–2 field layers (a colormap + wind particles).
-- Global time controller + scrubber (live/forecast/history); layer on/off/opacity/order.
-- **Hover readout** (all active layers' values).
-- **URL view state** (layers/time/camera/level).
-- Basemap presets; **"frame AOI" button** (animate globe → 2D → zoom to AOI; predefined config
-  AOIs — drawing comes in Slice 3).
+Spec: [`specs/slice-1.md`](specs/slice-1.md). (2D-only — globe returns later, see `decisions.md`.)
+
+- **First-party renderers** (colormap + CPU particles) on deck.gl primitives; `weatherlayers-gl`
+  removed.
+- Layer registry (definition shape finalized) + temperature colormap + wind particles.
+- Data-access layer (bbox-windowed, continuous-timeline contract) + `dev/` interceptor mock.
+- Global time controller + scrubber (jumps only, keyboard included); layer on/off/opacity/order.
+- **Hover readout** (all active layers' values) + minimal Units module.
+- ~~URL view state~~ — dropped 2026-06-11, URL stays clean (see `decisions.md`).
+- Basemap presets; **"frame AOI" button** as a 2D fly-to (predefined config AOIs — drawing comes
+  in Slice 3).
 
 ## Slice 2 — Full layer system + panel + levels
 
@@ -61,6 +66,8 @@ Scaffold + prove the engine before building deep. Spec: [`specs/slice-0.md`](spe
 - Run locally; globe + basemap presets render.
 - Slice 0 spike: best-effort FPS/memory measurement vs the perf budget + Chrome-for-Testing 113
   smoke test; go/no-go recorded as a reasoned assessment (no target-hardware access).
-- Slice 1: scrub time across live/forecast/history; toggle layers/opacity/order; hover shows all
-  active layers; match-or-beat current Cesium responsiveness; RTL spot-check (Hebrew).
+- Slice 1: scrub time across −24h→+96h (mouse + keyboard); toggle layers/opacity/order; hover
+  shows all active layers; model auto-switch on zoom; missing-data + high-latitude alignment
+  checks; match-or-beat current Cesium responsiveness; RTL spot-check (Hebrew). Full list in
+  [`specs/slice-1.md`](specs/slice-1.md).
 - Lint + typecheck clean; manual smoke of key flows.

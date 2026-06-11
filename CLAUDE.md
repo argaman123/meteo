@@ -217,6 +217,7 @@ render style = exactly one new file in `layers/model/`.
 trustworthy (upstream WeatherLayers bug; report draft in
 [`docs/dev/weatherlayers-issue-draft.md`](docs/dev/weatherlayers-issue-draft.md), the lead posts it).
 **Decided 2026-06-11: first-party weather renderers** (colormap + CPU particles in Slice 1; no
-high/low layer; see decisions.md). **Next: write the Slice 1 spec** (first layers + time + hover, per
-[`docs/roadmap.md`](docs/roadmap.md)) — remember the **viewport-windowed (bbox) backend contract**
-and the planned `dev/` HTTP mock when designing the data-access layer.
+high/low layer; see decisions.md). **Slice 1 spec approved 2026-06-11**
+([`docs/specs/slice-1.md`](docs/specs/slice-1.md)): bbox-windowed continuous-timeline contract,
+`dev/` interceptor mock, time scrubber, hover readout + minimal Units module, first-party
+renderers; URL view state dropped. **Next: the Slice 1 implementation plan, then build.**

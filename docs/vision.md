@@ -52,7 +52,7 @@ build authoring/editing here. The on-map draw/measure tools are for the viewer's
 | **Warnings** | sidebar (current + near-future for AOIs, with green/yellow/red status) + warning polygons as a globe layer + active notifications (polling) |
 | **Tables / reports** | tabular forecasts · decoded obs (METAR/TAF/synoptic) · auto text summaries · custom reports/briefings (later) |
 | **Output** | screenshot-first (users screenshot globe/tables) + "frame AOI" button (auto-animate globe → 2D → zoom to AOI). PDF/print + data export = later |
-| **View links** | layers/time/camera/level encoded in the **URL** — the no-login share/bookmark mechanism (from Slice 1) |
+| **View links** | ~~URL-encoded view state~~ **dropped 2026-06-11** — the URL stays clean; revisit only if sharing becomes a real need (see `decisions.md`) |
 | **AOIs** | predefined per group + user-defined on the fly |
 | **Dashboard / wall mode** | the main view running full-screen on control-room walls, **single map view**; operators reload daily — no special long-run engineering |
 | **Presets / theming** | tokens; modern/clean default + "classic/old-look" toggle (minimum) + per-group + possibly custom; bounded, never at the cost of maintainability; stored in localStorage, one per PC |
