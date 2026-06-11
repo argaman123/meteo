@@ -13,6 +13,7 @@ const FADE_SECONDS = 0.25;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
+const FLOOR_CURVE_MINIMUM_METERS_PER_SECOND = 3;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -111,7 +112,9 @@ export class ParticleSystem {
       const curvedSpeed =
         tuning.speedCurve === 'sqrt'
           ? Math.sqrt(speed * SQRT_CURVE_PIVOT_METERS_PER_SECOND)
-          : speed;
+          : tuning.speedCurve === 'floor'
+            ? Math.max(speed, FLOOR_CURVE_MINIMUM_METERS_PER_SECOND)
+            : speed;
       const stepDegrees = curvedSpeed * spanScale;
       const latitudeCosine = tuning.latitudeCorrection
         ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
