@@ -2,99 +2,104 @@ import type { Layer } from '@deck.gl/core';
 import { LineLayer } from '@deck.gl/layers';
 import { ParticleLayerDefinition } from '../../layers/layer-definition';
 import { Bounds, VectorField } from '../../types/field-grid';
+import { sampleVectorField } from '../../utils/grids';
 
-const DASH_BASE_LENGTH_PIXELS = 5;
-const DASH_LENGTH_PIXELS_PER_METER_PER_SECOND = 0.35;
-const DASH_MAX_LENGTH_PIXELS = 16;
-const TRAVEL_DISTANCE_PIXELS = 16;
-const CRAWL_PIXELS_PER_SECOND_PER_METER_PER_SECOND = 0.6;
-const MAX_CRAWL_PIXELS_PER_SECOND = 16;
-const PHASE_FADE_FRACTION = 0.25;
+const TRAIL_POINTS = 8;
+const TRAIL_SAMPLE_SECONDS = 0.05;
+const MIN_LIFETIME_SECONDS = 0.8;
+const MAX_LIFETIME_SECONDS = 1.6;
+const FADE_SECONDS = 0.25;
+const SCREEN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const MIN_LATITUDE_COSINE = 0.2;
+const VIEW_MARGIN_FRACTION = 0.02;
+const REDISTRIBUTE_SPAN_RATIO = 1.2;
+const REDISTRIBUTE_CENTER_SHIFT_FRACTION = 0.2;
+const REDISTRIBUTE_FRACTION = 0.25;
 
-export class WindDashField {
-  private nodeCount = 0;
-  private nodeLon: Float32Array;
-  private nodeLat: Float32Array;
-  private nodeU: Float32Array;
-  private nodeV: Float32Array;
-  private nodeSpeed: Float32Array;
-  private nodePhaseOffset: Float32Array;
+export class ParticleSystem {
+  private history: Float32Array;
+  private ages: Float32Array;
+  private lifetimes: Float32Array;
   private sources: Float32Array;
   private targets: Float32Array;
   private colors: Uint8Array;
+  private trailAlphas: Float32Array;
+  private spawnBounds: Bounds;
+  private seedBounds: Bounds;
+  private sinceTrailSample = 0;
 
   constructor(
     readonly wind: VectorField,
-    readonly maxDashCount: number,
+    readonly count: number,
+    initialBounds: Bounds,
   ) {
-    const totalNodes = wind.width * wind.height;
-    const stride = Math.max(1, Math.ceil(Math.sqrt(totalNodes / maxDashCount)));
-    const capacity = Math.ceil(wind.width / stride) * Math.ceil(wind.height / stride);
-    this.nodeLon = new Float32Array(capacity);
-    this.nodeLat = new Float32Array(capacity);
-    this.nodeU = new Float32Array(capacity);
-    this.nodeV = new Float32Array(capacity);
-    this.nodeSpeed = new Float32Array(capacity);
-    this.nodePhaseOffset = new Float32Array(capacity);
-    const [west, south, east, north] = wind.bounds;
-    for (let r = 0; r < wind.height; r += stride) {
-      for (let c = 0; c < wind.width; c += stride) {
-        const u = wind.data[(r * wind.width + c) * 2];
-        const v = wind.data[(r * wind.width + c) * 2 + 1];
-        if (Number.isNaN(u) || Number.isNaN(v)) continue;
-        const speed = Math.hypot(u, v);
-        if (speed === 0) continue;
-        const i = this.nodeCount++;
-        this.nodeLon[i] = west + ((east - west) * c) / (wind.width - 1);
-        this.nodeLat[i] = north - ((north - south) * r) / (wind.height - 1);
-        this.nodeU[i] = u;
-        this.nodeV[i] = v;
-        this.nodeSpeed[i] = speed;
-        this.nodePhaseOffset[i] = hash01(this.nodeLon[i], this.nodeLat[i]);
-      }
+    this.history = new Float32Array(TRAIL_POINTS * count * 2);
+    this.ages = new Float32Array(count);
+    this.lifetimes = new Float32Array(count);
+    const segments = count * (TRAIL_POINTS - 1);
+    this.sources = new Float32Array(segments * 2);
+    this.targets = new Float32Array(segments * 2);
+    this.colors = new Uint8Array(segments * 4);
+    this.trailAlphas = new Float32Array(TRAIL_POINTS - 1);
+    for (let t = 0; t < TRAIL_POINTS - 1; t++) {
+      this.trailAlphas[t] = 1 - t / (TRAIL_POINTS - 1);
     }
-    this.sources = new Float32Array(this.nodeCount * 2);
-    this.targets = new Float32Array(this.nodeCount * 2);
-    this.colors = new Uint8Array(this.nodeCount * 4);
-    for (let i = 0; i < this.nodeCount; i++) {
-      this.colors[i * 4] = 255;
-      this.colors[i * 4 + 1] = 255;
-      this.colors[i * 4 + 2] = 255;
+    for (let i = 0; i < segments * 4; i += 4) {
+      this.colors[i] = 255;
+      this.colors[i + 1] = 255;
+      this.colors[i + 2] = 255;
+    }
+    this.spawnBounds = initialBounds;
+    this.seedBounds = initialBounds;
+    for (let i = 0; i < count; i++) this.respawn(i, Math.random());
+  }
+
+  setSpawnBounds(bounds: Bounds): void {
+    this.spawnBounds = bounds;
+    const seedSpan = this.seedBounds[2] - this.seedBounds[0];
+    const span = bounds[2] - bounds[0];
+    const ratio = span / seedSpan;
+    const shiftLimit = Math.max(span, seedSpan) * REDISTRIBUTE_CENTER_SHIFT_FRACTION;
+    const centerShiftLon = Math.abs(
+      (bounds[0] + bounds[2]) / 2 - (this.seedBounds[0] + this.seedBounds[2]) / 2,
+    );
+    const centerShiftLat = Math.abs(
+      (bounds[1] + bounds[3]) / 2 - (this.seedBounds[1] + this.seedBounds[3]) / 2,
+    );
+    if (
+      ratio > REDISTRIBUTE_SPAN_RATIO ||
+      ratio < 1 / REDISTRIBUTE_SPAN_RATIO ||
+      centerShiftLon > shiftLimit ||
+      centerShiftLat > shiftLimit
+    ) {
+      for (let i = 0; i < this.count; i++) {
+        if (Math.random() < REDISTRIBUTE_FRACTION) this.respawn(i, Math.random() * 0.5);
+      }
+      this.seedBounds = bounds;
     }
   }
 
-  update(view: Bounds, viewWidthPixels: number, nowSeconds: number): void {
-    const lonPerPixel = (view[2] - view[0]) / Math.max(1, viewWidthPixels);
-    for (let i = 0; i < this.nodeCount; i++) {
-      const speed = this.nodeSpeed[i];
-      const directionX = this.nodeU[i] / speed;
-      const directionY = this.nodeV[i] / speed;
-      const crawl = Math.min(
-        MAX_CRAWL_PIXELS_PER_SECOND,
-        speed * CRAWL_PIXELS_PER_SECOND_PER_METER_PER_SECOND,
-      );
-      const phase = fract((nowSeconds * crawl) / TRAVEL_DISTANCE_PIXELS + this.nodePhaseOffset[i]);
-      const slidePixels = (phase - 0.5) * TRAVEL_DISTANCE_PIXELS;
-      const lengthPixels = Math.min(
-        DASH_MAX_LENGTH_PIXELS,
-        DASH_BASE_LENGTH_PIXELS + speed * DASH_LENGTH_PIXELS_PER_METER_PER_SECOND,
-      );
-      const halfPixels = lengthPixels / 2;
-      const latitudeCosine = Math.max(
-        MIN_LATITUDE_COSINE,
-        Math.cos((this.nodeLat[i] * Math.PI) / 180),
-      );
-      const lonPerDashPixel = directionX * lonPerPixel;
-      const latPerDashPixel = directionY * lonPerPixel * latitudeCosine;
-      const centerLon = this.nodeLon[i] + lonPerDashPixel * slidePixels;
-      const centerLat = this.nodeLat[i] + latPerDashPixel * slidePixels;
-      this.sources[i * 2] = centerLon - lonPerDashPixel * halfPixels;
-      this.sources[i * 2 + 1] = centerLat - latPerDashPixel * halfPixels;
-      this.targets[i * 2] = centerLon + lonPerDashPixel * halfPixels;
-      this.targets[i * 2 + 1] = centerLat + latPerDashPixel * halfPixels;
-      const fade = Math.min(1, phase / PHASE_FADE_FRACTION, (1 - phase) / PHASE_FADE_FRACTION);
-      this.colors[i * 4 + 3] = Math.round(255 * fade);
+  step(deltaSeconds: number): void {
+    const stride = this.count * 2;
+    this.sinceTrailSample += deltaSeconds;
+    if (this.sinceTrailSample >= TRAIL_SAMPLE_SECONDS) {
+      this.history.copyWithin(stride, 0, stride * (TRAIL_POINTS - 1));
+      this.sinceTrailSample = 0;
+    }
+    const lonSpan = this.spawnBounds[2] - this.spawnBounds[0];
+    const speedScale = SCREEN_FRACTION_PER_SECOND_PER_METER_PER_SECOND * lonSpan * deltaSeconds;
+    for (let i = 0; i < this.count; i++) {
+      const lon = this.history[i * 2];
+      const lat = this.history[i * 2 + 1];
+      const [u, v] = sampleVectorField(this.wind, lon, lat);
+      this.ages[i] += deltaSeconds;
+      if (Number.isNaN(u) || this.ages[i] > this.lifetimes[i] || this.outsideView(lon, lat)) {
+        this.respawn(i, 0);
+        continue;
+      }
+      const latitudeCosine = Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180));
+      this.history[i * 2] = lon + (u * speedScale) / latitudeCosine;
+      this.history[i * 2 + 1] = lat + v * speedScale;
     }
   }
 
@@ -106,8 +111,23 @@ export class WindDashField {
       getColor: { value: Uint8Array; size: number };
     };
   } {
+    let segment = 0;
+    const stride = this.count * 2;
+    for (let i = 0; i < this.count; i++) {
+      const age = this.ages[i];
+      const lifetime = this.lifetimes[i];
+      const fade = Math.max(0, Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS));
+      for (let t = 0; t < TRAIL_POINTS - 1; t++) {
+        this.sources[segment * 2] = this.history[t * stride + i * 2];
+        this.sources[segment * 2 + 1] = this.history[t * stride + i * 2 + 1];
+        this.targets[segment * 2] = this.history[(t + 1) * stride + i * 2];
+        this.targets[segment * 2 + 1] = this.history[(t + 1) * stride + i * 2 + 1];
+        this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * fade);
+        segment++;
+      }
+    }
     return {
-      length: this.nodeCount,
+      length: segment,
       attributes: {
         getSourcePosition: { value: this.sources, size: 2 },
         getTargetPosition: { value: this.targets, size: 2 },
@@ -115,26 +135,48 @@ export class WindDashField {
       },
     };
   }
-}
 
-function fract(value: number): number {
-  return value - Math.floor(value);
-}
+  private outsideView(lon: number, lat: number): boolean {
+    const [west, south, east, north] = this.spawnBounds;
+    const lonMargin = (east - west) * VIEW_MARGIN_FRACTION;
+    const latMargin = (north - south) * VIEW_MARGIN_FRACTION;
+    return (
+      lon < west - lonMargin ||
+      lon > east + lonMargin ||
+      lat < south - latMargin ||
+      lat > north + latMargin
+    );
+  }
 
-function hash01(lon: number, lat: number): number {
-  const quantizedLon = Math.round(lon * 8);
-  const quantizedLat = Math.round(lat * 8);
-  return fract(Math.sin(quantizedLon * 12.9898 + quantizedLat * 78.233) * 43758.5453);
+  private respawn(index: number, ageFraction: number): void {
+    const [west, south, east, north] = this.spawnBounds;
+    let lon = 0;
+    let lat = 0;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      lon = west + Math.random() * (east - west);
+      lat = south + Math.random() * (north - south);
+      const [u] = sampleVectorField(this.wind, lon, lat);
+      if (!Number.isNaN(u)) break;
+    }
+    const lifetime =
+      MIN_LIFETIME_SECONDS + Math.random() * (MAX_LIFETIME_SECONDS - MIN_LIFETIME_SECONDS);
+    this.lifetimes[index] = lifetime;
+    this.ages[index] = ageFraction * lifetime;
+    for (let t = 0; t < TRAIL_POINTS; t++) {
+      this.history[t * this.count * 2 + index * 2] = lon;
+      this.history[t * this.count * 2 + index * 2 + 1] = lat;
+    }
+  }
 }
 
 export function renderParticleLayer(
   definition: ParticleLayerDefinition,
-  field: WindDashField,
+  system: ParticleSystem,
 ): Layer {
   return new LineLayer({
     id: definition.entry.id,
-    data: field.layerData(),
-    getWidth: 1.5,
+    data: system.layerData(),
+    getWidth: 1,
     widthUnits: 'pixels',
     opacity: definition.opacity,
   });
