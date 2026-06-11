@@ -9,9 +9,9 @@ interface StoredQuality {
 
 @Service()
 export class QualitySettings {
-  particleCount = signal(2000);
+  particleCount = signal(3000);
   textureMaxDimension = signal(2048);
-  particleCountOptions = [500, 2000, 5000, 20000];
+  particleCountOptions = [500, 2000, 3000, 5000, 20000];
   textureMaxDimensionOptions = [512, 1024, 2048, 4096];
 
   constructor() {

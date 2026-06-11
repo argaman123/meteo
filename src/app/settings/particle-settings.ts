@@ -6,7 +6,6 @@ export type SpeedReference = 'view' | 'data' | 'fixed';
 export type SpeedCurve = 'linear' | 'floor' | 'sqrt' | 'windy';
 
 export interface ParticleTuning {
-  windyMode: boolean;
   speedReference: SpeedReference;
   latitudeCorrection: boolean;
   speedCurve: SpeedCurve;
@@ -20,7 +19,6 @@ interface StoredTuning extends ParticleTuning {
 
 @Service()
 export class ParticleSettings {
-  windyMode = signal(false);
   speedReference = signal<SpeedReference>('data');
   latitudeCorrection = signal(false);
   speedCurve = signal<SpeedCurve>('floor');
@@ -31,7 +29,6 @@ export class ParticleSettings {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved) as StoredTuning;
-      this.windyMode.set(parsed.windyMode ?? false);
       this.speedReference.set(parsed.speedReference);
       this.latitudeCorrection.set(parsed.latitudeCorrection);
       this.speedCurve.set(parsed.speedCurve);
@@ -46,7 +43,6 @@ export class ParticleSettings {
 
   tuning(): ParticleTuning {
     return {
-      windyMode: this.windyMode(),
       speedReference: this.speedReference(),
       latitudeCorrection: this.latitudeCorrection(),
       speedCurve: this.speedCurve(),
