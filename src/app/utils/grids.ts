@@ -72,17 +72,3 @@ export function toVectorField(speed: FieldGrid, direction: FieldGrid): VectorFie
   }
   return { bounds: speed.bounds, width: speed.width, height: speed.height, data };
 }
-
-export function downsampleGrid(grid: FieldGrid, maxDimension: number): FieldGrid {
-  if (grid.width <= maxDimension && grid.height <= maxDimension) return grid;
-  const step = Math.ceil(Math.max(grid.width, grid.height) / maxDimension);
-  const width = Math.ceil(grid.width / step);
-  const height = Math.ceil(grid.height / step);
-  const data = new Float32Array(width * height);
-  for (let r = 0; r < height; r++) {
-    for (let c = 0; c < width; c++) {
-      data[r * width + c] = grid.data[r * step * grid.width + c * step];
-    }
-  }
-  return { ...grid, width, height, data };
-}
