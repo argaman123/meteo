@@ -2,6 +2,7 @@ import type { Layer } from '@deck.gl/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import { ColorStop, ColormapLayerDefinition } from '../../layers/layer-definition';
 import { FieldGrid } from '../../types/field-grid';
+import { inverseMercatorY, mercatorY } from '../../utils/mercator';
 
 const colorizedImages = new WeakMap<FieldGrid, { textureCap: number; image: ImageData }>();
 
@@ -94,15 +95,6 @@ export function mercatorLatitudes(north: number, south: number, rows: number): n
     latitudes.push(inverseMercatorY(y));
   }
   return latitudes;
-}
-
-function mercatorY(latitudeDegrees: number): number {
-  const radians = (latitudeDegrees * Math.PI) / 180;
-  return Math.log(Math.tan(Math.PI / 4 + radians / 2));
-}
-
-function inverseMercatorY(y: number): number {
-  return ((2 * Math.atan(Math.exp(y)) - Math.PI / 2) * 180) / Math.PI;
 }
 
 export function paletteRgba(

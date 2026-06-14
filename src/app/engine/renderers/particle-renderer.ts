@@ -4,12 +4,14 @@ import { ParticleLayerDefinition } from '../../layers/layer-definition';
 import { ParticleTuning } from '../../settings/particle-settings';
 import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
+import { inverseMercatorY, mercatorY } from '../../utils/mercator';
 
 const TRAIL_POINTS = 14;
 const TRAIL_FADE_POWER = 1.3;
-const PARTICLES_PER_CELL = 2;
-const MAX_PARTICLES = 8000;
-const MIN_TRAIL_CELL_FRACTION = 0.18;
+const MAX_SLOTS_PER_CELL = 3;
+const MAX_PARTICLES = 9000;
+const GAP_CELL_FRACTION = 0.35;
+const MIN_TRAIL_CELL_FRACTION = 0.2;
 const MAX_TRAIL_CELL_FRACTION = 0.85;
 const LENGTH_FADE_BAND_FRACTION = 0.4;
 const FADE_IN_FRACTION = 0.1;
@@ -42,9 +44,12 @@ export class ParticleSystem {
   private sampleDistances: Float32Array;
   private distanceSinceSample: Float32Array;
   private startPoints: Float32Array;
+  private active: Uint8Array;
+  private cellCenterLon: Float32Array;
+  private cellCenterLat: Float32Array;
+  private cellHeightDegrees: Float32Array;
   private cellParity: Uint8Array;
-  private homeU: Float32Array;
-  private homeV: Float32Array;
+  private emitAccumulators: Float32Array;
   private sources: Float32Array;
   private targets: Float32Array;
   private colors: Uint8Array;
@@ -52,7 +57,6 @@ export class ParticleSystem {
   private bounds: Bounds;
   private numCells: number;
   private cellWidthDegrees: number;
-  private cellHeightDegrees: number;
 
   constructor(
     readonly wind: VectorField,
@@ -65,8 +69,7 @@ export class ParticleSystem {
     this.gridRows = Math.max(1, gridRows);
     this.numCells = this.gridCols * this.gridRows;
     this.cellWidthDegrees = (east - west) / this.gridCols;
-    this.cellHeightDegrees = (north - south) / this.gridRows;
-    this.count = Math.min(MAX_PARTICLES, this.numCells * PARTICLES_PER_CELL);
+    this.count = Math.min(MAX_PARTICLES, this.numCells * MAX_SLOTS_PER_CELL);
 
     this.history = new Float32Array(TRAIL_POINTS * this.count * 2);
     this.progress = new Float32Array(this.count);
@@ -75,9 +78,12 @@ export class ParticleSystem {
     this.sampleDistances = new Float32Array(this.count).fill(this.cellWidthDegrees);
     this.distanceSinceSample = new Float32Array(this.count);
     this.startPoints = new Float32Array(this.count * 2);
-    this.cellParity = new Uint8Array(this.count);
-    this.homeU = new Float32Array(this.count);
-    this.homeV = new Float32Array(this.count);
+    this.active = new Uint8Array(this.count);
+    this.cellCenterLon = new Float32Array(this.numCells);
+    this.cellCenterLat = new Float32Array(this.numCells);
+    this.cellHeightDegrees = new Float32Array(this.numCells);
+    this.cellParity = new Uint8Array(this.numCells);
+    this.emitAccumulators = new Float32Array(this.numCells);
     const segments = this.count * (TRAIL_POINTS - 1);
     this.sources = new Float32Array(segments * 2);
     this.targets = new Float32Array(segments * 2);
@@ -86,16 +92,23 @@ export class ParticleSystem {
     for (let t = 0; t < TRAIL_POINTS - 1; t++) {
       this.trailAlphas[t] = (1 - t / (TRAIL_POINTS - 1)) ** TRAIL_FADE_POWER;
     }
-    for (let i = 0; i < this.count; i++) {
-      const cell = i % this.numCells;
-      const slot = Math.floor(i / this.numCells);
-      const col = cell % this.gridCols;
-      const row = Math.floor(cell / this.gridCols);
-      this.homeU[i] = (col + 0.5) / this.gridCols;
-      this.homeV[i] = (row + 0.5) / this.gridRows;
-      this.cellParity[i] = (col + row) % 2;
-      const cellOffset = (cell * GOLDEN_RATIO_FRACTION) % 1;
-      this.emitFromCell(i, (slot / PARTICLES_PER_CELL + cellOffset) % 1);
+
+    const yNorth = mercatorY(north);
+    const ySouth = mercatorY(south);
+    for (let row = 0; row < this.gridRows; row++) {
+      const latTop = inverseMercatorY(yNorth + ((ySouth - yNorth) * row) / this.gridRows);
+      const latBottom = inverseMercatorY(yNorth + ((ySouth - yNorth) * (row + 1)) / this.gridRows);
+      for (let col = 0; col < this.gridCols; col++) {
+        const cell = row * this.gridCols + col;
+        this.cellCenterLon[cell] = west + ((col + 0.5) / this.gridCols) * (east - west);
+        this.cellCenterLat[cell] = (latTop + latBottom) / 2;
+        this.cellHeightDegrees[cell] = latTop - latBottom;
+        this.cellParity[cell] = (col + row) % 2;
+        this.emitAccumulators[cell] = (cell * GOLDEN_RATIO_FRACTION) % 1;
+      }
+    }
+    for (let cell = 0; cell < this.numCells; cell++) {
+      this.emitFromCell(cell, cell, (cell * GOLDEN_RATIO_FRACTION) % 0.6);
     }
   }
 
@@ -108,15 +121,12 @@ export class ParticleSystem {
       tuning.speedFactor *
       deltaSeconds;
     for (let i = 0; i < this.count; i++) {
-      if (this.rawSpeeds[i] <= 0) {
-        this.emitFromCell(i, 0);
-        continue;
-      }
+      if (!this.active[i]) continue;
       const lon = this.history[i * 2];
       const lat = this.history[i * 2 + 1];
       const [u, v] = sampleVectorField(this.wind, lon, lat);
       if (Number.isNaN(u)) {
-        this.emitFromCell(i, 0);
+        this.active[i] = 0;
         continue;
       }
       const speed = Math.hypot(u, v);
@@ -137,8 +147,38 @@ export class ParticleSystem {
         }
         this.distanceSinceSample[i] -= this.sampleDistances[i];
       }
-      if (this.progress[i] >= 1) this.emitFromCell(i, 0);
+      if (this.progress[i] >= 1) this.active[i] = 0;
     }
+    for (let cell = 0; cell < this.numCells; cell++) {
+      const [u, v] = sampleVectorField(this.wind, this.cellCenterLon[cell], this.cellCenterLat[cell]);
+      const speed = Math.hypot(u, v);
+      if (Number.isNaN(u) || speed === 0) continue;
+      const trailFraction =
+        MIN_TRAIL_CELL_FRACTION +
+        (MAX_TRAIL_CELL_FRACTION - MIN_TRAIL_CELL_FRACTION) *
+          Math.min(1, speed / TRAIL_SPEED_PIVOT_METERS_PER_SECOND);
+      const spacing = trailFraction + GAP_CELL_FRACTION;
+      const cross = this.crossFor(u / speed, v / speed, this.cellHeightDegrees[cell]);
+      this.emitAccumulators[cell] += (curveSpeed(speed, tuning.speedCurve) * spanScale) / cross;
+      if (this.emitAccumulators[cell] >= spacing) {
+        for (let s = 0; s < MAX_SLOTS_PER_CELL; s++) {
+          const index = cell + s * this.numCells;
+          if (!this.active[index]) {
+            this.emitFromCell(index, cell, 0);
+            break;
+          }
+        }
+        this.emitAccumulators[cell] -= spacing;
+      }
+    }
+  }
+
+  private crossFor(dirLon: number, dirLat: number, cellHeightDegrees: number): number {
+    const toVerticalEdge =
+      Math.abs(dirLon) > 1e-6 ? this.cellWidthDegrees / 2 / Math.abs(dirLon) : Infinity;
+    const toHorizontalEdge =
+      Math.abs(dirLat) > 1e-6 ? cellHeightDegrees / 2 / Math.abs(dirLat) : Infinity;
+    return 2 * Math.min(toVerticalEdge, toHorizontalEdge);
   }
 
   private referenceSpan(reference: ParticleTuning['speedReference']): number {
@@ -171,8 +211,8 @@ export class ParticleSystem {
       );
       const birthFade = Math.min(1, fraction / FADE_IN_FRACTION);
       const deathFade = Math.min(1, (1 - fraction) / FADE_OUT_FRACTION);
-      const endFade = rawSpeed <= 0 ? 0 : birthFade * deathFade * fastDim;
-      const color = debug && this.cellParity[i] === 1 ? CHESS_COLOR_B : CHESS_COLOR_A;
+      const endFade = this.active[i] ? birthFade * deathFade * fastDim : 0;
+      const color = debug && this.cellParity[i % this.numCells] === 1 ? CHESS_COLOR_B : CHESS_COLOR_A;
       let trailDistance = 0;
       for (let t = 0; t < segmentsPerParticle; t++) {
         const sourceLon = this.history[t * stride + i * 2];
@@ -205,31 +245,25 @@ export class ParticleSystem {
   startMarkers(): [number, number][] {
     const points: [number, number][] = [];
     for (let i = 0; i < this.count; i++) {
-      if (this.rawSpeeds[i] <= 0) continue;
+      if (!this.active[i]) continue;
       points.push([this.startPoints[i * 2], this.startPoints[i * 2 + 1]]);
     }
     return points;
   }
 
-  private emitFromCell(index: number, startProgress: number): void {
-    const [west, south, east, north] = this.bounds;
-    const centerLon = west + this.homeU[index] * (east - west);
-    const centerLat = south + this.homeV[index] * (north - south);
+  private emitFromCell(index: number, cell: number, startProgress: number): void {
+    const centerLon = this.cellCenterLon[cell];
+    const centerLat = this.cellCenterLat[cell];
     const [u, v] = sampleVectorField(this.wind, centerLon, centerLat);
     const speed = Math.hypot(u, v);
     if (Number.isNaN(u) || speed === 0) {
-      this.rawSpeeds[index] = 0;
-      this.progress[index] = startProgress;
+      this.active[index] = 0;
       return;
     }
     const dirLon = u / speed;
     const dirLat = v / speed;
-    const toVerticalEdge =
-      Math.abs(dirLon) > 1e-6 ? this.cellWidthDegrees / 2 / Math.abs(dirLon) : Infinity;
-    const toHorizontalEdge =
-      Math.abs(dirLat) > 1e-6 ? this.cellHeightDegrees / 2 / Math.abs(dirLat) : Infinity;
-    const crossHalf = Math.min(toVerticalEdge, toHorizontalEdge);
-    const cross = 2 * crossHalf;
+    const cross = this.crossFor(dirLon, dirLat, this.cellHeightDegrees[cell]);
+    const crossHalf = cross / 2;
     const startLon = centerLon - dirLon * crossHalf;
     const startLat = centerLat - dirLat * crossHalf;
     const headLon = startLon + dirLon * startProgress * cross;
@@ -237,6 +271,7 @@ export class ParticleSystem {
     this.crossDistances[index] = cross;
     this.rawSpeeds[index] = speed;
     this.progress[index] = startProgress;
+    this.active[index] = 1;
     this.sampleDistances[index] = (MAX_TRAIL_CELL_FRACTION * cross) / (TRAIL_POINTS - 1);
     this.distanceSinceSample[index] = 0;
     this.startPoints[index * 2] = startLon;
@@ -254,13 +289,15 @@ export function particleLineWidth(): number {
 
 export function renderCellGrid(id: string, system: ParticleSystem): Layer {
   const [west, south, east, north] = system.wind.bounds;
+  const yNorth = mercatorY(north);
+  const ySouth = mercatorY(south);
   const lines: { source: [number, number]; target: [number, number] }[] = [];
   for (let k = 0; k <= system.gridCols; k++) {
     const lon = west + ((east - west) * k) / system.gridCols;
     lines.push({ source: [lon, south], target: [lon, north] });
   }
   for (let j = 0; j <= system.gridRows; j++) {
-    const lat = south + ((north - south) * j) / system.gridRows;
+    const lat = inverseMercatorY(yNorth + ((ySouth - yNorth) * j) / system.gridRows);
     lines.push({ source: [west, lat], target: [east, lat] });
   }
   return new LineLayer<(typeof lines)[number]>({
