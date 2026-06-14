@@ -29,6 +29,7 @@ export class MapEngine {
   private lastTickMs = 0;
 
   readonly viewBounds = signal<Bounds | null>(null);
+  readonly settledBounds = signal<Bounds | null>(null);
   readonly zoom = signal<number | null>(null);
   readonly cursor = signal<{ point: [number, number]; lngLat: [number, number] } | null>(null);
 
@@ -56,6 +57,7 @@ export class MapEngine {
     this.map.keyboard.disable();
     this.map.on('style.load', () => this.syncLayers());
     this.map.on('move', () => this.publishView());
+    this.map.on('moveend', () => this.settledBounds.set(this.viewBounds()));
     this.map.on('mousemove', (event) => {
       this.cursor.set({
         point: [event.point.x, event.point.y],
@@ -64,6 +66,7 @@ export class MapEngine {
     });
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
     this.publishView();
+    this.settledBounds.set(this.viewBounds());
   }
 
   async setBasemap(id: BasemapId): Promise<void> {
@@ -102,6 +105,7 @@ export class MapEngine {
     this.map?.remove();
     this.map = null;
     this.viewBounds.set(null);
+    this.settledBounds.set(null);
     this.zoom.set(null);
     this.cursor.set(null);
     maplibregl.removeProtocol('pmtiles');
@@ -147,11 +151,7 @@ export class MapEngine {
     if (existing && existing.wind === definition.wind && existing.count === count) {
       return existing;
     }
-    const system = new ParticleSystem(
-      definition.wind,
-      count,
-      this.viewBounds() ?? definition.wind.bounds,
-    );
+    const system = new ParticleSystem(definition.wind, count);
     this.particleSystems.set(id, system);
     return system;
   }
@@ -159,14 +159,12 @@ export class MapEngine {
   private animate = (nowMs: number): void => {
     const deltaSeconds = Math.min(0.1, (nowMs - this.lastTickMs) / 1000 || 0.016);
     this.lastTickMs = nowMs;
-    const bounds = this.viewBounds();
     const tuning = this.particleSettings.tuning();
     for (const [id, system] of this.particleSystems) {
       if (!this.definitions.has(id)) {
         this.particleSystems.delete(id);
         continue;
       }
-      if (bounds) system.setSpawnBounds(bounds);
       system.step(deltaSeconds, tuning);
     }
     this.syncLayers();

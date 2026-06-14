@@ -35,7 +35,7 @@ export class FieldData {
   private lastCompleteGrids = new Map<string, Record<string, FieldGrid>>();
 
   private model = computed(() => {
-    const view = this.engine.viewBounds();
+    const view = this.engine.settledBounds();
     if (!view) return 'wide';
     const covered = coveredFraction(view, LOCAL_MODEL_COVERAGE);
     return covered >= LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE ? 'local' : 'wide';
@@ -88,13 +88,13 @@ export class FieldData {
 
   constructor() {
     effect(() => {
-      const visible = this.engine.viewBounds();
-      if (!visible) return;
+      const settled = this.engine.settledBounds();
+      if (!settled) return;
       const current = untracked(this.requestBounds);
       const zoomedInPastDetail =
-        current !== null && visible[2] - visible[0] < (current[2] - current[0]) * REFETCH_SHRINK_RATIO;
-      if (!current || !containsBounds(current, visible) || zoomedInPastDetail) {
-        this.requestBounds.set(expandBounds(visible, BBOX_PADDING_FACTOR));
+        current !== null && settled[2] - settled[0] < (current[2] - current[0]) * REFETCH_SHRINK_RATIO;
+      if (!current || !containsBounds(current, settled) || zoomedInPastDetail) {
+        this.requestBounds.set(expandBounds(settled, BBOX_PADDING_FACTOR));
       }
     });
     for (const entry of layerRegistry) {
