@@ -11,6 +11,7 @@ export interface ParticleTuning {
   speedCurve: SpeedCurve;
   speedFactor: number;
   lifetimeScale: number;
+  widthScale: number;
 }
 
 interface StoredTuning extends ParticleTuning {
@@ -24,6 +25,7 @@ export class ParticleSettings {
   speedCurve = signal<SpeedCurve>('floor');
   speedFactor = signal(1);
   lifetimeScale = signal(1);
+  widthScale = signal(1);
 
   constructor() {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -34,6 +36,7 @@ export class ParticleSettings {
       this.speedCurve.set(parsed.speedCurve);
       this.speedFactor.set(parsed.speedFactor);
       this.lifetimeScale.set(parsed.lifetimeScale);
+      this.widthScale.set(parsed.widthScale ?? 1);
     }
     effect(() => {
       const snapshot: StoredTuning = { version: 1, ...this.tuning() };
@@ -48,6 +51,7 @@ export class ParticleSettings {
       speedCurve: this.speedCurve(),
       speedFactor: this.speedFactor(),
       lifetimeScale: this.lifetimeScale(),
+      widthScale: this.widthScale(),
     };
   }
 }

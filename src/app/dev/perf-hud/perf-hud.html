@@ -94,5 +94,17 @@
         (input)="setLifetimeScale($event)"
       />
     </label>
+    <label class="mt-1 block">
+      Width x{{ particles.widthScale() }}
+      <input
+        type="range"
+        class="w-full"
+        min="0.5"
+        max="4"
+        step="0.25"
+        [value]="particles.widthScale()"
+        (input)="setWidthScale($event)"
+      />
+    </label>
   </div>
 }

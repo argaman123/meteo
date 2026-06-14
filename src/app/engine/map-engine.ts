@@ -136,7 +136,8 @@ export class MapEngine {
     if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
-    const widthPixels = particleLineWidth(this.zoom() ?? 4);
+    const widthPixels =
+      particleLineWidth(this.zoom() ?? 4) * this.particleSettings.widthScale();
     return renderParticleLayer(definition, this.particleSystem(definition), widthPixels);
   }
 

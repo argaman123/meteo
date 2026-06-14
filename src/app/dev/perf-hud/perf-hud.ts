@@ -69,4 +69,8 @@ export class PerfHud {
   setLifetimeScale(event: Event): void {
     this.particles.lifetimeScale.set(Number((event.target as HTMLInputElement).value));
   }
+
+  setWidthScale(event: Event): void {
+    this.particles.widthScale.set(Number((event.target as HTMLInputElement).value));
+  }
 }
