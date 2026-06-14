@@ -13,6 +13,7 @@ import {
   particleLineWidth,
   renderCellGrid,
   renderParticleLayer,
+  renderStartMarkers,
 } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
@@ -130,47 +131,52 @@ export class MapEngine {
       this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
       this.map.addControl(this.overlay as unknown as maplibregl.IControl);
     }
+    const debug = this.particleSettings.showGrid();
     const layers: Layer[] = [...this.definitions.values()]
       .sort((a, b) => a.order - b.order)
-      .map((definition) => this.toDeckLayer(definition));
-    if (this.particleSettings.showGrid()) {
+      .map((definition) => this.toDeckLayer(definition, debug));
+    if (debug) {
       for (const definition of this.definitions.values()) {
         if (!('wind' in definition)) continue;
         const system = this.particleSystems.get(definition.entry.id);
-        if (system) layers.push(renderCellGrid(`${definition.entry.id}-grid`, system));
+        if (!system) continue;
+        layers.push(renderCellGrid(`${definition.entry.id}-grid`, system));
+        layers.push(renderStartMarkers(`${definition.entry.id}-starts`, system));
       }
     }
     this.overlay.setProps({ layers });
   }
 
-  private toDeckLayer(definition: LayerDefinition): Layer {
+  private toDeckLayer(definition: LayerDefinition, debug: boolean): Layer {
     if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
     const widthPixels = particleLineWidth() * this.particleSettings.widthScale();
-    return renderParticleLayer(definition, this.particleSystem(definition), widthPixels);
+    return renderParticleLayer(definition, this.particleSystem(definition), widthPixels, debug);
   }
 
   private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
     const id = definition.entry.id;
     const existing = this.particleSystems.get(id);
-    const cellSizeDegrees = this.cellSizeDegrees(definition.wind.bounds);
-    if (
-      existing &&
-      existing.wind === definition.wind &&
-      existing.cellSizeDegrees === cellSizeDegrees
-    ) {
+    const [cols, rows] = this.gridDimensions(definition.wind.bounds);
+    if (existing && existing.wind === definition.wind && existing.gridCols === cols && existing.gridRows === rows) {
       return existing;
     }
-    const system = new ParticleSystem(definition.wind, cellSizeDegrees);
+    const system = new ParticleSystem(definition.wind, cols, rows);
     this.particleSystems.set(id, system);
     return system;
   }
 
-  private cellSizeDegrees(bounds: Bounds): number {
-    const canvasWidthPx = this.map?.getCanvas().clientWidth ?? 1280;
-    const boundsWidthDegrees = bounds[2] - bounds[0];
-    return (this.particleSettings.cellSizePx() * boundsWidthDegrees) / canvasWidthPx;
+  private gridDimensions(bounds: Bounds): [number, number] {
+    const cellPx = this.particleSettings.cellSizePx();
+    if (!this.map) return [Math.round((bounds[2] - bounds[0]) / 3), Math.round((bounds[3] - bounds[1]) / 3)];
+    const west = this.map.project([bounds[0], (bounds[1] + bounds[3]) / 2]).x;
+    const east = this.map.project([bounds[2], (bounds[1] + bounds[3]) / 2]).x;
+    const north = this.map.project([(bounds[0] + bounds[2]) / 2, bounds[3]]).y;
+    const south = this.map.project([(bounds[0] + bounds[2]) / 2, bounds[1]]).y;
+    const cols = Math.max(1, Math.round(Math.abs(east - west) / cellPx));
+    const rows = Math.max(1, Math.round(Math.abs(south - north) / cellPx));
+    return [cols, rows];
   }
 
   private animate = (nowMs: number): void => {

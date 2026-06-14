@@ -1,15 +1,17 @@
 import type { Layer } from '@deck.gl/core';
-import { LineLayer } from '@deck.gl/layers';
+import { LineLayer, ScatterplotLayer } from '@deck.gl/layers';
 import { ParticleLayerDefinition } from '../../layers/layer-definition';
 import { ParticleTuning } from '../../settings/particle-settings';
 import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 
-const TRAIL_POINTS = 12;
+const TRAIL_POINTS = 14;
 const TRAIL_FADE_POWER = 1.3;
-const MAX_PARTICLES = 6000;
+const PARTICLES_PER_CELL = 2;
+const MAX_PARTICLES = 8000;
 const MIN_TRAIL_CELL_FRACTION = 0.18;
 const MAX_TRAIL_CELL_FRACTION = 0.85;
+const LENGTH_FADE_BAND_FRACTION = 0.4;
 const FADE_IN_FRACTION = 0.1;
 const FADE_OUT_FRACTION = 0.28;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
@@ -25,17 +27,22 @@ const BASE_LINE_WIDTH_PIXELS = 1.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 12;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.45;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
+const MIN_LATITUDE_COSINE = 0.2;
+const CHESS_COLOR_A: [number, number, number] = [255, 255, 255];
+const CHESS_COLOR_B: [number, number, number] = [110, 200, 255];
 
 export class ParticleSystem {
   readonly count: number;
-  readonly cellSizeDegrees: number;
   readonly gridCols: number;
   readonly gridRows: number;
-  private starts: Float32Array;
-  private directions: Float32Array;
+  private history: Float32Array;
+  private progress: Float32Array;
   private crossDistances: Float32Array;
   private rawSpeeds: Float32Array;
-  private progress: Float32Array;
+  private sampleDistances: Float32Array;
+  private distanceSinceSample: Float32Array;
+  private startPoints: Float32Array;
+  private cellParity: Uint8Array;
   private homeU: Float32Array;
   private homeV: Float32Array;
   private sources: Float32Array;
@@ -49,25 +56,26 @@ export class ParticleSystem {
 
   constructor(
     readonly wind: VectorField,
-    cellSizeDegrees: number,
+    gridCols: number,
+    gridRows: number,
   ) {
-    this.cellSizeDegrees = cellSizeDegrees;
     this.bounds = wind.bounds;
     const [west, south, east, north] = this.bounds;
-    const widthDegrees = east - west;
-    const heightDegrees = north - south;
-    this.gridCols = Math.max(1, Math.round(widthDegrees / cellSizeDegrees));
-    this.gridRows = Math.max(1, Math.round(heightDegrees / cellSizeDegrees));
+    this.gridCols = Math.max(1, gridCols);
+    this.gridRows = Math.max(1, gridRows);
     this.numCells = this.gridCols * this.gridRows;
-    this.cellWidthDegrees = widthDegrees / this.gridCols;
-    this.cellHeightDegrees = heightDegrees / this.gridRows;
-    this.count = Math.min(MAX_PARTICLES, this.numCells);
+    this.cellWidthDegrees = (east - west) / this.gridCols;
+    this.cellHeightDegrees = (north - south) / this.gridRows;
+    this.count = Math.min(MAX_PARTICLES, this.numCells * PARTICLES_PER_CELL);
 
-    this.starts = new Float32Array(this.count * 2);
-    this.directions = new Float32Array(this.count * 2);
+    this.history = new Float32Array(TRAIL_POINTS * this.count * 2);
+    this.progress = new Float32Array(this.count);
     this.crossDistances = new Float32Array(this.count).fill(this.cellWidthDegrees);
     this.rawSpeeds = new Float32Array(this.count);
-    this.progress = new Float32Array(this.count);
+    this.sampleDistances = new Float32Array(this.count).fill(this.cellWidthDegrees);
+    this.distanceSinceSample = new Float32Array(this.count);
+    this.startPoints = new Float32Array(this.count * 2);
+    this.cellParity = new Uint8Array(this.count);
     this.homeU = new Float32Array(this.count);
     this.homeV = new Float32Array(this.count);
     const segments = this.count * (TRAIL_POINTS - 1);
@@ -78,21 +86,21 @@ export class ParticleSystem {
     for (let t = 0; t < TRAIL_POINTS - 1; t++) {
       this.trailAlphas[t] = (1 - t / (TRAIL_POINTS - 1)) ** TRAIL_FADE_POWER;
     }
-    for (let i = 0; i < segments * 4; i += 4) {
-      this.colors[i] = 255;
-      this.colors[i + 1] = 255;
-      this.colors[i + 2] = 255;
-    }
     for (let i = 0; i < this.count; i++) {
-      const col = i % this.gridCols;
-      const row = Math.floor(i / this.gridCols);
+      const cell = i % this.numCells;
+      const slot = Math.floor(i / this.numCells);
+      const col = cell % this.gridCols;
+      const row = Math.floor(cell / this.gridCols);
       this.homeU[i] = (col + 0.5) / this.gridCols;
       this.homeV[i] = (row + 0.5) / this.gridRows;
-      this.emitFromCell(i, (i * GOLDEN_RATIO_FRACTION) % 1);
+      this.cellParity[i] = (col + row) % 2;
+      const cellOffset = (cell * GOLDEN_RATIO_FRACTION) % 1;
+      this.emitFromCell(i, (slot / PARTICLES_PER_CELL + cellOffset) % 1);
     }
   }
 
   step(deltaSeconds: number, tuning: ParticleTuning): void {
+    const stride = this.count * 2;
     const referenceSpan = this.referenceSpan(tuning.speedReference);
     const spanScale =
       SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND *
@@ -100,10 +108,35 @@ export class ParticleSystem {
       tuning.speedFactor *
       deltaSeconds;
     for (let i = 0; i < this.count; i++) {
-      const rawSpeed = this.rawSpeeds[i];
-      if (rawSpeed <= 0) continue;
-      const stepDegrees = curveSpeed(rawSpeed, tuning.speedCurve) * spanScale;
+      if (this.rawSpeeds[i] <= 0) {
+        this.emitFromCell(i, 0);
+        continue;
+      }
+      const lon = this.history[i * 2];
+      const lat = this.history[i * 2 + 1];
+      const [u, v] = sampleVectorField(this.wind, lon, lat);
+      if (Number.isNaN(u)) {
+        this.emitFromCell(i, 0);
+        continue;
+      }
+      const speed = Math.hypot(u, v);
+      if (speed === 0) continue;
+      this.rawSpeeds[i] = speed;
+      const stepDegrees = curveSpeed(speed, tuning.speedCurve) * spanScale;
+      const latitudeCosine = tuning.latitudeCorrection
+        ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
+        : 1;
+      this.history[i * 2] = lon + ((u / speed) * stepDegrees) / latitudeCosine;
+      this.history[i * 2 + 1] = lat + (v / speed) * stepDegrees;
       this.progress[i] += stepDegrees / this.crossDistances[i];
+      this.distanceSinceSample[i] += stepDegrees;
+      if (this.distanceSinceSample[i] >= this.sampleDistances[i]) {
+        for (let t = TRAIL_POINTS - 1; t > 0; t--) {
+          this.history[t * stride + i * 2] = this.history[(t - 1) * stride + i * 2];
+          this.history[t * stride + i * 2 + 1] = this.history[(t - 1) * stride + i * 2 + 1];
+        }
+        this.distanceSinceSample[i] -= this.sampleDistances[i];
+      }
       if (this.progress[i] >= 1) this.emitFromCell(i, 0);
     }
   }
@@ -113,7 +146,7 @@ export class ParticleSystem {
     return this.bounds[2] - this.bounds[0];
   }
 
-  layerData(): {
+  layerData(debug: boolean): {
     length: number;
     attributes: {
       getSourcePosition: { value: Float32Array; size: number };
@@ -122,22 +155,16 @@ export class ParticleSystem {
     };
   } {
     let segment = 0;
+    const stride = this.count * 2;
     const segmentsPerParticle = TRAIL_POINTS - 1;
     for (let i = 0; i < this.count; i++) {
       const rawSpeed = this.rawSpeeds[i];
       const fraction = this.progress[i];
-      const startLon = this.starts[i * 2];
-      const startLat = this.starts[i * 2 + 1];
-      const dirLon = this.directions[i * 2];
-      const dirLat = this.directions[i * 2 + 1];
-      const crossDistance = this.crossDistances[i];
-      const headDistance = fraction * crossDistance;
-      const headLon = startLon + dirLon * headDistance;
-      const headLat = startLat + dirLat * headDistance;
       const speedNorm = Math.min(1, rawSpeed / TRAIL_SPEED_PIVOT_METERS_PER_SECOND);
       const trailFraction =
         MIN_TRAIL_CELL_FRACTION + (MAX_TRAIL_CELL_FRACTION - MIN_TRAIL_CELL_FRACTION) * speedNorm;
-      const visibleLength = Math.min(trailFraction * crossDistance, headDistance);
+      const visibleLength = trailFraction * this.crossDistances[i];
+      const lengthFadeBand = visibleLength * LENGTH_FADE_BAND_FRACTION;
       const fastDim = Math.max(
         FAST_DIMMING_MINIMUM_ALPHA,
         Math.min(1, FAST_DIMMING_PIVOT_METERS_PER_SECOND / Math.max(0.001, rawSpeed)),
@@ -145,14 +172,23 @@ export class ParticleSystem {
       const birthFade = Math.min(1, fraction / FADE_IN_FRACTION);
       const deathFade = Math.min(1, (1 - fraction) / FADE_OUT_FRACTION);
       const endFade = rawSpeed <= 0 ? 0 : birthFade * deathFade * fastDim;
+      const color = debug && this.cellParity[i] === 1 ? CHESS_COLOR_B : CHESS_COLOR_A;
+      let trailDistance = 0;
       for (let t = 0; t < segmentsPerParticle; t++) {
-        const d0 = (t / (TRAIL_POINTS - 1)) * visibleLength;
-        const d1 = ((t + 1) / (TRAIL_POINTS - 1)) * visibleLength;
-        this.sources[segment * 2] = headLon - dirLon * d0;
-        this.sources[segment * 2 + 1] = headLat - dirLat * d0;
-        this.targets[segment * 2] = headLon - dirLon * d1;
-        this.targets[segment * 2 + 1] = headLat - dirLat * d1;
-        this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * endFade);
+        const sourceLon = this.history[t * stride + i * 2];
+        const sourceLat = this.history[t * stride + i * 2 + 1];
+        const targetLon = this.history[(t + 1) * stride + i * 2];
+        const targetLat = this.history[(t + 1) * stride + i * 2 + 1];
+        this.sources[segment * 2] = sourceLon;
+        this.sources[segment * 2 + 1] = sourceLat;
+        this.targets[segment * 2] = targetLon;
+        this.targets[segment * 2 + 1] = targetLat;
+        trailDistance += Math.hypot(targetLon - sourceLon, targetLat - sourceLat);
+        const lengthMask = Math.max(0, Math.min(1, (visibleLength - trailDistance) / lengthFadeBand));
+        this.colors[segment * 4] = color[0];
+        this.colors[segment * 4 + 1] = color[1];
+        this.colors[segment * 4 + 2] = color[2];
+        this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * endFade * lengthMask);
         segment++;
       }
     }
@@ -164,6 +200,15 @@ export class ParticleSystem {
         getColor: { value: this.colors, size: 4 },
       },
     };
+  }
+
+  startMarkers(): [number, number][] {
+    const points: [number, number][] = [];
+    for (let i = 0; i < this.count; i++) {
+      if (this.rawSpeeds[i] <= 0) continue;
+      points.push([this.startPoints[i * 2], this.startPoints[i * 2 + 1]]);
+    }
+    return points;
   }
 
   private emitFromCell(index: number, startProgress: number): void {
@@ -184,13 +229,22 @@ export class ParticleSystem {
     const toHorizontalEdge =
       Math.abs(dirLat) > 1e-6 ? this.cellHeightDegrees / 2 / Math.abs(dirLat) : Infinity;
     const crossHalf = Math.min(toVerticalEdge, toHorizontalEdge);
-    this.crossDistances[index] = 2 * crossHalf;
-    this.directions[index * 2] = dirLon;
-    this.directions[index * 2 + 1] = dirLat;
-    this.starts[index * 2] = centerLon - dirLon * crossHalf;
-    this.starts[index * 2 + 1] = centerLat - dirLat * crossHalf;
+    const cross = 2 * crossHalf;
+    const startLon = centerLon - dirLon * crossHalf;
+    const startLat = centerLat - dirLat * crossHalf;
+    const headLon = startLon + dirLon * startProgress * cross;
+    const headLat = startLat + dirLat * startProgress * cross;
+    this.crossDistances[index] = cross;
     this.rawSpeeds[index] = speed;
     this.progress[index] = startProgress;
+    this.sampleDistances[index] = (MAX_TRAIL_CELL_FRACTION * cross) / (TRAIL_POINTS - 1);
+    this.distanceSinceSample[index] = 0;
+    this.startPoints[index * 2] = startLon;
+    this.startPoints[index * 2 + 1] = startLat;
+    for (let t = 0; t < TRAIL_POINTS; t++) {
+      this.history[t * this.count * 2 + index * 2] = headLon;
+      this.history[t * this.count * 2 + index * 2 + 1] = headLat;
+    }
   }
 }
 
@@ -214,9 +268,20 @@ export function renderCellGrid(id: string, system: ParticleSystem): Layer {
     data: lines,
     getSourcePosition: (line) => line.source,
     getTargetPosition: (line) => line.target,
-    getColor: [255, 210, 0, 110],
+    getColor: [255, 210, 0, 90],
     getWidth: 1,
     widthUnits: 'pixels',
+  });
+}
+
+export function renderStartMarkers(id: string, system: ParticleSystem): Layer {
+  return new ScatterplotLayer<[number, number]>({
+    id,
+    data: system.startMarkers(),
+    getPosition: (point) => point,
+    getFillColor: [255, 90, 90, 220],
+    getRadius: 3,
+    radiusUnits: 'pixels',
   });
 }
 
@@ -244,10 +309,11 @@ export function renderParticleLayer(
   definition: ParticleLayerDefinition,
   system: ParticleSystem,
   widthPixels: number,
+  debug: boolean,
 ): Layer {
   return new LineLayer({
     id: definition.entry.id,
-    data: system.layerData(),
+    data: system.layerData(debug),
     getWidth: widthPixels,
     widthUnits: 'pixels',
     opacity: definition.opacity,
