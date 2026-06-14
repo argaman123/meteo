@@ -12,7 +12,7 @@ import { mapGridValues, parseFieldGrid, toVectorField } from '../utils/grids';
 
 const LOCAL_MODEL_COVERAGE: Bounds = [0, 24, 50, 52];
 const LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE = 0.8;
-const BBOX_PADDING_FACTOR = 0.25;
+const BBOX_PADDING_FACTOR = 0.15;
 const REFETCH_SHRINK_RATIO = 0.5;
 
 export interface LoadedLayer {

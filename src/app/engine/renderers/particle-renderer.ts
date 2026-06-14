@@ -26,6 +26,7 @@ const FAST_DIMMING_MINIMUM_ALPHA = 0.4;
 const SLOW_SPAWN_BIAS_METERS_PER_SECOND = 8;
 const SPAWN_JITTER_FRACTION = 0.45;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
+const DEATH_RECESSION_BAND = 0.5;
 const MIN_LATITUDE_COSINE = 0.2;
 const COVERAGE_MARGIN_FRACTION = 0.02;
 
@@ -148,15 +149,23 @@ export class ParticleSystem {
     for (let i = 0; i < this.count; i++) {
       const age = this.ages[i];
       const lifetime = this.lifetimes[i];
-      const fade =
-        Math.max(0, Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS)) *
-        this.speedAlphas[i];
+      const birthFade = Math.min(1, age / FADE_SECONDS) * this.speedAlphas[i];
+      const deathWindow = Math.max(0, (age - (lifetime - FADE_SECONDS)) / FADE_SECONDS);
+      const recessionFront =
+        1 + DEATH_RECESSION_BAND / 2 - deathWindow * (1 + DEATH_RECESSION_BAND);
       for (let t = 0; t < segmentsPerParticle; t++) {
         this.sources[segment * 2] = this.history[t * stride + i * 2];
         this.sources[segment * 2 + 1] = this.history[t * stride + i * 2 + 1];
         this.targets[segment * 2] = this.history[(t + 1) * stride + i * 2];
         this.targets[segment * 2 + 1] = this.history[(t + 1) * stride + i * 2 + 1];
-        this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * fade);
+        const trailPosition = t / (segmentsPerParticle - 1);
+        const deathErase = Math.max(
+          0,
+          Math.min(1, (recessionFront - trailPosition) / DEATH_RECESSION_BAND + 0.5),
+        );
+        this.colors[segment * 4 + 3] = Math.round(
+          255 * this.trailAlphas[t] * birthFade * deathErase,
+        );
         segment++;
       }
     }
