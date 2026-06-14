@@ -5,12 +5,13 @@ import { ParticleTuning } from '../../settings/particle-settings';
 import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 
-const TRAIL_POINTS = 14;
-const TRAIL_SAMPLE_SECONDS = 0.08;
-const EVEN_LIFETIME_SECONDS = 2;
+const TRAIL_POINTS = 12;
+const TRAIL_SAMPLE_SECONDS = 0.045;
+const TRAIL_FADE_POWER = 1.6;
+const EVEN_LIFETIME_SECONDS = 1;
 const RANDOM_MIN_LIFETIME_SECONDS = 1.6;
 const RANDOM_MAX_LIFETIME_SECONDS = 3.2;
-const FADE_SECONDS = 0.4;
+const FADE_SECONDS = 0.3;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
@@ -19,9 +20,7 @@ const FLOOR_CURVE_MAXIMUM_METERS_PER_SECOND = 25;
 const WINDY_CURVE_POWER = 0.7;
 const WINDY_CURVE_MINIMUM_METERS_PER_SECOND = 1.5;
 const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
-const LINE_WIDTH_PER_ZOOM = 0.3;
-const MIN_LINE_WIDTH_PIXELS = 1.4;
-const MAX_LINE_WIDTH_PIXELS = 3.5;
+const BASE_LINE_WIDTH_PIXELS = 1.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 10;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.4;
 const SLOW_SPAWN_BIAS_METERS_PER_SECOND = 8;
@@ -29,8 +28,8 @@ const SPAWN_JITTER_FRACTION = 0.45;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
-const REDISTRIBUTE_SPAN_RATIO = 1.2;
-const REDISTRIBUTE_CENTER_SHIFT_FRACTION = 0.2;
+const REDISTRIBUTE_SPAN_RATIO = 1.08;
+const REDISTRIBUTE_CENTER_SHIFT_FRACTION = 0.06;
 const REDISTRIBUTE_FRACTION = 0.25;
 
 export class ParticleSystem {
@@ -69,7 +68,7 @@ export class ParticleSystem {
     this.colors = new Uint8Array(segments * 4);
     this.trailAlphas = new Float32Array(TRAIL_POINTS - 1);
     for (let t = 0; t < TRAIL_POINTS - 1; t++) {
-      this.trailAlphas[t] = 1 - t / (TRAIL_POINTS - 1);
+      this.trailAlphas[t] = (1 - t / (TRAIL_POINTS - 1)) ** TRAIL_FADE_POWER;
     }
     for (let i = 0; i < segments * 4; i += 4) {
       this.colors[i] = 255;
@@ -178,18 +177,20 @@ export class ParticleSystem {
   } {
     let segment = 0;
     const stride = this.count * 2;
+    const segmentsPerParticle = TRAIL_POINTS - 1;
     for (let i = 0; i < this.count; i++) {
       const age = this.ages[i];
       const lifetime = this.lifetimes[i];
-      const fade =
-        Math.max(0, Math.min(1, age / FADE_SECONDS, (lifetime - age) / FADE_SECONDS)) *
-        this.speedAlphas[i];
-      for (let t = 0; t < TRAIL_POINTS - 1; t++) {
+      const birthFade = Math.max(0, Math.min(1, age / FADE_SECONDS)) * this.speedAlphas[i];
+      const deathProgress = Math.max(0, Math.min(1, (lifetime - age) / FADE_SECONDS));
+      const survivingSegments = deathProgress * segmentsPerParticle;
+      for (let t = 0; t < segmentsPerParticle; t++) {
         this.sources[segment * 2] = this.history[t * stride + i * 2];
         this.sources[segment * 2 + 1] = this.history[t * stride + i * 2 + 1];
         this.targets[segment * 2] = this.history[(t + 1) * stride + i * 2];
         this.targets[segment * 2 + 1] = this.history[(t + 1) * stride + i * 2 + 1];
-        this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * fade);
+        const tailErase = Math.max(0, Math.min(1, survivingSegments - t));
+        this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * birthFade * tailErase);
         segment++;
       }
     }
@@ -275,11 +276,8 @@ export class ParticleSystem {
   }
 }
 
-export function particleLineWidth(zoom: number): number {
-  return Math.min(
-    MAX_LINE_WIDTH_PIXELS,
-    Math.max(MIN_LINE_WIDTH_PIXELS, zoom * LINE_WIDTH_PER_ZOOM),
-  );
+export function particleLineWidth(): number {
+  return BASE_LINE_WIDTH_PIXELS;
 }
 
 function curveSpeed(speed: number, curve: ParticleTuning['speedCurve']): number {
