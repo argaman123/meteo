@@ -11,11 +11,12 @@ const TRAIL_FADE_POWER = 1.3;
 const MAX_SLOTS_PER_CELL = 3;
 const MAX_PARTICLES = 9000;
 const GAP_CELL_FRACTION = 0.35;
-const MIN_TRAIL_CELL_FRACTION = 0.2;
+const MIN_TRAIL_CELL_FRACTION = 0.08;
 const MAX_TRAIL_CELL_FRACTION = 0.85;
 const LENGTH_FADE_BAND_FRACTION = 0.4;
-const FADE_IN_FRACTION = 0.1;
-const FADE_OUT_FRACTION = 0.28;
+const FADE_IN_FRACTION = 0.15;
+const FADE_OUT_FRACTION = 0.35;
+const ACROSS_LIMIT_CELL_FRACTION = 0.5;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
@@ -24,7 +25,7 @@ const FLOOR_CURVE_MAXIMUM_METERS_PER_SECOND = 25;
 const WINDY_CURVE_POWER = 0.7;
 const WINDY_CURVE_MINIMUM_METERS_PER_SECOND = 1.5;
 const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
-const TRAIL_SPEED_PIVOT_METERS_PER_SECOND = 14;
+const TRAIL_SPEED_PIVOT_METERS_PER_SECOND = 18;
 const BASE_LINE_WIDTH_PIXELS = 1.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 12;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.45;
@@ -45,6 +46,7 @@ export class ParticleSystem {
   private distanceSinceSample: Float32Array;
   private startPoints: Float32Array;
   private emitDirections: Float32Array;
+  private acrossOffsets: Float32Array;
   private active: Uint8Array;
   private cellCenterLon: Float32Array;
   private cellCenterLat: Float32Array;
@@ -80,6 +82,7 @@ export class ParticleSystem {
     this.distanceSinceSample = new Float32Array(this.count);
     this.startPoints = new Float32Array(this.count * 2);
     this.emitDirections = new Float32Array(this.count * 2);
+    this.acrossOffsets = new Float32Array(this.count);
     this.active = new Uint8Array(this.count);
     this.cellCenterLon = new Float32Array(this.numCells);
     this.cellCenterLat = new Float32Array(this.numCells);
@@ -150,6 +153,7 @@ export class ParticleSystem {
         -offsetLon * this.emitDirections[i * 2 + 1] + offsetLat * this.emitDirections[i * 2],
       );
       this.progress[i] = alongCrossing / this.crossDistances[i];
+      this.acrossOffsets[i] = acrossCrossing;
       this.distanceSinceSample[i] += stepDegrees;
       if (this.distanceSinceSample[i] >= this.sampleDistances[i]) {
         for (let t = TRAIL_POINTS - 1; t > 0; t--) {
@@ -159,8 +163,9 @@ export class ParticleSystem {
         this.distanceSinceSample[i] -= this.sampleDistances[i];
       }
       const cell = i % this.numCells;
-      const maxAcross = 0.55 * Math.min(this.cellWidthDegrees, this.cellHeightDegrees[cell]);
-      if (this.progress[i] >= 1 || this.progress[i] < -0.1 || acrossCrossing > maxAcross) {
+      const maxAcross =
+        ACROSS_LIMIT_CELL_FRACTION * Math.min(this.cellWidthDegrees, this.cellHeightDegrees[cell]);
+      if (this.progress[i] >= 1 || this.progress[i] < -0.1 || acrossCrossing >= maxAcross) {
         this.active[i] = 0;
       }
     }
@@ -224,9 +229,16 @@ export class ParticleSystem {
         FAST_DIMMING_MINIMUM_ALPHA,
         Math.min(1, FAST_DIMMING_PIVOT_METERS_PER_SECOND / Math.max(0.001, rawSpeed)),
       );
+      const cell = i % this.numCells;
+      const maxAcross =
+        ACROSS_LIMIT_CELL_FRACTION * Math.min(this.cellWidthDegrees, this.cellHeightDegrees[cell]);
+      const acrossRemaining = (maxAcross - this.acrossOffsets[i]) / maxAcross;
       const birthFade = Math.min(1, fraction / FADE_IN_FRACTION);
-      const deathFade = Math.min(1, (1 - fraction) / FADE_OUT_FRACTION);
-      const endFade = this.active[i] ? birthFade * deathFade * fastDim : 0;
+      const deathFade = Math.min(
+        Math.max(0, (1 - fraction) / FADE_OUT_FRACTION),
+        Math.max(0, acrossRemaining / FADE_OUT_FRACTION),
+      );
+      const endFade = this.active[i] ? Math.min(1, birthFade) * Math.min(1, deathFade) * fastDim : 0;
       const color = debug && this.cellParity[i % this.numCells] === 1 ? CHESS_COLOR_B : CHESS_COLOR_A;
       let trailDistance = 0;
       for (let t = 0; t < segmentsPerParticle; t++) {
