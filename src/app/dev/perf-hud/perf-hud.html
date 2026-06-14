@@ -34,6 +34,14 @@
       </select>
     </label>
     <div class="mt-2 border-t border-panel-border pt-2 font-bold">Particle tuning</div>
+    <label class="mt-1 flex items-center gap-1">
+      <input
+        type="checkbox"
+        [checked]="particles.spawnMode() === 'even'"
+        (change)="toggleSpawnMode()"
+      />
+      Even grid spawn
+    </label>
     <label class="mt-1 block">
       Speed ref
       <select

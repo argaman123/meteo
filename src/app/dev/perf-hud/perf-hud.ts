@@ -73,4 +73,8 @@ export class PerfHud {
   setWidthScale(event: Event): void {
     this.particles.widthScale.set(Number((event.target as HTMLInputElement).value));
   }
+
+  toggleSpawnMode(): void {
+    this.particles.spawnMode.update((mode) => (mode === 'even' ? 'random' : 'even'));
+  }
 }

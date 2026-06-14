@@ -7,8 +7,9 @@ import { sampleVectorField } from '../../utils/grids';
 
 const TRAIL_POINTS = 14;
 const TRAIL_SAMPLE_SECONDS = 0.08;
-const MIN_LIFETIME_SECONDS = 1.6;
-const MAX_LIFETIME_SECONDS = 3.2;
+const EVEN_LIFETIME_SECONDS = 2;
+const RANDOM_MIN_LIFETIME_SECONDS = 1.6;
+const RANDOM_MAX_LIFETIME_SECONDS = 3.2;
 const FADE_SECONDS = 0.4;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
@@ -24,6 +25,8 @@ const MAX_LINE_WIDTH_PIXELS = 3.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 10;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.4;
 const SLOW_SPAWN_BIAS_METERS_PER_SECOND = 8;
+const SPAWN_JITTER_FRACTION = 0.45;
+const GOLDEN_RATIO_FRACTION = 0.618033988749895;
 const MIN_LATITUDE_COSINE = 0.2;
 const VIEW_MARGIN_FRACTION = 0.02;
 const REDISTRIBUTE_SPAN_RATIO = 1.2;
@@ -35,12 +38,17 @@ export class ParticleSystem {
   private ages: Float32Array;
   private lifetimes: Float32Array;
   private speedAlphas: Float32Array;
+  private homeU: Float32Array;
+  private homeV: Float32Array;
   private sources: Float32Array;
   private targets: Float32Array;
   private colors: Uint8Array;
   private trailAlphas: Float32Array;
   private spawnBounds: Bounds;
   private seedBounds: Bounds;
+  private gridCols: number;
+  private gridRows: number;
+  private spawnMode: ParticleTuning['spawnMode'] = 'even';
   private sinceTrailSample = 0;
   private lifetimeScale = 1;
 
@@ -53,6 +61,8 @@ export class ParticleSystem {
     this.ages = new Float32Array(count);
     this.lifetimes = new Float32Array(count);
     this.speedAlphas = new Float32Array(count).fill(1);
+    this.homeU = new Float32Array(count);
+    this.homeV = new Float32Array(count);
     const segments = count * (TRAIL_POINTS - 1);
     this.sources = new Float32Array(segments * 2);
     this.targets = new Float32Array(segments * 2);
@@ -66,9 +76,19 @@ export class ParticleSystem {
       this.colors[i + 1] = 255;
       this.colors[i + 2] = 255;
     }
+    const [west, south, east, north] = initialBounds;
+    const aspect = (east - west) / Math.max(1e-6, north - south);
+    this.gridCols = Math.max(1, Math.round(Math.sqrt(count * aspect)));
+    this.gridRows = Math.max(1, Math.ceil(count / this.gridCols));
+    for (let i = 0; i < count; i++) {
+      const col = i % this.gridCols;
+      const row = Math.floor(i / this.gridCols);
+      this.homeU[i] = (col + 0.5) / this.gridCols;
+      this.homeV[i] = (row + 0.5) / this.gridRows;
+    }
     this.spawnBounds = initialBounds;
     this.seedBounds = initialBounds;
-    for (let i = 0; i < count; i++) this.respawn(i, Math.random());
+    this.seedEven();
   }
 
   setSpawnBounds(bounds: Bounds): void {
@@ -83,21 +103,28 @@ export class ParticleSystem {
     const centerShiftLat = Math.abs(
       (bounds[1] + bounds[3]) / 2 - (this.seedBounds[1] + this.seedBounds[3]) / 2,
     );
-    if (
+    const bigChange =
       ratio > REDISTRIBUTE_SPAN_RATIO ||
       ratio < 1 / REDISTRIBUTE_SPAN_RATIO ||
       centerShiftLon > shiftLimit ||
-      centerShiftLat > shiftLimit
-    ) {
+      centerShiftLat > shiftLimit;
+    if (!bigChange) return;
+    if (this.spawnMode === 'even') {
+      this.seedEven();
+    } else {
       for (let i = 0; i < this.count; i++) {
-        if (Math.random() < REDISTRIBUTE_FRACTION) this.respawn(i, Math.random() * 0.5);
+        if (Math.random() < REDISTRIBUTE_FRACTION) this.respawnRandom(i, Math.random() * 0.5);
       }
-      this.seedBounds = bounds;
     }
+    this.seedBounds = bounds;
   }
 
   step(deltaSeconds: number, tuning: ParticleTuning): void {
     this.lifetimeScale = tuning.lifetimeScale;
+    if (tuning.spawnMode !== this.spawnMode) {
+      this.spawnMode = tuning.spawnMode;
+      if (this.spawnMode === 'even') this.seedEven();
+    }
     const stride = this.count * 2;
     this.sinceTrailSample += deltaSeconds;
     if (this.sinceTrailSample >= TRAIL_SAMPLE_SECONDS) {
@@ -188,7 +215,29 @@ export class ParticleSystem {
     );
   }
 
+  private seedEven(): void {
+    for (let i = 0; i < this.count; i++) {
+      this.placeAtHome(i, (i * GOLDEN_RATIO_FRACTION) % 1);
+    }
+  }
+
   private respawn(index: number, ageFraction: number): void {
+    if (this.spawnMode === 'even') this.placeAtHome(index, ageFraction);
+    else this.respawnRandom(index, ageFraction);
+  }
+
+  private placeAtHome(index: number, ageFraction: number): void {
+    const [west, south, east, north] = this.spawnBounds;
+    const cellWidth = (east - west) / this.gridCols;
+    const cellHeight = (north - south) / this.gridRows;
+    const lon =
+      west + this.homeU[index] * (east - west) + (Math.random() - 0.5) * SPAWN_JITTER_FRACTION * cellWidth;
+    const lat =
+      south + this.homeV[index] * (north - south) + (Math.random() - 0.5) * SPAWN_JITTER_FRACTION * cellHeight;
+    this.placeParticle(index, lon, lat, EVEN_LIFETIME_SECONDS * this.lifetimeScale, ageFraction);
+  }
+
+  private respawnRandom(index: number, ageFraction: number): void {
     const [west, south, east, north] = this.spawnBounds;
     let lon = west + Math.random() * (east - west);
     let lat = south + Math.random() * (north - south);
@@ -205,8 +254,18 @@ export class ParticleSystem {
       if (Math.random() < acceptProbability) break;
     }
     const lifetime =
-      (MIN_LIFETIME_SECONDS + Math.random() * (MAX_LIFETIME_SECONDS - MIN_LIFETIME_SECONDS)) *
-      this.lifetimeScale;
+      RANDOM_MIN_LIFETIME_SECONDS +
+      Math.random() * (RANDOM_MAX_LIFETIME_SECONDS - RANDOM_MIN_LIFETIME_SECONDS);
+    this.placeParticle(index, lon, lat, lifetime * this.lifetimeScale, ageFraction);
+  }
+
+  private placeParticle(
+    index: number,
+    lon: number,
+    lat: number,
+    lifetime: number,
+    ageFraction: number,
+  ): void {
     this.lifetimes[index] = lifetime;
     this.ages[index] = ageFraction * lifetime;
     for (let t = 0; t < TRAIL_POINTS; t++) {
