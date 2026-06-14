@@ -21,6 +21,7 @@ interface StoredTuning extends ParticleTuning {
 @Service()
 export class ParticleSettings {
   cellSizePx = signal(70);
+  showGrid = signal(false);
   speedReference = signal<SpeedReference>('data');
   latitudeCorrection = signal(false);
   speedCurve = signal<SpeedCurve>('floor');

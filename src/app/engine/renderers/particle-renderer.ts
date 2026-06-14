@@ -30,6 +30,8 @@ const MIN_LATITUDE_COSINE = 0.2;
 export class ParticleSystem {
   readonly count: number;
   readonly cellSizeDegrees: number;
+  readonly gridCols: number;
+  readonly gridRows: number;
   private history: Float32Array;
   private progress: Float32Array;
   private speedAlphas: Float32Array;
@@ -41,8 +43,6 @@ export class ParticleSystem {
   private trailAlphas: Float32Array;
   private bounds: Bounds;
   private numCells: number;
-  private gridCols: number;
-  private gridRows: number;
   private cellTravelDegrees: number;
   private sinceTrailSample = 0;
 
@@ -216,6 +216,28 @@ export class ParticleSystem {
 
 export function particleLineWidth(): number {
   return BASE_LINE_WIDTH_PIXELS;
+}
+
+export function renderCellGrid(id: string, system: ParticleSystem): Layer {
+  const [west, south, east, north] = system.wind.bounds;
+  const lines: { source: [number, number]; target: [number, number]; anchor: boolean }[] = [];
+  for (let k = 0; k <= system.gridCols; k++) {
+    const lon = west + ((east - west) * k) / system.gridCols;
+    lines.push({ source: [lon, south], target: [lon, north], anchor: false });
+  }
+  for (let j = 0; j <= system.gridRows; j++) {
+    const lat = south + ((north - south) * j) / system.gridRows;
+    lines.push({ source: [west, lat], target: [east, lat], anchor: false });
+  }
+  return new LineLayer<(typeof lines)[number]>({
+    id,
+    data: lines,
+    getSourcePosition: (line) => line.source,
+    getTargetPosition: (line) => line.target,
+    getColor: [255, 210, 0, 110],
+    getWidth: 1,
+    widthUnits: 'pixels',
+  });
 }
 
 function curveSpeed(speed: number, curve: ParticleTuning['speedCurve']): number {

@@ -11,6 +11,7 @@ import { renderColormapLayer } from './renderers/colormap-renderer';
 import {
   ParticleSystem,
   particleLineWidth,
+  renderCellGrid,
   renderParticleLayer,
 } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
@@ -129,11 +130,17 @@ export class MapEngine {
       this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
       this.map.addControl(this.overlay as unknown as maplibregl.IControl);
     }
-    this.overlay.setProps({
-      layers: [...this.definitions.values()]
-        .sort((a, b) => a.order - b.order)
-        .map((definition) => this.toDeckLayer(definition)),
-    });
+    const layers: Layer[] = [...this.definitions.values()]
+      .sort((a, b) => a.order - b.order)
+      .map((definition) => this.toDeckLayer(definition));
+    if (this.particleSettings.showGrid()) {
+      for (const definition of this.definitions.values()) {
+        if (!('wind' in definition)) continue;
+        const system = this.particleSystems.get(definition.entry.id);
+        if (system) layers.push(renderCellGrid(`${definition.entry.id}-grid`, system));
+      }
+    }
+    this.overlay.setProps({ layers });
   }
 
   private toDeckLayer(definition: LayerDefinition): Layer {

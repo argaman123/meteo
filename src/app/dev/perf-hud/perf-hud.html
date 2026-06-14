@@ -17,6 +17,14 @@
         (input)="setCellSize($event)"
       />
     </label>
+    <label class="mt-1 flex items-center gap-1">
+      <input
+        type="checkbox"
+        [checked]="particles.showGrid()"
+        (change)="particles.showGrid.set(!particles.showGrid())"
+      />
+      Show grid
+    </label>
     <label class="mt-1 block">
       Texture cap
       <select
