@@ -5,12 +5,13 @@ import { ParticleTuning } from '../../settings/particle-settings';
 import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 
-const TRAIL_POINTS = 13;
-const TRAIL_SAMPLE_SECONDS = 0.05;
-const TRAIL_FADE_POWER = 1.6;
-const PARTICLES_PER_CELL = 4;
+const TRAIL_POINTS = 16;
+const TRAIL_SAMPLE_SECONDS = 0.04;
+const TRAIL_FADE_POWER = 1.4;
+const PARTICLES_PER_CELL = 2;
 const MAX_PARTICLES = 6000;
-const FADE_PROGRESS_FRACTION = 0.18;
+const FADE_PROGRESS_FRACTION = 0.12;
+const MAX_TRAIL_CELL_FRACTION = 0.35;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
@@ -148,6 +149,8 @@ export class ParticleSystem {
     let segment = 0;
     const stride = this.count * 2;
     const segmentsPerParticle = TRAIL_POINTS - 1;
+    const maxTrailDegrees = MAX_TRAIL_CELL_FRACTION * this.cellTravelDegrees;
+    const lengthFadeBand = maxTrailDegrees * 0.5;
     for (let i = 0; i < this.count; i++) {
       const fraction = this.progress[i];
       const birthFade = Math.min(1, fraction / FADE_PROGRESS_FRACTION) * this.speedAlphas[i];
@@ -157,18 +160,25 @@ export class ParticleSystem {
       );
       const recessionFront =
         1 + DEATH_RECESSION_BAND / 2 - deathWindow * (1 + DEATH_RECESSION_BAND);
+      let trailDistance = 0;
       for (let t = 0; t < segmentsPerParticle; t++) {
-        this.sources[segment * 2] = this.history[t * stride + i * 2];
-        this.sources[segment * 2 + 1] = this.history[t * stride + i * 2 + 1];
-        this.targets[segment * 2] = this.history[(t + 1) * stride + i * 2];
-        this.targets[segment * 2 + 1] = this.history[(t + 1) * stride + i * 2 + 1];
+        const sourceLon = this.history[t * stride + i * 2];
+        const sourceLat = this.history[t * stride + i * 2 + 1];
+        const targetLon = this.history[(t + 1) * stride + i * 2];
+        const targetLat = this.history[(t + 1) * stride + i * 2 + 1];
+        this.sources[segment * 2] = sourceLon;
+        this.sources[segment * 2 + 1] = sourceLat;
+        this.targets[segment * 2] = targetLon;
+        this.targets[segment * 2 + 1] = targetLat;
+        trailDistance += Math.hypot(targetLon - sourceLon, targetLat - sourceLat);
+        const lengthMask = Math.max(0, Math.min(1, (maxTrailDegrees - trailDistance) / lengthFadeBand));
         const trailPosition = t / (segmentsPerParticle - 1);
         const deathErase = Math.max(
           0,
           Math.min(1, (recessionFront - trailPosition) / DEATH_RECESSION_BAND + 0.5),
         );
         this.colors[segment * 4 + 3] = Math.round(
-          255 * this.trailAlphas[t] * birthFade * deathErase,
+          255 * this.trailAlphas[t] * birthFade * deathErase * lengthMask,
         );
         segment++;
       }
