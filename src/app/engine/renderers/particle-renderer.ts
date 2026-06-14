@@ -8,10 +8,11 @@ import { sampleVectorField } from '../../utils/grids';
 const TRAIL_POINTS = 13;
 const TRAIL_SAMPLE_SECONDS = 0.05;
 const TRAIL_FADE_POWER = 1.6;
-const EVEN_LIFETIME_SECONDS = 1.4;
+const PARTICLES_PER_SOURCE = 3;
+const EVEN_LIFETIME_SECONDS = 2;
 const RANDOM_MIN_LIFETIME_SECONDS = 1.6;
 const RANDOM_MAX_LIFETIME_SECONDS = 3.2;
-const FADE_SECONDS = 0.25;
+const FADE_SECONDS = 0.4;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
@@ -24,7 +25,6 @@ const BASE_LINE_WIDTH_PIXELS = 1.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 10;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.4;
 const SLOW_SPAWN_BIAS_METERS_PER_SECOND = 8;
-const SPAWN_JITTER_FRACTION = 0.45;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
 const DEATH_RECESSION_BAND = 0.5;
 const MIN_LATITUDE_COSINE = 0.2;
@@ -42,6 +42,7 @@ export class ParticleSystem {
   private colors: Uint8Array;
   private trailAlphas: Float32Array;
   private bounds: Bounds;
+  private numSources: number;
   private gridCols: number;
   private gridRows: number;
   private spawnMode: ParticleTuning['spawnMode'] = 'even';
@@ -74,24 +75,26 @@ export class ParticleSystem {
     this.bounds = wind.bounds;
     const [west, south, east, north] = this.bounds;
     const aspect = (east - west) / Math.max(1e-6, north - south);
-    this.gridCols = Math.max(1, Math.round(Math.sqrt(count * aspect)));
-    this.gridRows = Math.max(1, Math.round(count / this.gridCols));
+    this.numSources = Math.max(1, Math.round(count / PARTICLES_PER_SOURCE));
+    this.gridCols = Math.max(1, Math.round(Math.sqrt(this.numSources * aspect)));
+    this.gridRows = Math.max(1, Math.ceil(this.numSources / this.gridCols));
     const totalCells = this.gridCols * this.gridRows;
     for (let i = 0; i < count; i++) {
-      const cellIndex = Math.floor((i * totalCells) / count);
+      const source = i % this.numSources;
+      const cellIndex = Math.floor((source * totalCells) / this.numSources);
       const col = cellIndex % this.gridCols;
       const row = Math.floor(cellIndex / this.gridCols);
       this.homeU[i] = (col + 0.5) / this.gridCols;
       this.homeV[i] = (row + 0.5) / this.gridRows;
     }
-    this.seedEven();
+    this.seedSources();
   }
 
   step(deltaSeconds: number, tuning: ParticleTuning): void {
     this.lifetimeScale = tuning.lifetimeScale;
     if (tuning.spawnMode !== this.spawnMode) {
       this.spawnMode = tuning.spawnMode;
-      if (this.spawnMode === 'even') this.seedEven();
+      if (this.spawnMode === 'even') this.seedSources();
     }
     const stride = this.count * 2;
     this.sinceTrailSample += deltaSeconds;
@@ -191,29 +194,25 @@ export class ParticleSystem {
     );
   }
 
-  private seedEven(): void {
+  private seedSources(): void {
     for (let i = 0; i < this.count; i++) {
-      this.placeAtHome(i, (i * GOLDEN_RATIO_FRACTION) % 1);
+      const source = i % this.numSources;
+      const slot = Math.floor(i / this.numSources);
+      const sourceOffset = (source * GOLDEN_RATIO_FRACTION) % 1;
+      const ageFraction = (slot / PARTICLES_PER_SOURCE + sourceOffset) % 1;
+      this.respawn(i, ageFraction);
     }
   }
 
   private respawn(index: number, ageFraction: number): void {
-    if (this.spawnMode === 'even') this.placeAtHome(index, ageFraction);
+    if (this.spawnMode === 'even') this.emitFromSource(index, ageFraction);
     else this.respawnRandom(index, ageFraction);
   }
 
-  private placeAtHome(index: number, ageFraction: number): void {
+  private emitFromSource(index: number, ageFraction: number): void {
     const [west, south, east, north] = this.bounds;
-    const cellWidth = (east - west) / this.gridCols;
-    const cellHeight = (north - south) / this.gridRows;
-    const lon =
-      west +
-      this.homeU[index] * (east - west) +
-      (Math.random() - 0.5) * SPAWN_JITTER_FRACTION * cellWidth;
-    const lat =
-      south +
-      this.homeV[index] * (north - south) +
-      (Math.random() - 0.5) * SPAWN_JITTER_FRACTION * cellHeight;
+    const lon = west + this.homeU[index] * (east - west);
+    const lat = south + this.homeV[index] * (north - south);
     this.placeParticle(index, lon, lat, EVEN_LIFETIME_SECONDS * this.lifetimeScale, ageFraction);
   }
 
