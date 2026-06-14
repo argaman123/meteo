@@ -44,6 +44,7 @@ export class ParticleSystem {
   private sampleDistances: Float32Array;
   private distanceSinceSample: Float32Array;
   private startPoints: Float32Array;
+  private emitDirections: Float32Array;
   private active: Uint8Array;
   private cellCenterLon: Float32Array;
   private cellCenterLat: Float32Array;
@@ -78,6 +79,7 @@ export class ParticleSystem {
     this.sampleDistances = new Float32Array(this.count).fill(this.cellWidthDegrees);
     this.distanceSinceSample = new Float32Array(this.count);
     this.startPoints = new Float32Array(this.count * 2);
+    this.emitDirections = new Float32Array(this.count * 2);
     this.active = new Uint8Array(this.count);
     this.cellCenterLon = new Float32Array(this.numCells);
     this.cellCenterLat = new Float32Array(this.numCells);
@@ -136,9 +138,18 @@ export class ParticleSystem {
       const latitudeCosine = tuning.latitudeCorrection
         ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
         : 1;
-      this.history[i * 2] = lon + ((u / speed) * stepDegrees) / latitudeCosine;
-      this.history[i * 2 + 1] = lat + (v / speed) * stepDegrees;
-      this.progress[i] += stepDegrees / this.crossDistances[i];
+      const newLon = lon + ((u / speed) * stepDegrees) / latitudeCosine;
+      const newLat = lat + (v / speed) * stepDegrees;
+      this.history[i * 2] = newLon;
+      this.history[i * 2 + 1] = newLat;
+      const offsetLon = newLon - this.startPoints[i * 2];
+      const offsetLat = newLat - this.startPoints[i * 2 + 1];
+      const alongCrossing =
+        offsetLon * this.emitDirections[i * 2] + offsetLat * this.emitDirections[i * 2 + 1];
+      const acrossCrossing = Math.abs(
+        -offsetLon * this.emitDirections[i * 2 + 1] + offsetLat * this.emitDirections[i * 2],
+      );
+      this.progress[i] = alongCrossing / this.crossDistances[i];
       this.distanceSinceSample[i] += stepDegrees;
       if (this.distanceSinceSample[i] >= this.sampleDistances[i]) {
         for (let t = TRAIL_POINTS - 1; t > 0; t--) {
@@ -147,7 +158,11 @@ export class ParticleSystem {
         }
         this.distanceSinceSample[i] -= this.sampleDistances[i];
       }
-      if (this.progress[i] >= 1) this.active[i] = 0;
+      const cell = i % this.numCells;
+      const maxAcross = 0.55 * Math.min(this.cellWidthDegrees, this.cellHeightDegrees[cell]);
+      if (this.progress[i] >= 1 || this.progress[i] < -0.1 || acrossCrossing > maxAcross) {
+        this.active[i] = 0;
+      }
     }
     for (let cell = 0; cell < this.numCells; cell++) {
       const [u, v] = sampleVectorField(this.wind, this.cellCenterLon[cell], this.cellCenterLat[cell]);
@@ -276,6 +291,8 @@ export class ParticleSystem {
     this.distanceSinceSample[index] = 0;
     this.startPoints[index * 2] = startLon;
     this.startPoints[index * 2 + 1] = startLat;
+    this.emitDirections[index * 2] = dirLon;
+    this.emitDirections[index * 2 + 1] = dirLat;
     for (let t = 0; t < TRAIL_POINTS; t++) {
       this.history[t * this.count * 2 + index * 2] = headLon;
       this.history[t * this.count * 2 + index * 2 + 1] = headLat;
