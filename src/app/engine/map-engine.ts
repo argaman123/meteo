@@ -35,7 +35,7 @@ export class MapEngine {
 
   constructor() {
     effect(() => {
-      this.quality.particleCount();
+      this.particleSettings.cellSizePx();
       this.quality.textureMaxDimension();
       this.syncLayers();
     });
@@ -147,13 +147,23 @@ export class MapEngine {
   private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
     const id = definition.entry.id;
     const existing = this.particleSystems.get(id);
-    const count = this.quality.particleCount();
-    if (existing && existing.wind === definition.wind && existing.count === count) {
+    const cellSizeDegrees = this.cellSizeDegrees(definition.wind.bounds);
+    if (
+      existing &&
+      existing.wind === definition.wind &&
+      existing.cellSizeDegrees === cellSizeDegrees
+    ) {
       return existing;
     }
-    const system = new ParticleSystem(definition.wind, count);
+    const system = new ParticleSystem(definition.wind, cellSizeDegrees);
     this.particleSystems.set(id, system);
     return system;
+  }
+
+  private cellSizeDegrees(bounds: Bounds): number {
+    const canvasWidthPx = this.map?.getCanvas().clientWidth ?? 1280;
+    const boundsWidthDegrees = bounds[2] - bounds[0];
+    return (this.particleSettings.cellSizePx() * boundsWidthDegrees) / canvasWidthPx;
   }
 
   private animate = (nowMs: number): void => {

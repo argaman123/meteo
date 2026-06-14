@@ -46,8 +46,8 @@ export class PerfHud {
     this.visible.update((value) => !value);
   }
 
-  setParticles(event: Event): void {
-    this.quality.particleCount.set(Number((event.target as HTMLSelectElement).value));
+  setCellSize(event: Event): void {
+    this.particles.cellSizePx.set(Number((event.target as HTMLInputElement).value));
   }
 
   setTextureCap(event: Event): void {
@@ -66,15 +66,7 @@ export class PerfHud {
     this.particles.speedFactor.set(Number((event.target as HTMLInputElement).value));
   }
 
-  setLifetimeScale(event: Event): void {
-    this.particles.lifetimeScale.set(Number((event.target as HTMLInputElement).value));
-  }
-
   setWidthScale(event: Event): void {
     this.particles.widthScale.set(Number((event.target as HTMLInputElement).value));
-  }
-
-  toggleSpawnMode(): void {
-    this.particles.spawnMode.update((mode) => (mode === 'even' ? 'random' : 'even'));
   }
 }

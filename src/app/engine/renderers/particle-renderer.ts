@@ -8,11 +8,9 @@ import { sampleVectorField } from '../../utils/grids';
 const TRAIL_POINTS = 13;
 const TRAIL_SAMPLE_SECONDS = 0.05;
 const TRAIL_FADE_POWER = 1.6;
-const PARTICLES_PER_SOURCE = 3;
-const EVEN_LIFETIME_SECONDS = 2;
-const RANDOM_MIN_LIFETIME_SECONDS = 1.6;
-const RANDOM_MAX_LIFETIME_SECONDS = 3.2;
-const FADE_SECONDS = 0.4;
+const PARTICLES_PER_CELL = 4;
+const MAX_PARTICLES = 6000;
+const FADE_PROGRESS_FRACTION = 0.18;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const FIXED_REFERENCE_SPAN_DEGREES = 40;
 const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
@@ -24,16 +22,15 @@ const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
 const BASE_LINE_WIDTH_PIXELS = 1.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 10;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.4;
-const SLOW_SPAWN_BIAS_METERS_PER_SECOND = 8;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
 const DEATH_RECESSION_BAND = 0.5;
 const MIN_LATITUDE_COSINE = 0.2;
-const COVERAGE_MARGIN_FRACTION = 0.02;
 
 export class ParticleSystem {
+  readonly count: number;
+  readonly cellSizeDegrees: number;
   private history: Float32Array;
-  private ages: Float32Array;
-  private lifetimes: Float32Array;
+  private progress: Float32Array;
   private speedAlphas: Float32Array;
   private homeU: Float32Array;
   private homeV: Float32Array;
@@ -42,24 +39,33 @@ export class ParticleSystem {
   private colors: Uint8Array;
   private trailAlphas: Float32Array;
   private bounds: Bounds;
-  private numSources: number;
+  private numCells: number;
   private gridCols: number;
   private gridRows: number;
-  private spawnMode: ParticleTuning['spawnMode'] = 'even';
+  private cellTravelDegrees: number;
   private sinceTrailSample = 0;
-  private lifetimeScale = 1;
 
   constructor(
     readonly wind: VectorField,
-    readonly count: number,
+    cellSizeDegrees: number,
   ) {
-    this.history = new Float32Array(TRAIL_POINTS * count * 2);
-    this.ages = new Float32Array(count);
-    this.lifetimes = new Float32Array(count);
-    this.speedAlphas = new Float32Array(count).fill(1);
-    this.homeU = new Float32Array(count);
-    this.homeV = new Float32Array(count);
-    const segments = count * (TRAIL_POINTS - 1);
+    this.cellSizeDegrees = cellSizeDegrees;
+    this.bounds = wind.bounds;
+    const [west, south, east, north] = this.bounds;
+    const widthDegrees = east - west;
+    const heightDegrees = north - south;
+    this.gridCols = Math.max(1, Math.round(widthDegrees / cellSizeDegrees));
+    this.gridRows = Math.max(1, Math.round(heightDegrees / cellSizeDegrees));
+    this.numCells = this.gridCols * this.gridRows;
+    this.cellTravelDegrees = widthDegrees / this.gridCols;
+    this.count = Math.min(MAX_PARTICLES, this.numCells * PARTICLES_PER_CELL);
+
+    this.history = new Float32Array(TRAIL_POINTS * this.count * 2);
+    this.progress = new Float32Array(this.count);
+    this.speedAlphas = new Float32Array(this.count).fill(1);
+    this.homeU = new Float32Array(this.count);
+    this.homeV = new Float32Array(this.count);
+    const segments = this.count * (TRAIL_POINTS - 1);
     this.sources = new Float32Array(segments * 2);
     this.targets = new Float32Array(segments * 2);
     this.colors = new Uint8Array(segments * 4);
@@ -72,30 +78,20 @@ export class ParticleSystem {
       this.colors[i + 1] = 255;
       this.colors[i + 2] = 255;
     }
-    this.bounds = wind.bounds;
-    const [west, south, east, north] = this.bounds;
-    const aspect = (east - west) / Math.max(1e-6, north - south);
-    this.numSources = Math.max(1, Math.round(count / PARTICLES_PER_SOURCE));
-    this.gridCols = Math.max(1, Math.round(Math.sqrt(this.numSources * aspect)));
-    this.gridRows = Math.max(1, Math.ceil(this.numSources / this.gridCols));
-    const totalCells = this.gridCols * this.gridRows;
-    for (let i = 0; i < count; i++) {
-      const source = i % this.numSources;
-      const cellIndex = Math.floor((source * totalCells) / this.numSources);
-      const col = cellIndex % this.gridCols;
-      const row = Math.floor(cellIndex / this.gridCols);
+    for (let i = 0; i < this.count; i++) {
+      const cell = i % this.numCells;
+      const col = cell % this.gridCols;
+      const row = Math.floor(cell / this.gridCols);
       this.homeU[i] = (col + 0.5) / this.gridCols;
       this.homeV[i] = (row + 0.5) / this.gridRows;
+      const slot = Math.floor(i / this.numCells);
+      const cellPhase = (cell * GOLDEN_RATIO_FRACTION) % 1;
+      const startProgress = ((slot + cellPhase) / PARTICLES_PER_CELL) % 1;
+      this.emitFromCell(i, startProgress);
     }
-    this.seedSources();
   }
 
   step(deltaSeconds: number, tuning: ParticleTuning): void {
-    this.lifetimeScale = tuning.lifetimeScale;
-    if (tuning.spawnMode !== this.spawnMode) {
-      this.spawnMode = tuning.spawnMode;
-      if (this.spawnMode === 'even') this.seedSources();
-    }
     const stride = this.count * 2;
     this.sinceTrailSample += deltaSeconds;
     if (this.sinceTrailSample >= TRAIL_SAMPLE_SECONDS) {
@@ -112,9 +108,8 @@ export class ParticleSystem {
       const lon = this.history[i * 2];
       const lat = this.history[i * 2 + 1];
       const [u, v] = sampleVectorField(this.wind, lon, lat);
-      this.ages[i] += deltaSeconds;
-      if (Number.isNaN(u) || this.ages[i] > this.lifetimes[i] || this.outsideCoverage(lon, lat)) {
-        this.respawn(i, 0);
+      if (Number.isNaN(u)) {
+        this.emitFromCell(i, 0);
         continue;
       }
       const speed = Math.hypot(u, v);
@@ -123,8 +118,12 @@ export class ParticleSystem {
         FAST_DIMMING_MINIMUM_ALPHA,
         Math.min(1, FAST_DIMMING_PIVOT_METERS_PER_SECOND / speed),
       );
-      const curvedSpeed = curveSpeed(speed, tuning.speedCurve);
-      const stepDegrees = curvedSpeed * spanScale;
+      const stepDegrees = curveSpeed(speed, tuning.speedCurve) * spanScale;
+      this.progress[i] += stepDegrees / this.cellTravelDegrees;
+      if (this.progress[i] >= 1) {
+        this.emitFromCell(i, 0);
+        continue;
+      }
       const latitudeCosine = tuning.latitudeCorrection
         ? Math.max(MIN_LATITUDE_COSINE, Math.cos((lat * Math.PI) / 180))
         : 1;
@@ -150,10 +149,12 @@ export class ParticleSystem {
     const stride = this.count * 2;
     const segmentsPerParticle = TRAIL_POINTS - 1;
     for (let i = 0; i < this.count; i++) {
-      const age = this.ages[i];
-      const lifetime = this.lifetimes[i];
-      const birthFade = Math.min(1, age / FADE_SECONDS) * this.speedAlphas[i];
-      const deathWindow = Math.max(0, (age - (lifetime - FADE_SECONDS)) / FADE_SECONDS);
+      const fraction = this.progress[i];
+      const birthFade = Math.min(1, fraction / FADE_PROGRESS_FRACTION) * this.speedAlphas[i];
+      const deathWindow = Math.max(
+        0,
+        (fraction - (1 - FADE_PROGRESS_FRACTION)) / FADE_PROGRESS_FRACTION,
+      );
       const recessionFront =
         1 + DEATH_RECESSION_BAND / 2 - deathWindow * (1 + DEATH_RECESSION_BAND);
       for (let t = 0; t < segmentsPerParticle; t++) {
@@ -182,71 +183,20 @@ export class ParticleSystem {
     };
   }
 
-  private outsideCoverage(lon: number, lat: number): boolean {
+  private emitFromCell(index: number, startProgress: number): void {
     const [west, south, east, north] = this.bounds;
-    const lonMargin = (east - west) * COVERAGE_MARGIN_FRACTION;
-    const latMargin = (north - south) * COVERAGE_MARGIN_FRACTION;
-    return (
-      lon < west - lonMargin ||
-      lon > east + lonMargin ||
-      lat < south - latMargin ||
-      lat > north + latMargin
-    );
-  }
-
-  private seedSources(): void {
-    for (let i = 0; i < this.count; i++) {
-      const source = i % this.numSources;
-      const slot = Math.floor(i / this.numSources);
-      const sourceOffset = (source * GOLDEN_RATIO_FRACTION) % 1;
-      const ageFraction = (slot / PARTICLES_PER_SOURCE + sourceOffset) % 1;
-      this.respawn(i, ageFraction);
+    const anchorLon = west + this.homeU[index] * (east - west);
+    const anchorLat = south + this.homeV[index] * (north - south);
+    let lon = anchorLon;
+    let lat = anchorLat;
+    const [u, v] = sampleVectorField(this.wind, anchorLon, anchorLat);
+    const speed = Math.hypot(u, v);
+    if (!Number.isNaN(u) && speed > 0) {
+      const travel = startProgress * this.cellTravelDegrees;
+      lon = anchorLon + (u / speed) * travel;
+      lat = anchorLat + (v / speed) * travel;
     }
-  }
-
-  private respawn(index: number, ageFraction: number): void {
-    if (this.spawnMode === 'even') this.emitFromSource(index, ageFraction);
-    else this.respawnRandom(index, ageFraction);
-  }
-
-  private emitFromSource(index: number, ageFraction: number): void {
-    const [west, south, east, north] = this.bounds;
-    const lon = west + this.homeU[index] * (east - west);
-    const lat = south + this.homeV[index] * (north - south);
-    this.placeParticle(index, lon, lat, EVEN_LIFETIME_SECONDS * this.lifetimeScale, ageFraction);
-  }
-
-  private respawnRandom(index: number, ageFraction: number): void {
-    const [west, south, east, north] = this.bounds;
-    let lon = west + Math.random() * (east - west);
-    let lat = south + Math.random() * (north - south);
-    for (let attempt = 0; attempt < 8; attempt++) {
-      const candidateLon = west + Math.random() * (east - west);
-      const candidateLat = south + Math.random() * (north - south);
-      const [u, v] = sampleVectorField(this.wind, candidateLon, candidateLat);
-      if (Number.isNaN(u)) continue;
-      lon = candidateLon;
-      lat = candidateLat;
-      const speed = Math.hypot(u, v);
-      const acceptProbability =
-        SLOW_SPAWN_BIAS_METERS_PER_SECOND / (SLOW_SPAWN_BIAS_METERS_PER_SECOND + speed);
-      if (Math.random() < acceptProbability) break;
-    }
-    const lifetime =
-      RANDOM_MIN_LIFETIME_SECONDS +
-      Math.random() * (RANDOM_MAX_LIFETIME_SECONDS - RANDOM_MIN_LIFETIME_SECONDS);
-    this.placeParticle(index, lon, lat, lifetime * this.lifetimeScale, ageFraction);
-  }
-
-  private placeParticle(
-    index: number,
-    lon: number,
-    lat: number,
-    lifetime: number,
-    ageFraction: number,
-  ): void {
-    this.lifetimes[index] = lifetime;
-    this.ages[index] = ageFraction * lifetime;
+    this.progress[index] = startProgress;
     for (let t = 0; t < TRAIL_POINTS; t++) {
       this.history[t * this.count * 2 + index * 2] = lon;
       this.history[t * this.count * 2 + index * 2 + 1] = lat;
