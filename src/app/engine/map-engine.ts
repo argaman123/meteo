@@ -150,11 +150,15 @@ export class MapEngine {
     const id = definition.entry.id;
     const existing = this.particleSystems.get(id);
     const cellPx = this.particleSettings.cellSizePx();
-    if (existing && existing.wind === definition.wind && this.particleGridCellPx.get(id) === cellPx) {
+    if (
+      existing &&
+      existing.vectorField === definition.vectorField &&
+      this.particleGridCellPx.get(id) === cellPx
+    ) {
       return existing;
     }
-    const [cols, rows] = this.gridDimensions(definition.wind.bounds);
-    const system = new ParticleSystem(definition.wind, cols, rows);
+    const [cols, rows] = this.gridDimensions(definition.vectorField.bounds);
+    const system = new ParticleSystem(definition.vectorField, cols, rows);
     this.particleSystems.set(id, system);
     this.particleGridCellPx.set(id, cellPx);
     return system;
@@ -202,7 +206,9 @@ export class MapEngine {
   };
 
   private updateAnimationLoop(): void {
-    const hasParticles = [...this.definitions.values()].some((definition) => 'wind' in definition);
+    const hasParticles = [...this.definitions.values()].some(
+      (definition) => 'vectorField' in definition,
+    );
     if (hasParticles && this.animationFrame === null) {
       this.lastTickMs = performance.now();
       this.animationFrame = requestAnimationFrame(this.animate);

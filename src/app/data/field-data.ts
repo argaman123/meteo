@@ -23,7 +23,7 @@ export interface LoadedLayer {
 }
 
 const parsedGrids = new WeakMap<FieldGridDocument, FieldGrid>();
-const windFields = new WeakMap<FieldGrid, VectorField>();
+const vectorFields = new WeakMap<FieldGrid, VectorField>();
 
 @Service()
 export class FieldData {
@@ -155,12 +155,12 @@ function toDefinition(layer: LoadedLayer): LayerDefinition {
   }
   const speed = layer.grids[layer.entry.speedParameter];
   const direction = layer.grids[layer.entry.directionParameter];
-  let wind = windFields.get(speed);
-  if (!wind) {
+  let vectorField = vectorFields.get(speed);
+  if (!vectorField) {
     const speedMetersPerSecond =
       speed.units === 'kt' ? mapGridValues(speed, knotsToMetersPerSecond, 'm/s') : speed;
-    wind = toVectorField(speedMetersPerSecond, direction);
-    windFields.set(speed, wind);
+    vectorField = toVectorField(speedMetersPerSecond, direction);
+    vectorFields.set(speed, vectorField);
   }
-  return { entry: layer.entry, wind, opacity: layer.opacity, order: layer.order };
+  return { entry: layer.entry, vectorField, opacity: layer.opacity, order: layer.order };
 }

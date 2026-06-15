@@ -54,7 +54,7 @@ export interface ColormapLayerDefinition {
 
 export interface ParticleLayerDefinition {
   entry: ParticleLayerCatalogEntry;
-  wind: VectorField;
+  vectorField: VectorField;
   opacity: number;
   order: number;
 }

@@ -50,11 +50,11 @@ export class ParticleSystem {
   private cellWidthDegrees: number;
 
   constructor(
-    readonly wind: VectorField,
+    readonly vectorField: VectorField,
     gridCols: number,
     gridRows: number,
   ) {
-    this.bounds = wind.bounds;
+    this.bounds = vectorField.bounds;
     const [west, south, east, north] = this.bounds;
     this.gridCols = Math.max(1, gridCols);
     this.gridRows = Math.max(1, gridRows);
@@ -165,7 +165,7 @@ export class ParticleSystem {
     const halfWidth = this.cellWidthDegrees / 2;
     const halfHeight = this.cellHeightDegrees[cell] / 2;
     const base = cell * PATH_POINTS * 2;
-    const [centerU, centerV] = sampleVectorField(this.wind, centerLon, centerLat);
+    const [centerU, centerV] = sampleVectorField(this.vectorField, centerLon, centerLat);
     const centerSpeed = Math.hypot(centerU, centerV);
     this.cellSpeed[cell] = Number.isNaN(centerSpeed) ? 0 : centerSpeed;
     if (Number.isNaN(centerU) || centerSpeed === 0) {
@@ -183,7 +183,7 @@ export class ParticleSystem {
     let lon = centerLon;
     let lat = centerLat;
     for (let k = 0; k < 60; k++) {
-      const [u, v] = sampleVectorField(this.wind, lon, lat);
+      const [u, v] = sampleVectorField(this.vectorField, lon, lat);
       const speed = Math.hypot(u, v);
       if (Number.isNaN(u) || speed === 0) break;
       const dirLon = -u / speed;
@@ -204,7 +204,7 @@ export class ParticleSystem {
     lon = entryLon;
     lat = entryLat;
     for (let k = 0; k < 120; k++) {
-      const [u, v] = sampleVectorField(this.wind, lon, lat);
+      const [u, v] = sampleVectorField(this.vectorField, lon, lat);
       const speed = Math.hypot(u, v);
       if (Number.isNaN(u) || speed === 0) break;
       const dirLon = u / speed;
