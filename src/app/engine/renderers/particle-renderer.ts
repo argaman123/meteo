@@ -5,12 +5,6 @@ import { arcAppearance } from './arc-appearance';
 import { ParticleAppearance, ParticleSystem } from './particle-system';
 import { trailAppearance } from './trail-appearance';
 
-const BASE_LINE_WIDTH_PIXELS = 1.5;
-
-export function particleLineWidth(): number {
-  return BASE_LINE_WIDTH_PIXELS;
-}
-
 export function renderParticleLayer(
   definition: ParticleLayerDefinition,
   system: ParticleSystem,

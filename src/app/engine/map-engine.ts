@@ -8,7 +8,7 @@ import { ParticleSettings } from '../settings/particle-settings';
 import { QualitySettings } from '../settings/quality-settings';
 import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
-import { particleLineWidth, renderParticleLayer } from './renderers/particle-renderer';
+import { renderParticleLayer } from './renderers/particle-renderer';
 import { MAX_PARTICLE_GRID_CELLS, ParticleSystem } from './renderers/particle-system';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
@@ -138,7 +138,7 @@ export class MapEngine {
     if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
-    const widthPixels = particleLineWidth() * this.particleSettings.widthScale();
+    const widthPixels = definition.entry.lineWidthPixels * this.particleSettings.widthScale();
     return renderParticleLayer(definition, this.particleSystem(definition), widthPixels);
   }
 

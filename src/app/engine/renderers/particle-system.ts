@@ -3,14 +3,13 @@ import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 import { inverseMercatorY, mercatorY } from '../../utils/mercator';
 
-// Universal simulation constants — independent of what the field means or how it is drawn.
+// Structural constants only — buffer/grid sizing and math. NOT behaviour: every number that
+// shapes how particles move or space out lives on the layer's ParticleMotion config. These five
+// are identical for wind, waves, or any future particle layer.
 const PATH_POINTS = 24;
 const MAX_SLOTS_PER_CELL = 3;
 export const MAX_PARTICLE_GRID_CELLS = 6000;
 const MAX_SEGMENTS_PER_PARTICLE = 14;
-const GAP_CELL_FRACTION = 0.35;
-const MINIMUM_CROSSING_SECONDS = 1.8;
-const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
 
 /**
@@ -136,9 +135,8 @@ export class ParticleSystem {
 
   step(deltaSeconds: number, speedFactor: number): void {
     const dataSpan = this.bounds[2] - this.bounds[0];
-    const spanScale =
-      SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND * dataSpan * speedFactor * deltaSeconds;
-    const maxIncrement = (deltaSeconds * speedFactor) / MINIMUM_CROSSING_SECONDS;
+    const spanScale = this.motion.baseSpeedScale * dataSpan * speedFactor * deltaSeconds;
+    const maxIncrement = (deltaSeconds * speedFactor) / this.motion.minimumCrossingSeconds;
     for (let i = 0; i < this.slotCount; i++) {
       if (!this.active[i]) continue;
       const cell = i % this.numCells;
@@ -153,7 +151,7 @@ export class ParticleSystem {
     }
     for (let cell = 0; cell < this.numCells; cell++) {
       if (this.crossDistance[cell] <= 0) continue;
-      const threshold = this.footprintFraction(this.cellSpeed[cell]) + GAP_CELL_FRACTION;
+      const threshold = this.footprintFraction(this.cellSpeed[cell]) + this.motion.gapFraction;
       let activeCount = 0;
       let minProgress = Infinity;
       let freeSlot = -1;

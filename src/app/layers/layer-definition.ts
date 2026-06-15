@@ -17,13 +17,16 @@ export interface ValueRange {
 }
 
 /**
- * How a particle layer's field magnitude drives motion. These are the numbers that look
- * universal but are really per-field (wind in m/s behaves nothing like wave height in metres),
- * so each particle layer carries its own.
+ * Every behavioural number for a particle layer. The simulation itself holds none of these —
+ * it keeps only structural constants (buffer sizes, grid cap, golden-ratio seeding). Wind in
+ * m/s behaves nothing like wave height in metres, so each layer carries its own full set.
  */
 export interface ParticleMotion {
+  baseSpeedScale: number;
   minSpeedMetersPerSecond: number;
   maxSpeedMetersPerSecond: number;
+  minimumCrossingSeconds: number;
+  gapFraction: number;
   minFootprintFraction: number;
   maxFootprintFraction: number;
   footprintPivotMetersPerSecond: number;
@@ -53,6 +56,7 @@ export interface ParticleLayerCatalogEntry extends LayerCatalogEntryBase {
   directionParameter: string;
   appearance: ParticleAppearanceName;
   motion: ParticleMotion;
+  lineWidthPixels: number;
 }
 
 export type LayerCatalogEntry = ColormapLayerCatalogEntry | ParticleLayerCatalogEntry;
