@@ -1,9 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import {
-  ParticleSettings,
-  SpeedCurve,
-  SpeedReference,
-} from '../../settings/particle-settings';
+import { ParticleSettings } from '../../settings/particle-settings';
 import { QualitySettings } from '../../settings/quality-settings';
 
 interface MemoryInfo {
@@ -22,8 +18,6 @@ export class PerfHud {
   visible = signal(new URLSearchParams(location.search).get('hud') === '1');
   fps = signal(0);
   heapMb = signal(0);
-  speedReferenceOptions: SpeedReference[] = ['view', 'data', 'fixed'];
-  speedCurveOptions: SpeedCurve[] = ['linear', 'floor', 'sqrt', 'windy'];
 
   constructor() {
     let frames = 0;
@@ -52,14 +46,6 @@ export class PerfHud {
 
   setTextureCap(event: Event): void {
     this.quality.textureMaxDimension.set(Number((event.target as HTMLSelectElement).value));
-  }
-
-  setSpeedReference(event: Event): void {
-    this.particles.speedReference.set((event.target as HTMLSelectElement).value as SpeedReference);
-  }
-
-  setSpeedCurve(event: Event): void {
-    this.particles.speedCurve.set((event.target as HTMLSelectElement).value as SpeedCurve);
   }
 
   setSpeedFactor(event: Event): void {

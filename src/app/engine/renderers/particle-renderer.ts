@@ -1,7 +1,6 @@
 import type { Layer } from '@deck.gl/core';
-import { LineLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { LineLayer } from '@deck.gl/layers';
 import { ParticleLayerDefinition } from '../../layers/layer-definition';
-import { ParticleTuning } from '../../settings/particle-settings';
 import { Bounds, VectorField } from '../../types/field-grid';
 import { sampleVectorField } from '../../utils/grids';
 import { inverseMercatorY, mercatorY } from '../../utils/mercator';
@@ -18,20 +17,14 @@ const FADE_IN_FRACTION = 0.15;
 const FADE_OUT_FRACTION = 0.35;
 const MINIMUM_CROSSING_SECONDS = 1.8;
 const SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND = 0.0018;
-const FIXED_REFERENCE_SPAN_DEGREES = 40;
-const SQRT_CURVE_PIVOT_METERS_PER_SECOND = 10;
 const FLOOR_CURVE_MINIMUM_METERS_PER_SECOND = 3;
 const FLOOR_CURVE_MAXIMUM_METERS_PER_SECOND = 25;
-const WINDY_CURVE_POWER = 0.7;
-const WINDY_CURVE_MINIMUM_METERS_PER_SECOND = 1.5;
-const WINDY_CURVE_MAXIMUM_METERS_PER_SECOND = 30;
 const TRAIL_SPEED_PIVOT_METERS_PER_SECOND = 18;
 const BASE_LINE_WIDTH_PIXELS = 1.5;
 const FAST_DIMMING_PIVOT_METERS_PER_SECOND = 12;
 const FAST_DIMMING_MINIMUM_ALPHA = 0.45;
 const GOLDEN_RATIO_FRACTION = 0.618033988749895;
-const CHESS_COLOR_A: [number, number, number] = [255, 255, 255];
-const CHESS_COLOR_B: [number, number, number] = [110, 200, 255];
+const TRAIL_COLOR: [number, number, number] = [255, 255, 255];
 
 export class ParticleSystem {
   readonly count: number;
@@ -42,7 +35,6 @@ export class ParticleSystem {
   private cellCenterLon: Float32Array;
   private cellCenterLat: Float32Array;
   private cellHeightDegrees: Float32Array;
-  private cellParity: Uint8Array;
   private pathPoints: Float32Array;
   private pathLength: Float32Array;
   private crossDistance: Float32Array;
@@ -78,7 +70,6 @@ export class ParticleSystem {
     this.cellCenterLon = new Float32Array(this.numCells);
     this.cellCenterLat = new Float32Array(this.numCells);
     this.cellHeightDegrees = new Float32Array(this.numCells);
-    this.cellParity = new Uint8Array(this.numCells);
     this.pathPoints = new Float32Array(this.numCells * PATH_POINTS * 2);
     this.pathLength = new Float32Array(this.numCells);
     this.crossDistance = new Float32Array(this.numCells);
@@ -105,7 +96,6 @@ export class ParticleSystem {
         this.cellCenterLon[cell] = west + ((col + 0.5) / this.gridCols) * (east - west);
         this.cellCenterLat[cell] = (latTop + latBottom) / 2;
         this.cellHeightDegrees[cell] = latTop - latBottom;
-        this.cellParity[cell] = (col + row) % 2;
       }
     }
     for (let cell = 0; cell < this.numCells; cell++) {
@@ -117,13 +107,11 @@ export class ParticleSystem {
     }
   }
 
-  step(deltaSeconds: number, tuning: ParticleTuning): void {
-    const referenceSpan = this.referenceSpan(tuning.speedReference);
+  step(deltaSeconds: number, speedFactor: number): void {
+    const dataSpan = this.bounds[2] - this.bounds[0];
     const spanScale =
-      SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND *
-      referenceSpan *
-      tuning.speedFactor *
-      deltaSeconds;
+      SPAN_FRACTION_PER_SECOND_PER_METER_PER_SECOND * dataSpan * speedFactor * deltaSeconds;
+    const maxIncrement = (deltaSeconds * speedFactor) / MINIMUM_CROSSING_SECONDS;
     for (let i = 0; i < this.count; i++) {
       if (!this.active[i]) continue;
       const cell = i % this.numCells;
@@ -132,8 +120,7 @@ export class ParticleSystem {
         this.active[i] = 0;
         continue;
       }
-      const stepDegrees = curveSpeed(this.cellSpeed[cell], tuning.speedCurve) * spanScale;
-      const maxIncrement = (deltaSeconds * tuning.speedFactor) / MINIMUM_CROSSING_SECONDS;
+      const stepDegrees = flooredSpeed(this.cellSpeed[cell]) * spanScale;
       this.headProgress[i] += Math.min(stepDegrees / crossing, maxIncrement);
       if (this.headProgress[i] >= 1) this.active[i] = 0;
     }
@@ -170,11 +157,6 @@ export class ParticleSystem {
       FAST_DIMMING_MINIMUM_ALPHA,
       Math.min(1, FAST_DIMMING_PIVOT_METERS_PER_SECOND / Math.max(0.001, speed)),
     );
-  }
-
-  private referenceSpan(reference: ParticleTuning['speedReference']): number {
-    if (reference === 'fixed') return FIXED_REFERENCE_SPAN_DEGREES;
-    return this.bounds[2] - this.bounds[0];
   }
 
   private buildCellPath(cell: number): void {
@@ -290,7 +272,7 @@ export class ParticleSystem {
     return Math.max(0, reach);
   }
 
-  layerData(debug: boolean): {
+  layerData(): {
     length: number;
     attributes: {
       getSourcePosition: { value: Float32Array; size: number };
@@ -311,7 +293,6 @@ export class ParticleSystem {
       const birthFade = Math.min(1, progress / FADE_IN_FRACTION);
       const deathFade = Math.min(1, (1 - progress) / FADE_OUT_FRACTION);
       const baseAlpha = birthFade * deathFade * this.fastDim(this.cellSpeed[cell]);
-      const color = debug && this.cellParity[cell] === 1 ? CHESS_COLOR_B : CHESS_COLOR_A;
       const base = cell * PATH_POINTS * 2;
       for (let t = 0; t < TRAIL_POINTS; t++) {
         const arc = headArc - (t / (TRAIL_POINTS - 1)) * trailLength;
@@ -329,9 +310,9 @@ export class ParticleSystem {
         this.sources[segment * 2 + 1] = this.trailLat[t];
         this.targets[segment * 2] = this.trailLon[t + 1];
         this.targets[segment * 2 + 1] = this.trailLat[t + 1];
-        this.colors[segment * 4] = color[0];
-        this.colors[segment * 4 + 1] = color[1];
-        this.colors[segment * 4 + 2] = color[2];
+        this.colors[segment * 4] = TRAIL_COLOR[0];
+        this.colors[segment * 4 + 1] = TRAIL_COLOR[1];
+        this.colors[segment * 4 + 2] = TRAIL_COLOR[2];
         this.colors[segment * 4 + 3] = Math.round(255 * this.trailAlphas[t] * baseAlpha);
         segment++;
       }
@@ -346,88 +327,27 @@ export class ParticleSystem {
     };
   }
 
-  startMarkers(): [number, number][] {
-    const points: [number, number][] = [];
-    for (let i = 0; i < this.count; i++) {
-      if (!this.active[i]) continue;
-      const cell = i % this.numCells;
-      if (this.pathLength[cell] <= 0) continue;
-      const base = cell * PATH_POINTS * 2;
-      points.push([this.pathPoints[base], this.pathPoints[base + 1]]);
-    }
-    return points;
-  }
-
 }
 
 export function particleLineWidth(): number {
   return BASE_LINE_WIDTH_PIXELS;
 }
 
-export function renderCellGrid(id: string, system: ParticleSystem): Layer {
-  const [west, south, east, north] = system.wind.bounds;
-  const yNorth = mercatorY(north);
-  const ySouth = mercatorY(south);
-  const lines: { source: [number, number]; target: [number, number] }[] = [];
-  for (let k = 0; k <= system.gridCols; k++) {
-    const lon = west + ((east - west) * k) / system.gridCols;
-    lines.push({ source: [lon, south], target: [lon, north] });
-  }
-  for (let j = 0; j <= system.gridRows; j++) {
-    const lat = inverseMercatorY(yNorth + ((ySouth - yNorth) * j) / system.gridRows);
-    lines.push({ source: [west, lat], target: [east, lat] });
-  }
-  return new LineLayer<(typeof lines)[number]>({
-    id,
-    data: lines,
-    getSourcePosition: (line) => line.source,
-    getTargetPosition: (line) => line.target,
-    getColor: [255, 210, 0, 90],
-    getWidth: 1,
-    widthUnits: 'pixels',
-  });
-}
-
-export function renderStartMarkers(id: string, system: ParticleSystem): Layer {
-  return new ScatterplotLayer<[number, number]>({
-    id,
-    data: system.startMarkers(),
-    getPosition: (point) => point,
-    getFillColor: [255, 90, 90, 220],
-    getRadius: 3,
-    radiusUnits: 'pixels',
-  });
-}
-
-function curveSpeed(speed: number, curve: ParticleTuning['speedCurve']): number {
-  if (curve === 'sqrt') return Math.sqrt(speed * SQRT_CURVE_PIVOT_METERS_PER_SECOND);
-  if (curve === 'floor') {
-    return Math.min(
-      FLOOR_CURVE_MAXIMUM_METERS_PER_SECOND,
-      Math.max(speed, FLOOR_CURVE_MINIMUM_METERS_PER_SECOND),
-    );
-  }
-  if (curve === 'windy') {
-    const clamped = Math.min(
-      WINDY_CURVE_MAXIMUM_METERS_PER_SECOND,
-      Math.max(WINDY_CURVE_MINIMUM_METERS_PER_SECOND, speed),
-    );
-    return (
-      SQRT_CURVE_PIVOT_METERS_PER_SECOND ** (1 - WINDY_CURVE_POWER) * clamped ** WINDY_CURVE_POWER
-    );
-  }
-  return speed;
+function flooredSpeed(speed: number): number {
+  return Math.min(
+    FLOOR_CURVE_MAXIMUM_METERS_PER_SECOND,
+    Math.max(speed, FLOOR_CURVE_MINIMUM_METERS_PER_SECOND),
+  );
 }
 
 export function renderParticleLayer(
   definition: ParticleLayerDefinition,
   system: ParticleSystem,
   widthPixels: number,
-  debug: boolean,
 ): Layer {
   return new LineLayer({
     id: definition.entry.id,
-    data: system.layerData(debug),
+    data: system.layerData(),
     getWidth: widthPixels,
     widthUnits: 'pixels',
     opacity: definition.opacity,

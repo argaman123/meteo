@@ -12,9 +12,7 @@ import {
   MAX_PARTICLE_GRID_CELLS,
   ParticleSystem,
   particleLineWidth,
-  renderCellGrid,
   renderParticleLayer,
-  renderStartMarkers,
 } from './renderers/particle-renderer';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
@@ -134,28 +132,18 @@ export class MapEngine {
       this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
       this.map.addControl(this.overlay as unknown as maplibregl.IControl);
     }
-    const debug = this.particleSettings.showGrid();
     const layers: Layer[] = [...this.definitions.values()]
       .sort((a, b) => a.order - b.order)
-      .map((definition) => this.toDeckLayer(definition, debug));
-    if (debug) {
-      for (const definition of this.definitions.values()) {
-        if (!('wind' in definition)) continue;
-        const system = this.particleSystems.get(definition.entry.id);
-        if (!system) continue;
-        layers.push(renderCellGrid(`${definition.entry.id}-grid`, system));
-        layers.push(renderStartMarkers(`${definition.entry.id}-starts`, system));
-      }
-    }
+      .map((definition) => this.toDeckLayer(definition));
     this.overlay.setProps({ layers });
   }
 
-  private toDeckLayer(definition: LayerDefinition, debug: boolean): Layer {
+  private toDeckLayer(definition: LayerDefinition): Layer {
     if ('grid' in definition) {
       return renderColormapLayer(definition, this.quality.textureMaxDimension());
     }
     const widthPixels = particleLineWidth() * this.particleSettings.widthScale();
-    return renderParticleLayer(definition, this.particleSystem(definition), widthPixels, debug);
+    return renderParticleLayer(definition, this.particleSystem(definition), widthPixels);
   }
 
   private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
@@ -200,14 +188,14 @@ export class MapEngine {
   private animate = (nowMs: number): void => {
     const deltaSeconds = Math.min(0.1, (nowMs - this.lastTickMs) / 1000 || 0.016);
     this.lastTickMs = nowMs;
-    const tuning = this.particleSettings.tuning();
+    const speedFactor = this.particleSettings.speedFactor();
     for (const [id, system] of this.particleSystems) {
       if (!this.definitions.has(id)) {
         this.particleSystems.delete(id);
         this.particleGridCellPx.delete(id);
         continue;
       }
-      system.step(deltaSeconds, tuning);
+      system.step(deltaSeconds, speedFactor);
     }
     this.syncLayers();
     this.animationFrame = requestAnimationFrame(this.animate);

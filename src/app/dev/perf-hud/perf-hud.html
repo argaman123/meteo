@@ -17,14 +17,6 @@
         (input)="setCellSize($event)"
       />
     </label>
-    <label class="mt-1 flex items-center gap-1">
-      <input
-        type="checkbox"
-        [checked]="particles.showGrid()"
-        (change)="particles.showGrid.set(!particles.showGrid())"
-      />
-      Show grid
-    </label>
     <label class="mt-1 block">
       Texture cap
       <select
@@ -40,42 +32,6 @@
       </select>
     </label>
     <div class="mt-2 border-t border-panel-border pt-2 font-bold">Particle tuning</div>
-    <label class="mt-1 block">
-      Speed ref
-      <select
-        class="ms-1 rounded border border-panel-border bg-app"
-        [value]="particles.speedReference()"
-        (change)="setSpeedReference($event)"
-      >
-        @for (option of speedReferenceOptions; track option) {
-          <option [value]="option" [selected]="option === particles.speedReference()">
-            {{ option }}
-          </option>
-        }
-      </select>
-    </label>
-    <label class="mt-1 block">
-      Curve
-      <select
-        class="ms-1 rounded border border-panel-border bg-app"
-        [value]="particles.speedCurve()"
-        (change)="setSpeedCurve($event)"
-      >
-        @for (option of speedCurveOptions; track option) {
-          <option [value]="option" [selected]="option === particles.speedCurve()">
-            {{ option }}
-          </option>
-        }
-      </select>
-    </label>
-    <label class="mt-1 flex items-center gap-1">
-      <input
-        type="checkbox"
-        [checked]="particles.latitudeCorrection()"
-        (change)="particles.latitudeCorrection.set(!particles.latitudeCorrection())"
-      />
-      Latitude correction (1/cos)
-    </label>
     <label class="mt-1 block">
       Speed x{{ particles.speedFactor() }}
       <input
