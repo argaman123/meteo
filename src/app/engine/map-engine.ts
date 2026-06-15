@@ -9,6 +9,7 @@ import { QualitySettings } from '../settings/quality-settings';
 import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
 import {
+  MAX_PARTICLE_GRID_CELLS,
   ParticleSystem,
   particleLineWidth,
   renderCellGrid,
@@ -27,6 +28,7 @@ export class MapEngine {
   private overlay: MapboxOverlay | null = null;
   private definitions = new Map<string, LayerDefinition>();
   private particleSystems = new Map<string, ParticleSystem>();
+  private particleGridCellPx = new Map<string, number>();
   private animationFrame: number | null = null;
   private lastTickMs = 0;
 
@@ -102,6 +104,7 @@ export class MapEngine {
     if (this.animationFrame !== null) cancelAnimationFrame(this.animationFrame);
     this.animationFrame = null;
     this.particleSystems.clear();
+    this.particleGridCellPx.clear();
     this.overlay = null;
     this.definitions.clear();
     this.map?.remove();
@@ -158,25 +161,40 @@ export class MapEngine {
   private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
     const id = definition.entry.id;
     const existing = this.particleSystems.get(id);
-    const [cols, rows] = this.gridDimensions(definition.wind.bounds);
-    if (existing && existing.wind === definition.wind && existing.gridCols === cols && existing.gridRows === rows) {
+    const cellPx = this.particleSettings.cellSizePx();
+    if (existing && existing.wind === definition.wind && this.particleGridCellPx.get(id) === cellPx) {
       return existing;
     }
+    const [cols, rows] = this.gridDimensions(definition.wind.bounds);
     const system = new ParticleSystem(definition.wind, cols, rows);
     this.particleSystems.set(id, system);
+    this.particleGridCellPx.set(id, cellPx);
     return system;
   }
 
   private gridDimensions(bounds: Bounds): [number, number] {
     const cellPx = this.particleSettings.cellSizePx();
-    if (!this.map) return [Math.round((bounds[2] - bounds[0]) / 3), Math.round((bounds[3] - bounds[1]) / 3)];
+    if (!this.map) {
+      return this.capGrid(
+        Math.round((bounds[2] - bounds[0]) / 3),
+        Math.round((bounds[3] - bounds[1]) / 3),
+      );
+    }
     const west = this.map.project([bounds[0], (bounds[1] + bounds[3]) / 2]).x;
     const east = this.map.project([bounds[2], (bounds[1] + bounds[3]) / 2]).x;
     const north = this.map.project([(bounds[0] + bounds[2]) / 2, bounds[3]]).y;
     const south = this.map.project([(bounds[0] + bounds[2]) / 2, bounds[1]]).y;
-    const cols = Math.max(1, Math.round(Math.abs(east - west) / cellPx));
-    const rows = Math.max(1, Math.round(Math.abs(south - north) / cellPx));
-    return [cols, rows];
+    const cols = Math.round(Math.abs(east - west) / cellPx);
+    const rows = Math.round(Math.abs(south - north) / cellPx);
+    return this.capGrid(cols, rows);
+  }
+
+  private capGrid(cols: number, rows: number): [number, number] {
+    const safeCols = Math.max(1, cols);
+    const safeRows = Math.max(1, rows);
+    if (safeCols * safeRows <= MAX_PARTICLE_GRID_CELLS) return [safeCols, safeRows];
+    const scale = Math.sqrt(MAX_PARTICLE_GRID_CELLS / (safeCols * safeRows));
+    return [Math.max(1, Math.round(safeCols * scale)), Math.max(1, Math.round(safeRows * scale))];
   }
 
   private animate = (nowMs: number): void => {
@@ -186,6 +204,7 @@ export class MapEngine {
     for (const [id, system] of this.particleSystems) {
       if (!this.definitions.has(id)) {
         this.particleSystems.delete(id);
+        this.particleGridCellPx.delete(id);
         continue;
       }
       system.step(deltaSeconds, tuning);
