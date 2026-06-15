@@ -67,7 +67,7 @@ Three non-negotiables, in priority order:
 | Framework | **Angular 22** (standalone, **zoneless**, signals-first) | |
 | Components | **Angular CDK** + **Tailwind** now; **add PrimeNG 22 when it ships** | See checkpoint below |
 | State | **Signals + small injectable signal-stores** per domain | No NgRx |
-| Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL being phased out; globe/3D temporarily removed — returns after first-party particles are verified) | Always behind the engine adapter |
+| Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL removed 2026-06; globe/3D temporarily removed — returns after first-party particles are verified) | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
 | Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **no committed unit tests for now** — temporary Vitest checks verify pure units/geo/time logic during development, then are deleted | Lead 2026-06-10; wrong conversions remain a flagged hazard — revisit when Units/Geo modules land |
@@ -150,7 +150,9 @@ render style = exactly one new file in `layers/model/`.
 - **Interfaces colocate with the area that owns them** (e.g. layer interfaces in `layers/`);
   backend contracts go in `types/`. No global interface dump.
 - **`dev/` is quarantined:** product code (`engine/`, `layers/`, `utils/`, `settings/`, the frame)
-  must never import from `dev/`; only page templates may mount dev widgets.
+  must never import from `dev/`; only page templates may mount dev widgets. (One recorded
+  exception: `environment.development.ts` registers the dev fixture-backend interceptor; prod
+  builds swap the file out via `fileReplacements`, so no mock ships.)
 - **Naming:** descriptive, no abbreviations a junior wouldn't know. One concept = one name everywhere.
 - **Files stay small and focused.** If a file is doing two things, split it. (Old codebase pain.)
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
@@ -211,13 +213,20 @@ render style = exactly one new file in `layers/model/`.
 
 ## 11. Current status
 
-**Slice 0 complete (2026-06-10), spike = GO**, post-review amendments executed (tree v4.1 locked in
-§5; see [`docs/plans/2026-06-10-slice-0-review-amendments.md`](docs/plans/2026-06-10-slice-0-review-amendments.md)).
-**Globe/3D is temporarily REMOVED — the app is 2D-only** until the wind-particle rendering path is
-trustworthy (upstream WeatherLayers bug; report draft in
-[`docs/dev/weatherlayers-issue-draft.md`](docs/dev/weatherlayers-issue-draft.md), the lead posts it).
-**Decided 2026-06-11: first-party weather renderers** (colormap + CPU particles in Slice 1; no
-high/low layer; see decisions.md). **Slice 1 spec approved 2026-06-11**
-([`docs/specs/slice-1.md`](docs/specs/slice-1.md)): bbox-windowed continuous-timeline contract,
-`dev/` interceptor mock, time scrubber, hover readout + minimal Units module, first-party
-renderers; URL view state dropped. **Next: the Slice 1 implementation plan, then build.**
+**Slice 0 complete (2026-06-10), spike = GO** (tree v4.1 locked in §5; see
+[`docs/plans/2026-06-10-slice-0-review-amendments.md`](docs/plans/2026-06-10-slice-0-review-amendments.md)).
+**Globe/3D remains REMOVED — the app is 2D-only** until the first-party wind-particle path is fully
+trustworthy.
+
+**Slice 1 implemented and cleaned (2026-06-15)** ([`docs/specs/slice-1.md`](docs/specs/slice-1.md)):
+first-party renderers (colormap `BitmapLayer` + CPU streamline particles `LineLayer`), bbox-windowed
+continuous-timeline contract with a `dev/` interceptor mock (swapped out in prod), time scrubber +
+keyboard + Now, hover readout + minimal Units, frame-AOI; `weatherlayers-gl` removed. **T11 close-out
+done:** temp Vitest checks deleted, debug scaffolding stripped, particle path simplified — the wind
+**LOOK is frozen for this slice** (revisit later). **Deferred (decided 2026-06-15): the opacity +
+reorder layer controls** — the pipeline already carries `opacity`/`order` with sane defaults, but the
+layer bar exposes on/off only; surface the controls in a later slice.
+
+**Pending before sign-off:** the lead's interactive verification walkthrough (the spec's Verification
+list) + RTL/Hebrew spot-check. **Next: the Slice 2 spec** (full layer system + panel + levels, per the
+roadmap).

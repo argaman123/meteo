@@ -161,7 +161,9 @@ real palettes/AOIs.
 ## Verification
 
 - Scrub across −24h→+96h — both layers update; keyboard steps work; **Now** jumps correctly.
-- Toggle layers, change opacity, reorder — render follows.
+- Toggle layers on/off — render follows. (Opacity + reorder controls **deferred to a later slice**,
+  decided 2026-06-15: the pipeline carries `opacity`/`order` with defaults, but the layer bar exposes
+  on/off only — no UI to change them yet.)
 - Hover shows all active layers' values, formatted via Units; toggle works; missing shows `—`.
 - Zoom across the model threshold — data switches wide↔local; pan past the padding — refetch.
 - Colormap alignment spot-check at high latitude vs known grid values (the mercator fix).
