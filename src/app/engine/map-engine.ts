@@ -8,12 +8,8 @@ import { ParticleSettings } from '../settings/particle-settings';
 import { QualitySettings } from '../settings/quality-settings';
 import { Bounds } from '../types/field-grid';
 import { renderColormapLayer } from './renderers/colormap-renderer';
-import {
-  MAX_PARTICLE_GRID_CELLS,
-  ParticleSystem,
-  particleLineWidth,
-  renderParticleLayer,
-} from './renderers/particle-renderer';
+import { particleLineWidth, renderParticleLayer } from './renderers/particle-renderer';
+import { MAX_PARTICLE_GRID_CELLS, ParticleSystem } from './renderers/particle-system';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
 export type { BasemapId } from './style-loader';
@@ -158,7 +154,7 @@ export class MapEngine {
       return existing;
     }
     const [cols, rows] = this.gridDimensions(definition.vectorField.bounds);
-    const system = new ParticleSystem(definition.vectorField, cols, rows);
+    const system = new ParticleSystem(definition.vectorField, cols, rows, definition.entry.motion);
     this.particleSystems.set(id, system);
     this.particleGridCellPx.set(id, cellPx);
     return system;

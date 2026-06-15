@@ -16,6 +16,21 @@ export interface ValueRange {
   max: number;
 }
 
+/**
+ * How a particle layer's field magnitude drives motion. These are the numbers that look
+ * universal but are really per-field (wind in m/s behaves nothing like wave height in metres),
+ * so each particle layer carries its own.
+ */
+export interface ParticleMotion {
+  minSpeedMetersPerSecond: number;
+  maxSpeedMetersPerSecond: number;
+  minFootprintFraction: number;
+  maxFootprintFraction: number;
+  footprintPivotMetersPerSecond: number;
+}
+
+export type ParticleAppearanceName = 'trails' | 'arcs';
+
 interface LayerCatalogEntryBase {
   id: string;
   label: string;
@@ -36,6 +51,8 @@ export interface ParticleLayerCatalogEntry extends LayerCatalogEntryBase {
   type: 'particles';
   speedParameter: string;
   directionParameter: string;
+  appearance: ParticleAppearanceName;
+  motion: ParticleMotion;
 }
 
 export type LayerCatalogEntry = ColormapLayerCatalogEntry | ParticleLayerCatalogEntry;
