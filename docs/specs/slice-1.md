@@ -157,6 +157,9 @@ real palettes/AOIs.
 2. Real **AOI list**, whenever convenient — placeholders until.
 3. Eventually: confirm the real backend's missing-value convention is indeed `null` (parser
    isolates the assumption either way).
+4. A real **`waveDirection`** field for the waves layer (animated arcs). It currently borrows
+   `windDirection` as a placeholder swell direction; only a new fixture/parameter is needed, no
+   code change.
 
 ## Verification
 
