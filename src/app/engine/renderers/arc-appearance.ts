@@ -1,14 +1,15 @@
 import { ParticleFrame } from './particle-system';
 
-// Wave look: each particle is a small half-circle wavefront, bulging in the direction of travel.
-const ARC_SEGMENTS = 10;
-const ARC_MINIMUM_RADIUS_FRACTION = 0.12;
-const ARC_MAXIMUM_RADIUS_FRACTION = 0.34;
-const ARC_SIZE_PIVOT_METERS_PER_SECOND = 4;
+// Wave look: a short, gently bowed crest line lying across the swell direction. The particle
+// drifts forward, so the whole crest slides sideways (perpendicular to its own length) like a
+// wavefront. Uniform size — the crest does not grow with wave height.
+const CREST_SEGMENTS = 7;
+const CREST_LENGTH_FRACTION = 0.46;
+const CREST_BOW_FRACTION = 0.14;
 const FADE_IN_FRACTION = 0.2;
 const FADE_OUT_FRACTION = 0.3;
 const MINIMUM_LATITUDE_COSINE = 0.2;
-const COLOR: [number, number, number] = [186, 230, 255];
+const COLOR: [number, number, number] = [196, 235, 255];
 
 export function arcAppearance(
   frame: ParticleFrame,
@@ -24,24 +25,22 @@ export function arcAppearance(
     const alpha = Math.round(255 * birthFade * deathFade);
     const headLon = frame.headLon[p];
     const headLat = frame.headLat[p];
-    const dirLon = frame.dirLon[p];
-    const dirLat = frame.dirLat[p];
-    const perpLon = -dirLat;
-    const perpLat = dirLon;
-    const sizeNorm = Math.min(1, frame.speed[p] / ARC_SIZE_PIVOT_METERS_PER_SECOND);
-    const radius =
-      frame.span[p] *
-      (ARC_MINIMUM_RADIUS_FRACTION +
-        (ARC_MAXIMUM_RADIUS_FRACTION - ARC_MINIMUM_RADIUS_FRACTION) * sizeNorm);
+    const forwardLon = frame.dirLon[p];
+    const forwardLat = frame.dirLat[p];
+    const crestLon = -forwardLat;
+    const crestLat = forwardLon;
+    const halfLength = (frame.span[p] * CREST_LENGTH_FRACTION) / 2;
+    const bowDepth = frame.span[p] * CREST_LENGTH_FRACTION * CREST_BOW_FRACTION;
     const lonStretch = 1 / Math.max(MINIMUM_LATITUDE_COSINE, Math.cos((headLat * Math.PI) / 180));
     let previousLon = 0;
     let previousLat = 0;
-    for (let k = 0; k <= ARC_SEGMENTS; k++) {
-      const angle = (Math.PI * k) / ARC_SEGMENTS;
-      const offsetLon = Math.cos(angle) * perpLon + Math.sin(angle) * dirLon;
-      const offsetLat = Math.cos(angle) * perpLat + Math.sin(angle) * dirLat;
-      const lon = headLon + radius * offsetLon * lonStretch;
-      const lat = headLat + radius * offsetLat;
+    for (let k = 0; k <= CREST_SEGMENTS; k++) {
+      const along = (k / CREST_SEGMENTS) * 2 - 1;
+      const bow = (1 - along * along) * bowDepth;
+      const offsetLon = along * halfLength * crestLon + bow * forwardLon;
+      const offsetLat = along * halfLength * crestLat + bow * forwardLat;
+      const lon = headLon + offsetLon * lonStretch;
+      const lat = headLat + offsetLat;
       if (k > 0) {
         sources[segment * 2] = previousLon;
         sources[segment * 2 + 1] = previousLat;
