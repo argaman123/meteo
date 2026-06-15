@@ -49,33 +49,14 @@ export class FieldData {
         this.lastCompleteGrids.delete(entry.id);
         continue;
       }
-      const grids: Record<string, FieldGrid> = {};
-      let complete = true;
-      let failed = false;
-      for (const parameter of layerParameters(entry)) {
-        const resource = this.resources.get(resourceKey(entry.id, parameter));
-        if (resource?.status() === 'error') {
-          failed = true;
-          break;
-        }
-        if (!resource?.hasValue()) {
-          complete = false;
-          break;
-        }
-        const document = resource.value();
-        if (!document) {
-          complete = false;
-          break;
-        }
-        grids[parameter] = parseDocument(document);
-      }
-      if (failed) {
+      const resolved = this.resolveGrids(entry);
+      if (resolved.status === 'failed') {
         this.lastCompleteGrids.delete(entry.id);
         continue;
       }
-      if (complete) {
-        this.lastCompleteGrids.set(entry.id, grids);
-        loaded.push({ entry, opacity: state.opacity, order: state.order, grids });
+      if (resolved.status === 'complete') {
+        this.lastCompleteGrids.set(entry.id, resolved.grids);
+        loaded.push({ entry, opacity: state.opacity, order: state.order, grids: resolved.grids });
         continue;
       }
       const stale = this.lastCompleteGrids.get(entry.id);
@@ -85,6 +66,22 @@ export class FieldData {
     }
     return loaded;
   });
+
+  private resolveGrids(entry: LayerCatalogEntry): {
+    status: 'complete' | 'incomplete' | 'failed';
+    grids: Record<string, FieldGrid>;
+  } {
+    const grids: Record<string, FieldGrid> = {};
+    for (const parameter of layerParameters(entry)) {
+      const resource = this.resources.get(resourceKey(entry.id, parameter));
+      if (resource?.status() === 'error') return { status: 'failed', grids };
+      if (!resource?.hasValue()) return { status: 'incomplete', grids };
+      const document = resource.value();
+      if (!document) return { status: 'incomplete', grids };
+      grids[parameter] = parseDocument(document);
+    }
+    return { status: 'complete', grids };
+  }
 
   constructor() {
     effect(() => {
