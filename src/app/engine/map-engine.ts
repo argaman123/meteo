@@ -1,6 +1,9 @@
-import { Service, signal } from '@angular/core';
+import { Service, inject } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
+import { MapboxOverlay } from '@deck.gl/mapbox';
+import { BitmapLayer } from '@deck.gl/layers';
+import { ViewStore } from '../stores/view-store';
 import { Bounds } from '../types/wrap';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
@@ -8,12 +11,9 @@ export type { BasemapId } from './style-loader';
 
 @Service()
 export class MapEngine {
+  private view = inject(ViewStore);
   private map: maplibregl.Map | null = null;
-
-  readonly viewBounds = signal<Bounds | null>(null);
-  readonly settledBounds = signal<Bounds | null>(null);
-  readonly zoom = signal<number | null>(null);
-  readonly cursor = signal<{ point: [number, number]; lngLat: [number, number] } | null>(null);
+  private overlay: MapboxOverlay | null = null;
 
   async init(container: HTMLElement, basemap: BasemapId): Promise<void> {
     const protocol = new Protocol();
@@ -30,16 +30,13 @@ export class MapEngine {
     });
     this.map.keyboard.disable();
     this.map.on('move', () => this.publishView());
-    this.map.on('moveend', () => this.settledBounds.set(this.viewBounds()));
+    this.map.on('moveend', () => this.view.settledBbox.set(this.view.bbox()));
     this.map.on('mousemove', (event) => {
-      this.cursor.set({
-        point: [event.point.x, event.point.y],
-        lngLat: [event.lngLat.lng, event.lngLat.lat],
-      });
+      this.view.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
-    this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
+    this.map.getCanvasContainer().addEventListener('mouseleave', () => this.view.cursor.set(null));
     this.publishView();
-    this.settledBounds.set(this.viewBounds());
+    this.view.settledBbox.set(this.view.bbox());
   }
 
   async setBasemap(id: BasemapId): Promise<void> {
@@ -47,25 +44,35 @@ export class MapEngine {
     this.map?.setStyle(style);
   }
 
+  showColormap(id: string, image: ImageData, bounds: Bounds, opacity: number): void {
+    if (!this.map) return;
+    if (!this.overlay) {
+      this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
+      this.map.addControl(this.overlay as unknown as maplibregl.IControl);
+    }
+    this.overlay.setProps({ layers: [new BitmapLayer({ id, image, bounds, opacity })] });
+  }
+
   destroy(): void {
+    this.overlay = null;
     this.map?.remove();
     this.map = null;
-    this.viewBounds.set(null);
-    this.settledBounds.set(null);
-    this.zoom.set(null);
-    this.cursor.set(null);
+    this.view.bbox.set(null);
+    this.view.settledBbox.set(null);
+    this.view.zoom.set(null);
+    this.view.cursor.set(null);
     maplibregl.removeProtocol('pmtiles');
   }
 
   private publishView(): void {
     if (!this.map) return;
     const bounds = this.map.getBounds();
-    this.viewBounds.set([
+    this.view.bbox.set([
       Math.max(-180, bounds.getWest()),
       bounds.getSouth(),
       Math.min(180, bounds.getEast()),
       bounds.getNorth(),
     ]);
-    this.zoom.set(this.map.getZoom());
+    this.view.zoom.set(this.map.getZoom());
   }
 }

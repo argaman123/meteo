@@ -45,6 +45,10 @@ Weather layers render through first-party renderers over `@deck.gl/layers` (`Bit
 colormaps, `LineLayer` for particles). `weatherlayers-gl` was removed in Slice 1 (2026-06), which
 also dropped its `geotiff` / `@scarf/scarf` install-time telemetry transitive.
 
+`d3-scale` (+ `d3-interpolate`, `d3-color`) added during the rebuild (2026-06) for colormap colour
+scaling — pure JS, popular, no runtime telemetry; chosen over the color-specialist `chroma.js`
+because d3 is the one viz toolkit we reuse later for axes/legends/charts (handoff over specialization).
+
 ### Style JSON self-hosting patches
 
 Downloaded styles reference hosted assets; exactly three fields are patched to local paths:

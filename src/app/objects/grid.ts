@@ -43,6 +43,17 @@ export class Grid {
     this.data = data;
   }
 
+  extent(): [number, number] {
+    let min = Infinity;
+    let max = -Infinity;
+    for (const value of this.data) {
+      if (Number.isNaN(value)) continue;
+      if (value < min) min = value;
+      if (value > max) max = value;
+    }
+    return [min, max];
+  }
+
   valueAt(lon: number, lat: number, interpolation: 'bilinear' | 'nearest'): number {
     const [west, south, east, north] = this.bounds;
     const col = ((lon - west) / (east - west)) * (this.width - 1);
