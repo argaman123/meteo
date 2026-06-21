@@ -1,22 +1,20 @@
 import { Bounds, Wrap } from '../types/wrap';
 
 export class Grid {
-  constructor(
-    readonly info: {
-      baseTime: number;
-      forecastTime: number;
-      model: string;
-      param: string;
-      pressure: string | null;
-      heightFt: string | null;
-    },
-    readonly bounds: Bounds,
-    readonly width: number,
-    readonly height: number,
-    readonly data: Float32Array,
-  ) {}
+  readonly info: {
+    baseTime: number;
+    forecastTime: number;
+    model: string;
+    param: string;
+    pressure: string | null;
+    heightFt: string | null;
+  };
+  readonly bounds: Bounds;
+  readonly width: number;
+  readonly height: number;
+  readonly data: Float32Array;
 
-  static fromWrap(wrap: Wrap): Grid {
+  constructor(wrap: Wrap) {
     const height = wrap.values.length;
     const width = height > 0 ? wrap.values[0].length : 0;
     const data = new Float32Array(width * height);
@@ -26,7 +24,7 @@ export class Grid {
         data[r * width + c] = value === null ? NaN : value;
       }
     }
-    const info = {
+    this.info = {
       baseTime: wrap.wrap_info.base_time,
       forecastTime: wrap.wrap_info.forecast_time,
       model: wrap.wrap_info.model,
@@ -34,17 +32,15 @@ export class Grid {
       pressure: wrap.wrap_info.pressure,
       heightFt: wrap.wrap_info.height,
     };
-    const bounds: Bounds = [
+    this.bounds = [
       wrap.start_x,
       wrap.start_y + wrap.ry * (height - 1),
       wrap.start_x + wrap.rx * (width - 1),
       wrap.start_y,
     ];
-    return new Grid(info, bounds, width, height, data);
-  }
-
-  static fromValues(template: Grid, data: Float32Array): Grid {
-    return new Grid(template.info, template.bounds, template.width, template.height, data);
+    this.width = width;
+    this.height = height;
+    this.data = data;
   }
 
   valueAt(lon: number, lat: number, interpolation: 'bilinear' | 'nearest'): number {
