@@ -170,7 +170,7 @@ src/app/
       particle-renderer.ts
   layers/                             the declarative layer system (registry arrives in Slice 1)
     layer-definition.ts               layer interfaces
-    field-grid.ts                     pure grid decode/convert functions
+    wrap.ts                     pure grid decode/convert functions
   settings/                           injectable settings stores
     quality-settings.ts               adaptive-quality store (engine reads it; its UI is dev-only)
   dev/                                QUARANTINE — not product code
@@ -210,10 +210,10 @@ src/app/
       wind.ts
   types/                             shared interfaces (NOT "models" — clashes with met. models)
     layer-definition.ts              LayerDefinition, ColorStop, catalog-entry shapes
-    field-grid.ts                    FieldGridDocument, FieldGrid, VectorField
+    wrap.ts                    FieldGridDocument, FieldGrid, VectorField
   utils/                             pure functions, sub-foldered by topic, one function per file
     grids/
-      parse-field-grid.ts
+      parse-wrap.ts
       downsample-grid.ts
     wind/
       wind-to-vector-field.ts
@@ -253,7 +253,7 @@ src/app/
       temperature.ts                 palette, defaults, parameter binding
       wind.ts
   types/                             backend data contracts (DAO shapes) shared across areas
-    field-grid.ts                    FieldGridDocument (backend JSON) + decoded FieldGrid/VectorField
+    wrap.ts                    FieldGridDocument (backend JSON) + decoded FieldGrid/VectorField
   utils/                             pure functions; similar functions share a file, split when grown
     grids.ts                         parse, downsample, wind→u/v vectors
     units.ts                         kt→m/s (seed of the future Units module)

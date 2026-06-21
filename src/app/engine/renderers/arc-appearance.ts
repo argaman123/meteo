@@ -1,36 +1,41 @@
 import { ParticleFrame } from './particle-system';
 
-// Wave look: a short, gently bowed crest line lying across the swell direction. The particle
-// drifts forward, so the whole crest slides sideways (perpendicular to its own length) like a
-// wavefront. Uniform size — the crest does not grow with wave height.
-const CREST_SEGMENTS = 7;
-const CREST_LENGTH_FRACTION = 0.46;
-const CREST_BOW_FRACTION = 0.14;
+const CREST_SEGMENTS = 6;
+const CREST_LENGTH_FRACTION = 0.4;
+const CREST_BOW_FRACTION = 0.16;
+const CREST_MIN_SCALE = 0.4;
+const CREST_MAX_SCALE = 1.3;
+const HEIGHT_PIVOT_METERS = 2.5;
 const FADE_IN_FRACTION = 0.2;
-const FADE_OUT_FRACTION = 0.3;
+const FADE_OUT_FRACTION = 0.4;
 const MINIMUM_LATITUDE_COSINE = 0.2;
-const COLOR: [number, number, number] = [196, 235, 255];
+const COLOR: [number, number, number] = [200, 236, 255];
 
 export function arcAppearance(
   frame: ParticleFrame,
   sources: Float32Array,
   targets: Float32Array,
   colors: Uint8Array,
+  sizeScale: number,
 ): number {
   let segment = 0;
+  const baseLength = frame.cellDegrees * CREST_LENGTH_FRACTION * sizeScale;
   for (let p = 0; p < frame.count; p++) {
-    const progress = frame.age[p];
-    const birthFade = Math.min(1, progress / FADE_IN_FRACTION);
-    const deathFade = Math.min(1, (1 - progress) / FADE_OUT_FRACTION);
+    const age = frame.ageFraction[p];
+    const birthFade = Math.min(1, age / FADE_IN_FRACTION);
+    const deathFade = Math.min(1, (1 - age) / FADE_OUT_FRACTION);
     const alpha = Math.round(255 * birthFade * deathFade);
+    const scale =
+      CREST_MIN_SCALE +
+      (CREST_MAX_SCALE - CREST_MIN_SCALE) * Math.min(1, frame.speed[p] / HEIGHT_PIVOT_METERS);
+    const halfLength = (baseLength * scale) / 2;
+    const bowDepth = baseLength * scale * CREST_BOW_FRACTION;
     const headLon = frame.headLon[p];
     const headLat = frame.headLat[p];
     const forwardLon = frame.dirLon[p];
     const forwardLat = frame.dirLat[p];
     const crestLon = -forwardLat;
     const crestLat = forwardLon;
-    const halfLength = (frame.span[p] * CREST_LENGTH_FRACTION) / 2;
-    const bowDepth = frame.span[p] * CREST_LENGTH_FRACTION * CREST_BOW_FRACTION;
     const lonStretch = 1 / Math.max(MINIMUM_LATITUDE_COSINE, Math.cos((headLat * Math.PI) / 180));
     let previousLon = 0;
     let previousLat = 0;

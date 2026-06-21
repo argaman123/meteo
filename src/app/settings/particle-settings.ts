@@ -1,6 +1,6 @@
 import { Service, effect, signal } from '@angular/core';
 
-const STORAGE_KEY = 'meteo.particle-tuning.v3';
+const STORAGE_KEY = 'meteo.particle-tuning.v4';
 
 interface StoredSettings {
   cellSizePx: number;
@@ -10,7 +10,7 @@ interface StoredSettings {
 
 @Service()
 export class ParticleSettings {
-  cellSizePx = signal(70);
+  cellSizePx = signal(30);
   speedFactor = signal(1);
   widthScale = signal(1);
 

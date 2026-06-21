@@ -153,12 +153,12 @@ git commit -m "feat: time-dimensioned fixtures (-24h..+96h), wave grid with null
 
 **Files:**
 - Create: `src/app/utils/bbox.ts`, `src/app/utils/time.ts`
-- Modify: `src/app/types/field-grid.ts`, `src/app/utils/grids.ts`
+- Modify: `src/app/types/wrap.ts`, `src/app/utils/grids.ts`
 - Test (temporary): `src/app/utils/bbox.spec.ts`, `src/app/utils/time.spec.ts`, `src/app/utils/grids.spec.ts`
 
 - [ ] **Step 1: Update the backend contract types**
 
-Replace `src/app/types/field-grid.ts` with:
+Replace `src/app/types/wrap.ts` with:
 
 ```ts
 export type Bounds = [number, number, number, number];
@@ -428,7 +428,7 @@ the removed `FieldGrid` fields).
 - [ ] **Step 6: Commit**
 
 ```bash
-git add src/app/types/field-grid.ts src/app/utils
+git add src/app/types/wrap.ts src/app/utils
 git commit -m "feat: bbox/time helpers, null-aware grid parsing, bilinear sampling (temp specs)"
 ```
 

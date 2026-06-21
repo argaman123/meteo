@@ -6,7 +6,7 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { from } from 'rxjs';
-import { Bounds, FieldGridDocument } from '../../types/field-grid';
+import { Bounds, Wrap } from '../../types/wrap';
 import {
   FixtureManifest,
   fixtureFileName,
@@ -17,7 +17,7 @@ import {
 const ARTIFICIAL_LATENCY_MS = 150;
 
 let manifestPromise: Promise<FixtureManifest> | null = null;
-const documentCache = new Map<string, Promise<FieldGridDocument>>();
+const documentCache = new Map<string, Promise<Wrap>>();
 
 export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
   if (!request.url.startsWith('/api/')) return next(request);
@@ -54,7 +54,7 @@ function loadDocument(
   model: string,
   parameter: string,
   hours: number,
-): Promise<FieldGridDocument> {
+): Promise<Wrap> {
   const url = `/fixtures/models/${model}/${fixtureFileName(parameter, hours)}`;
   let cached = documentCache.get(url);
   if (!cached) {
@@ -62,7 +62,7 @@ function loadDocument(
       if (!response.ok) {
         throw new HttpErrorResponse({ url, status: 404, statusText: 'Unknown fixture' });
       }
-      return response.json() as Promise<FieldGridDocument>;
+      return response.json() as Promise<Wrap>;
     });
     documentCache.set(url, cached);
   }

@@ -1,29 +1,24 @@
 import { Service, computed, effect, inject, signal, untracked } from '@angular/core';
 import { HttpResourceRef, httpResource } from '@angular/common/http';
 import { MapEngine } from '../engine/map-engine';
-import { LayerCatalogEntry, LayerDefinition, layerParameters } from '../layers/layer-definition';
+import { Layer, RenderItem } from '../layers/layer';
 import { layerRegistry } from '../layers/registry';
 import { LayersStore } from '../stores/layers-store';
 import { TimeStore } from '../stores/time-store';
-import { Bounds, FieldGrid, FieldGridDocument, VectorField } from '../types/field-grid';
-import { knotsToMetersPerSecond } from '../units/units';
+import { Bounds, Wrap } from '../types/wrap';
 import { containsBounds, coveredFraction, expandBounds } from '../utils/bbox';
-import { mapGridValues, parseFieldGrid, toVectorField } from '../utils/grids';
+import { Grid } from '../objects/grid';
 
 const LOCAL_MODEL_COVERAGE: Bounds = [0, 24, 50, 52];
 const LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE = 0.8;
 const BBOX_PADDING_FACTOR = 0;
 const REFETCH_SHRINK_RATIO = 0.5;
 
-export interface LoadedLayer {
-  entry: LayerCatalogEntry;
-  opacity: number;
+export interface ActiveLayer {
+  layer: Layer;
+  grids: Grid[];
   order: number;
-  grids: Record<string, FieldGrid>;
 }
-
-const parsedGrids = new WeakMap<FieldGridDocument, FieldGrid>();
-const vectorFields = new WeakMap<FieldGrid, VectorField>();
 
 @Service()
 export class FieldData {
@@ -31,8 +26,8 @@ export class FieldData {
   private layersStore = inject(LayersStore);
   private timeStore = inject(TimeStore);
   private requestBounds = signal<Bounds | null>(null);
-  private resources = new Map<string, HttpResourceRef<FieldGridDocument | undefined>>();
-  private lastCompleteGrids = new Map<string, Record<string, FieldGrid>>();
+  private resources = new Map<string, HttpResourceRef<Grid | undefined>>();
+  private lastCompleteGrids = new Map<string, Grid[]>();
 
   private model = computed(() => {
     const view = this.engine.settledBounds();
@@ -41,44 +36,41 @@ export class FieldData {
     return covered >= LOCAL_MODEL_MINIMUM_VISIBLE_COVERAGE ? 'local' : 'wide';
   });
 
-  readonly loadedLayers = computed<LoadedLayer[]>(() => {
-    const loaded: LoadedLayer[] = [];
-    for (const entry of layerRegistry) {
-      const state = this.layersStore.stateOf(entry.id);
+  readonly activeLayers = computed<ActiveLayer[]>(() => {
+    const active: ActiveLayer[] = [];
+    for (const layer of layerRegistry) {
+      const state = this.layersStore.stateOf(layer.id);
       if (!state?.active) {
-        this.lastCompleteGrids.delete(entry.id);
+        this.lastCompleteGrids.delete(layer.id);
         continue;
       }
-      const resolved = this.resolveGrids(entry);
+      const resolved = this.resolveGrids(layer);
       if (resolved.status === 'failed') {
-        this.lastCompleteGrids.delete(entry.id);
+        this.lastCompleteGrids.delete(layer.id);
         continue;
       }
       if (resolved.status === 'complete') {
-        this.lastCompleteGrids.set(entry.id, resolved.grids);
-        loaded.push({ entry, opacity: state.opacity, order: state.order, grids: resolved.grids });
+        this.lastCompleteGrids.set(layer.id, resolved.grids);
+        active.push({ layer, grids: resolved.grids, order: state.order });
         continue;
       }
-      const stale = this.lastCompleteGrids.get(entry.id);
+      const stale = this.lastCompleteGrids.get(layer.id);
       if (stale) {
-        loaded.push({ entry, opacity: state.opacity, order: state.order, grids: stale });
+        active.push({ layer, grids: stale, order: state.order });
       }
     }
-    return loaded;
+    return active;
   });
 
-  private resolveGrids(entry: LayerCatalogEntry): {
-    status: 'complete' | 'incomplete' | 'failed';
-    grids: Record<string, FieldGrid>;
-  } {
-    const grids: Record<string, FieldGrid> = {};
-    for (const parameter of layerParameters(entry)) {
-      const resource = this.resources.get(resourceKey(entry.id, parameter));
+  private resolveGrids(layer: Layer): { status: 'complete' | 'incomplete' | 'failed'; grids: Grid[] } {
+    const grids: Grid[] = [];
+    for (const parameter of layer.parameters) {
+      const resource = this.resources.get(resourceKey(layer.id, parameter));
       if (resource?.status() === 'error') return { status: 'failed', grids };
       if (!resource?.hasValue()) return { status: 'incomplete', grids };
-      const document = resource.value();
-      if (!document) return { status: 'incomplete', grids };
-      grids[parameter] = parseDocument(document);
+      const grid = resource.value();
+      if (!grid) return { status: 'incomplete', grids };
+      grids.push(grid);
     }
     return { status: 'complete', grids };
   }
@@ -94,24 +86,27 @@ export class FieldData {
         this.requestBounds.set(expandBounds(settled, BBOX_PADDING_FACTOR));
       }
     });
-    for (const entry of layerRegistry) {
-      for (const parameter of layerParameters(entry)) {
+    for (const layer of layerRegistry) {
+      for (const parameter of layer.parameters) {
         this.resources.set(
-          resourceKey(entry.id, parameter),
-          httpResource<FieldGridDocument>(() => {
-            if (!this.layersStore.stateOf(entry.id)?.active) return undefined;
-            const bounds = this.requestBounds();
-            if (!bounds) return undefined;
-            return {
-              url: '/api/grids',
-              params: {
-                parameter,
-                model: this.model(),
-                time: String(this.timeStore.currentTime()),
-                bbox: bounds.join(','),
-              },
-            };
-          }),
+          resourceKey(layer.id, parameter),
+          httpResource<Grid>(
+            () => {
+              if (!this.layersStore.stateOf(layer.id)?.active) return undefined;
+              const bounds = this.requestBounds();
+              if (!bounds) return undefined;
+              return {
+                url: '/api/grids',
+                params: {
+                  parameter,
+                  model: this.model(),
+                  time: String(this.timeStore.currentTime()),
+                  bbox: bounds.join(','),
+                },
+              };
+            },
+            { parse: (raw) => Grid.fromWrap(raw as Wrap) },
+          ),
         );
       }
     }
@@ -119,15 +114,10 @@ export class FieldData {
   }
 
   private syncEngine(): void {
-    const loaded = this.loadedLayers();
-    for (const entry of layerRegistry) {
-      const layer = loaded.find((candidate) => candidate.entry.id === entry.id);
-      if (layer) {
-        this.engine.addLayer(toDefinition(layer));
-      } else {
-        this.engine.removeLayer(entry.id);
-      }
-    }
+    const items = this.activeLayers().flatMap((active) =>
+      buildRenderItems(active.layer, active.grids, active.order),
+    );
+    this.engine.setItems(items);
   }
 }
 
@@ -135,32 +125,41 @@ function resourceKey(layerId: string, parameter: string): string {
   return `${layerId}:${parameter}`;
 }
 
-function parseDocument(document: FieldGridDocument): FieldGrid {
-  let grid = parsedGrids.get(document);
-  if (!grid) {
-    grid = parseFieldGrid(document);
-    parsedGrids.set(document, grid);
-  }
-  return grid;
+function buildRenderItems(layer: Layer, grids: Grid[], order: number): RenderItem[] {
+  const template = grids[0];
+  const cells = template.width * template.height;
+  return layer.looks.map((look, index) => {
+    const id = `${layer.id}:${index}`;
+    if (look.kind === 'colormap') {
+      const out = new Float32Array(cells);
+      for (let i = 0; i < cells; i++) out[i] = look.scalar(valuesAtCell(grids, i));
+      return {
+        id,
+        look,
+        grids: [Grid.fromValues(template, out)],
+        interpolation: layer.interpolation,
+        opacity: look.defaultOpacity,
+        order,
+      };
+    }
+    const u = new Float32Array(cells);
+    const v = new Float32Array(cells);
+    for (let i = 0; i < cells; i++) {
+      const moved = look.vector(valuesAtCell(grids, i));
+      u[i] = moved.u;
+      v[i] = moved.v;
+    }
+    return {
+      id,
+      look,
+      grids: [Grid.fromValues(template, u), Grid.fromValues(template, v)],
+      interpolation: layer.interpolation,
+      opacity: look.defaultOpacity,
+      order,
+    };
+  });
 }
 
-function toDefinition(layer: LoadedLayer): LayerDefinition {
-  if (layer.entry.type === 'colormap') {
-    return {
-      entry: layer.entry,
-      grid: layer.grids[layer.entry.parameter],
-      opacity: layer.opacity,
-      order: layer.order,
-    };
-  }
-  const speed = layer.grids[layer.entry.speedParameter];
-  const direction = layer.grids[layer.entry.directionParameter];
-  let vectorField = vectorFields.get(speed);
-  if (!vectorField) {
-    const speedMetersPerSecond =
-      speed.units === 'kt' ? mapGridValues(speed, knotsToMetersPerSecond, 'm/s') : speed;
-    vectorField = toVectorField(speedMetersPerSecond, direction);
-    vectorFields.set(speed, vectorField);
-  }
-  return { entry: layer.entry, vectorField, opacity: layer.opacity, order: layer.order };
+function valuesAtCell(grids: Grid[], index: number): number[] {
+  return grids.map((grid) => grid.data[index]);
 }

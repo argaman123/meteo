@@ -30,16 +30,22 @@ for (let h = -BACK_HOURS; h <= FORWARD_HOURS; h += STEP_HOURS) FRAME_HOURS.push(
 
 const RUN_TIME_UNIX_SECONDS =
   Math.floor(Date.now() / 1000 / (STEP_HOURS * 3600)) * (STEP_HOURS * 3600);
-const RUN_TIME_ISO = new Date(RUN_TIME_UNIX_SECONDS * 1000).toISOString();
 
-type Parameter = 'temperature' | 'windSpeed' | 'windDirection' | 'waveHeight';
+type Parameter = 'temperature' | 'windSpeed' | 'u' | 'v' | 'waveHeight' | 'waveU' | 'waveV';
 
-const UNITS: Record<Parameter, string> = {
-  temperature: 'C',
-  windSpeed: 'kt',
-  windDirection: 'deg',
-  waveHeight: 'm',
-};
+function isWave(parameter: Parameter): boolean {
+  return parameter === 'waveHeight' || parameter === 'waveU' || parameter === 'waveV';
+}
+
+const PARAMETERS: Parameter[] = [
+  'temperature',
+  'windSpeed',
+  'u',
+  'v',
+  'waveHeight',
+  'waveU',
+  'waveV',
+];
 
 interface PressureSystem {
   lat: number;
@@ -213,7 +219,13 @@ function field(lat: number, lon: number, hours: number, kind: Parameter): number
   if (kind === 'temperature') return round1(temperatureAt(lat, lon, hours));
   const wind = windAt(lat, lon, hours);
   if (kind === 'windSpeed') return round1(wind.speedKnots);
-  return round1(wind.directionDegrees);
+  const radians = (wind.directionDegrees * Math.PI) / 180;
+  if (kind === 'waveU' || kind === 'waveV') {
+    const height = waveHeightAt(lat, lon, hours);
+    return round1(kind === 'waveU' ? -height * Math.sin(radians) : -height * Math.cos(radians));
+  }
+  const speedMs = wind.speedKnots / KNOTS_PER_METER_PER_SECOND;
+  return round1(kind === 'u' ? -speedMs * Math.sin(radians) : -speedMs * Math.cos(radians));
 }
 
 function landMaskFor(geometry: Model): Uint8Array {
@@ -237,7 +249,7 @@ function fixtureFileName(parameter: string, hours: number): string {
 const WAVE_DELTA_DEGREES = 0.3;
 
 function gridGeometry(model: Model, parameter: Parameter): Model {
-  if (parameter !== 'waveHeight') return model;
+  if (!isWave(parameter)) return model;
   const endLat = model.startLat + model.deltaLat * (model.rows - 1);
   const endLon = model.startLon + model.deltaLon * (model.cols - 1);
   return {
@@ -258,9 +270,9 @@ rmSync('public/fixtures/models', { recursive: true, force: true });
 for (const model of MODELS) {
   const dir = `public/fixtures/models/${model.name}`;
   mkdirSync(dir, { recursive: true });
-  for (const parameter of Object.keys(UNITS) as Parameter[]) {
+  for (const parameter of PARAMETERS) {
     const geometry = gridGeometry(model, parameter);
-    const landMask = parameter === 'waveHeight' ? landMaskFor(geometry) : null;
+    const landMask = isWave(parameter) ? landMaskFor(geometry) : null;
     for (const hours of FRAME_HOURS) {
       const values: (number | null)[][] = [];
       for (let r = 0; r < geometry.rows; r++) {
@@ -276,17 +288,18 @@ for (const model of MODELS) {
         values.push(row);
       }
       const doc = {
-        parameter,
-        level: 'surface',
-        units: UNITS[parameter],
-        runTime: RUN_TIME_ISO,
-        forecastHours: hours,
-        startLat: geometry.startLat,
-        startLon: geometry.startLon,
-        deltaLat: geometry.deltaLat,
-        deltaLon: geometry.deltaLon,
-        rows: geometry.rows,
-        cols: geometry.cols,
+        rx: geometry.deltaLon,
+        ry: geometry.deltaLat,
+        start_x: geometry.startLon,
+        start_y: geometry.startLat,
+        wrap_info: {
+          base_time: RUN_TIME_UNIX_SECONDS,
+          forecast_time: hours,
+          model: model.name,
+          param: parameter,
+          pressure: null,
+          height: null,
+        },
         values,
       };
       writeFileSync(`${dir}/${fixtureFileName(parameter, hours)}`, JSON.stringify(doc));

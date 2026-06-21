@@ -1,25 +1,32 @@
 import type { Layer } from '@deck.gl/core';
 import { BitmapLayer } from '@deck.gl/layers';
-import { ColorStop, ColormapLayerDefinition } from '../../layers/layer-definition';
-import { FieldGrid } from '../../types/field-grid';
-import { inverseMercatorY, mercatorY } from '../../utils/mercator';
+import { ColorStop, ValueRange } from '../../layers/look';
+import { Grid } from '../../objects/grid';
+import { inverseMercatorY, mercatorY } from './mercator';
 
-const colorizedImages = new WeakMap<FieldGrid, { textureCap: number; image: ImageData }>();
+export interface ColormapRender {
+  id: string;
+  grid: Grid;
+  palette: ColorStop[];
+  paletteStyle: 'smooth' | 'stepped';
+  interpolation: 'bilinear' | 'nearest';
+  visibleRange?: ValueRange;
+  opacity: number;
+}
 
-export function renderColormapLayer(
-  definition: ColormapLayerDefinition,
-  textureCap: number,
-): Layer {
+const colorizedImages = new WeakMap<Grid, { textureCap: number; image: ImageData }>();
+
+export function renderColormapLayer(render: ColormapRender, textureCap: number): Layer {
   return new BitmapLayer({
-    id: definition.entry.id,
-    image: colorizeGrid(definition, textureCap),
-    bounds: definition.grid.bounds,
-    opacity: definition.opacity,
+    id: render.id,
+    image: colorizeGrid(render, textureCap),
+    bounds: render.grid.bounds,
+    opacity: render.opacity,
   });
 }
 
-function colorizeGrid(definition: ColormapLayerDefinition, textureCap: number): ImageData {
-  const grid = definition.grid;
+function colorizeGrid(render: ColormapRender, textureCap: number): ImageData {
+  const grid = render.grid;
   const cached = colorizedImages.get(grid);
   if (cached && cached.textureCap === textureCap) return cached.image;
   const width = Math.max(2, Math.min(Math.max(grid.width * 8, 512), textureCap));
@@ -27,12 +34,12 @@ function colorizeGrid(definition: ColormapLayerDefinition, textureCap: number): 
   const [west, south, east, north] = grid.bounds;
   const latitudes = mercatorLatitudes(north, south, height);
   const rgba = new Uint8ClampedArray(width * height * 4);
-  const visibleRange = definition.entry.visibleRange;
+  const visibleRange = render.visibleRange;
   for (let row = 0; row < height; row++) {
     const lat = latitudes[row];
     for (let col = 0; col < width; col++) {
       const lon = west + ((east - west) * col) / (width - 1);
-      const value = sampleNearMissing(grid, lon, lat);
+      const value = grid.valueAt(lon, lat, render.interpolation);
       if (
         Number.isNaN(value) ||
         (visibleRange && (value < visibleRange.min || value > visibleRange.max))
@@ -40,11 +47,7 @@ function colorizeGrid(definition: ColormapLayerDefinition, textureCap: number): 
         continue;
       }
       const offset = (row * width + col) * 4;
-      const [r, g, b, a] = paletteRgba(
-        value,
-        definition.entry.palette,
-        definition.entry.paletteStyle,
-      );
+      const [r, g, b, a] = paletteRgba(value, render.palette, render.paletteStyle);
       rgba[offset] = r;
       rgba[offset + 1] = g;
       rgba[offset + 2] = b;
@@ -56,37 +59,7 @@ function colorizeGrid(definition: ColormapLayerDefinition, textureCap: number): 
   return image;
 }
 
-function sampleNearMissing(grid: FieldGrid, lon: number, lat: number): number {
-  const [west, south, east, north] = grid.bounds;
-  const col = ((lon - west) / (east - west)) * (grid.width - 1);
-  const row = ((north - lat) / (north - south)) * (grid.height - 1);
-  if (col < 0 || row < 0 || col > grid.width - 1 || row > grid.height - 1) return NaN;
-  const nearest = grid.data[Math.round(row) * grid.width + Math.round(col)];
-  if (Number.isNaN(nearest)) return NaN;
-  const c0 = Math.floor(col);
-  const r0 = Math.floor(row);
-  const c1 = Math.min(c0 + 1, grid.width - 1);
-  const r1 = Math.min(r0 + 1, grid.height - 1);
-  const fc = col - c0;
-  const fr = row - r0;
-  const corners = [
-    grid.data[r0 * grid.width + c0],
-    grid.data[r0 * grid.width + c1],
-    grid.data[r1 * grid.width + c0],
-    grid.data[r1 * grid.width + c1],
-  ];
-  const weights = [(1 - fc) * (1 - fr), fc * (1 - fr), (1 - fc) * fr, fc * fr];
-  let sum = 0;
-  let weightSum = 0;
-  for (let i = 0; i < 4; i++) {
-    if (Number.isNaN(corners[i])) continue;
-    sum += corners[i] * weights[i];
-    weightSum += weights[i];
-  }
-  return weightSum > 0 ? sum / weightSum : NaN;
-}
-
-export function mercatorLatitudes(north: number, south: number, rows: number): number[] {
+function mercatorLatitudes(north: number, south: number, rows: number): number[] {
   const yNorth = mercatorY(north);
   const ySouth = mercatorY(south);
   const latitudes: number[] = [];
@@ -97,7 +70,7 @@ export function mercatorLatitudes(north: number, south: number, rows: number): n
   return latitudes;
 }
 
-export function paletteRgba(
+function paletteRgba(
   value: number,
   palette: ColorStop[],
   style: 'smooth' | 'stepped',

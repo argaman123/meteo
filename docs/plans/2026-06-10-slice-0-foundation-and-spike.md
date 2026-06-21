@@ -64,7 +64,7 @@ src/app/shell/app-shell.ts
 src/app/features/map/map-page.ts
 src/app/map/engine/map-engine.ts     (THE adapter)
 src/app/map/layers/layer-definition.ts
-src/app/map/layers/field-grid.ts     (verified with a temporary spec, deleted before commit)
+src/app/map/layers/wrap.ts     (verified with a temporary spec, deleted before commit)
 src/app/map/perf/perf-hud.ts
 src/app/core/quality-settings.ts
 ```
@@ -681,7 +681,7 @@ git commit -m "feat: generated model/observation fixtures and satellite sample (
 ### Task 7: Layer-definition v1 + field decode (verified with a temporary spec — not committed)
 
 **Files:**
-- Create: `src/app/map/layers/layer-definition.ts`, `src/app/map/layers/field-grid.ts`
+- Create: `src/app/map/layers/layer-definition.ts`, `src/app/map/layers/wrap.ts`
 
 - [ ] **Step 1: Types — `layer-definition.ts`**
 
@@ -710,7 +710,7 @@ export type LayerDefinition = ColormapLayerDefinition | ParticleLayerDefinition;
 
 (Slice 1's registry replaces inline `grid`/`wind` data with source descriptors + temporal behavior; this v1 shape covers exactly what the spike's two layers need, per the spec.)
 
-- [ ] **Step 2: Implement `field-grid.ts`**
+- [ ] **Step 2: Implement `wrap.ts`**
 
 ```ts
 export type FieldGridDocument = {

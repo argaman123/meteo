@@ -2,8 +2,6 @@ import { Component, computed, inject } from '@angular/core';
 import { FieldData } from '../../../data/field-data';
 import { MapEngine } from '../../../engine/map-engine';
 import { LayersStore } from '../../../stores/layers-store';
-import { formatParameterValue, formatWind } from '../../../units/units';
-import { sampleGrid } from '../../../utils/grids';
 
 @Component({
   selector: 'app-hover-readout',
@@ -20,19 +18,13 @@ export class HoverReadout {
     const cursor = this.engine.cursor();
     if (!cursor) return null;
     const [lon, lat] = cursor.lngLat;
-    const lines = [...this.fieldData.loadedLayers()]
+    const lines = [...this.fieldData.activeLayers()]
       .sort((a, b) => a.order - b.order)
-      .map((layer) => {
-        if (layer.entry.type === 'colormap') {
-          const value = sampleGrid(layer.grids[layer.entry.parameter], lon, lat);
-          return {
-            label: layer.entry.label,
-            value: formatParameterValue(layer.entry.parameter, value),
-          };
-        }
-        const speed = sampleGrid(layer.grids[layer.entry.speedParameter], lon, lat);
-        const direction = sampleGrid(layer.grids[layer.entry.directionParameter], lon, lat);
-        return { label: layer.entry.label, value: formatWind(speed, direction) };
+      .map((active) => {
+        const values = active.grids.map((grid) =>
+          grid.valueAt(lon, lat, active.layer.interpolation),
+        );
+        return { label: active.layer.label, value: active.layer.format(values) };
       });
     if (!lines.length) return null;
     return { point: cursor.point, lines };

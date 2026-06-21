@@ -9,9 +9,10 @@ import { LayersStore } from '../../../stores/layers-store';
 })
 export class LayerBar {
   store = inject(LayersStore);
+
   rows = computed(() =>
     [...this.store.states()]
       .sort((a, b) => a.order - b.order)
-      .map((state) => ({ state, entry: layerRegistry.find((entry) => entry.id === state.id)! })),
+      .map((state) => ({ state, entry: layerRegistry.find((layer) => layer.id === state.id)! })),
   );
 }

@@ -1,4 +1,4 @@
-import { Bounds, FieldGridDocument } from '../../types/field-grid';
+import { Bounds, Wrap } from '../../types/wrap';
 
 export interface FixtureManifest {
   runTimeUnixSeconds: number;
@@ -10,14 +10,16 @@ export interface FixtureManifest {
 export const RESPONSE_SIZE = 70;
 
 export function resampleGridDocument(
-  doc: FieldGridDocument,
+  doc: Wrap,
   bounds: Bounds,
   size = RESPONSE_SIZE,
-): FieldGridDocument | null {
-  const gridWest = doc.startLon;
-  const gridNorth = doc.startLat;
-  const gridEast = doc.startLon + doc.deltaLon * (doc.cols - 1);
-  const gridSouth = doc.startLat + doc.deltaLat * (doc.rows - 1);
+): Wrap | null {
+  const rows = doc.values.length;
+  const cols = rows > 0 ? doc.values[0].length : 0;
+  const gridWest = doc.start_x;
+  const gridNorth = doc.start_y;
+  const gridEast = doc.start_x + doc.rx * (cols - 1);
+  const gridSouth = doc.start_y + doc.ry * (rows - 1);
   const west = Math.max(bounds[0], gridWest);
   const east = Math.min(bounds[2], gridEast);
   const south = Math.max(bounds[1], gridSouth);
@@ -35,26 +37,26 @@ export function resampleGridDocument(
   }
   return {
     ...doc,
-    startLat: north,
-    startLon: west,
-    deltaLat: (south - north) / (size - 1),
-    deltaLon: (east - west) / (size - 1),
-    rows: size,
-    cols: size,
+    start_y: north,
+    start_x: west,
+    ry: (south - north) / (size - 1),
+    rx: (east - west) / (size - 1),
     values,
   };
 }
 
-function sampleDocument(doc: FieldGridDocument, lon: number, lat: number): number | null {
-  const col = (lon - doc.startLon) / doc.deltaLon;
-  const row = (lat - doc.startLat) / doc.deltaLat;
-  if (col < -0.5 || row < -0.5 || col > doc.cols - 0.5 || row > doc.rows - 0.5) return null;
-  const nearest = doc.values[clampIndex(Math.round(row), doc.rows)][clampIndex(Math.round(col), doc.cols)];
+function sampleDocument(doc: Wrap, lon: number, lat: number): number | null {
+  const rows = doc.values.length;
+  const cols = rows > 0 ? doc.values[0].length : 0;
+  const col = (lon - doc.start_x) / doc.rx;
+  const row = (lat - doc.start_y) / doc.ry;
+  if (col < -0.5 || row < -0.5 || col > cols - 0.5 || row > rows - 0.5) return null;
+  const nearest = doc.values[clampIndex(Math.round(row), rows)][clampIndex(Math.round(col), cols)];
   if (nearest === null) return null;
-  const c0 = clampIndex(Math.floor(col), doc.cols);
-  const r0 = clampIndex(Math.floor(row), doc.rows);
-  const c1 = Math.min(c0 + 1, doc.cols - 1);
-  const r1 = Math.min(r0 + 1, doc.rows - 1);
+  const c0 = clampIndex(Math.floor(col), cols);
+  const r0 = clampIndex(Math.floor(row), rows);
+  const c1 = Math.min(c0 + 1, cols - 1);
+  const r1 = Math.min(r0 + 1, rows - 1);
   const fc = Math.min(1, Math.max(0, col - c0));
   const fr = Math.min(1, Math.max(0, row - r0));
   const corners = [
@@ -64,7 +66,7 @@ function sampleDocument(doc: FieldGridDocument, lon: number, lat: number): numbe
     doc.values[r1][c1],
   ];
   const weights = [(1 - fc) * (1 - fr), fc * (1 - fr), (1 - fc) * fr, fc * fr];
-  if (doc.units === 'deg') return interpolateDirection(corners, weights);
+  if (doc.wrap_info.param === 'windDirection') return interpolateDirection(corners, weights);
   let sum = 0;
   let weightSum = 0;
   for (let i = 0; i < 4; i++) {

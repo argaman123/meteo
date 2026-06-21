@@ -1,4 +1,4 @@
-import { Bounds } from '../types/field-grid';
+import { Bounds } from '../types/wrap';
 
 const MERCATOR_LATITUDE_LIMIT = 85;
 

@@ -1,25 +1,29 @@
 import type { Layer } from '@deck.gl/core';
 import { LineLayer } from '@deck.gl/layers';
-import { ParticleLayerDefinition } from '../../layers/layer-definition';
+import { ParticleAppearanceName } from '../../layers/look';
 import { arcAppearance } from './arc-appearance';
 import { ParticleAppearance, ParticleSystem } from './particle-system';
 import { trailAppearance } from './trail-appearance';
 
 export function renderParticleLayer(
-  definition: ParticleLayerDefinition,
+  id: string,
+  appearanceName: ParticleAppearanceName,
+  opacity: number,
   system: ParticleSystem,
   widthPixels: number,
+  sizeScale: number,
 ): Layer {
   const appearance: ParticleAppearance =
-    definition.entry.appearance === 'arcs' ? arcAppearance : trailAppearance;
+    appearanceName === 'arcs' ? arcAppearance : trailAppearance;
   const length = appearance(
     system.frame(),
     system.segmentSources,
     system.segmentTargets,
     system.segmentColors,
+    sizeScale,
   );
   return new LineLayer({
-    id: definition.entry.id,
+    id,
     data: {
       length,
       attributes: {
@@ -30,6 +34,6 @@ export function renderParticleLayer(
     },
     getWidth: widthPixels,
     widthUnits: 'pixels',
-    opacity: definition.opacity,
+    opacity,
   });
 }

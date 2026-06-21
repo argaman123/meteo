@@ -1,20 +1,20 @@
 import { Service, signal } from '@angular/core';
 import { layerRegistry } from '../layers/registry';
 
+const DEFAULT_ACTIVE = new Set(['wind']);
+
 export interface LayerUiState {
   id: string;
   active: boolean;
-  opacity: number;
   order: number;
 }
 
 @Service()
 export class LayersStore {
   readonly states = signal<LayerUiState[]>(
-    layerRegistry.map((entry, index) => ({
-      id: entry.id,
-      active: entry.defaultActive,
-      opacity: entry.defaultOpacity,
+    layerRegistry.map((layer, index) => ({
+      id: layer.id,
+      active: DEFAULT_ACTIVE.has(layer.id),
       order: index,
     })),
   );
@@ -25,8 +25,14 @@ export class LayersStore {
   }
 
   toggle(id: string): void {
+    const current = this.stateOf(id);
+    if (!current) return;
+    const target = !current.active;
     this.states.update((states) =>
-      states.map((state) => (state.id === id ? { ...state, active: !state.active } : state)),
+      states.map((state) => {
+        if (state.id === id) return { ...state, active: target };
+        return target ? { ...state, active: false } : state;
+      }),
     );
   }
 

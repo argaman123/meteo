@@ -3,13 +3,16 @@ import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer } from '@deck.gl/core';
-import { LayerDefinition, ParticleLayerDefinition } from '../layers/layer-definition';
+import { RenderItem } from '../layers/layer';
+import { ParticleLook } from '../layers/look';
 import { ParticleSettings } from '../settings/particle-settings';
 import { QualitySettings } from '../settings/quality-settings';
-import { Bounds } from '../types/field-grid';
+import { Bounds } from '../types/wrap';
 import { renderColormapLayer } from './renderers/colormap-renderer';
+import { FreeParticles } from './renderers/free-particles';
+import { GridParticles } from './renderers/grid-particles';
 import { renderParticleLayer } from './renderers/particle-renderer';
-import { MAX_PARTICLE_GRID_CELLS, ParticleSystem } from './renderers/particle-system';
+import { MAX_PARTICLES, ParticleSystem } from './renderers/particle-system';
 import { BasemapId, loadBasemapStyle } from './style-loader';
 
 export type { BasemapId } from './style-loader';
@@ -20,9 +23,10 @@ export class MapEngine {
   private particleSettings = inject(ParticleSettings);
   private map: maplibregl.Map | null = null;
   private overlay: MapboxOverlay | null = null;
-  private definitions = new Map<string, LayerDefinition>();
+  private items = new Map<string, RenderItem>();
   private particleSystems = new Map<string, ParticleSystem>();
   private particleGridCellPx = new Map<string, number>();
+  private particleViewKey = new Map<string, string>();
   private animationFrame: number | null = null;
   private lastTickMs = 0;
 
@@ -35,6 +39,7 @@ export class MapEngine {
     effect(() => {
       this.particleSettings.cellSizePx();
       this.quality.textureMaxDimension();
+      this.settledBounds();
       this.syncLayers();
     });
   }
@@ -72,14 +77,15 @@ export class MapEngine {
     this.map?.setStyle(style);
   }
 
-  addLayer(definition: LayerDefinition): void {
-    this.definitions.set(definition.entry.id, definition);
-    this.syncLayers();
-    this.updateAnimationLoop();
-  }
-
-  removeLayer(id: string): void {
-    this.definitions.delete(id);
+  setItems(items: RenderItem[]): void {
+    this.items = new Map(items.map((item) => [item.id, item]));
+    for (const id of [...this.particleSystems.keys()]) {
+      if (!this.items.has(id)) {
+        this.particleSystems.delete(id);
+        this.particleGridCellPx.delete(id);
+        this.particleViewKey.delete(id);
+      }
+    }
     this.syncLayers();
     this.updateAnimationLoop();
   }
@@ -99,8 +105,9 @@ export class MapEngine {
     this.animationFrame = null;
     this.particleSystems.clear();
     this.particleGridCellPx.clear();
+    this.particleViewKey.clear();
     this.overlay = null;
-    this.definitions.clear();
+    this.items.clear();
     this.map?.remove();
     this.map = null;
     this.viewBounds.set(null);
@@ -128,61 +135,94 @@ export class MapEngine {
       this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
       this.map.addControl(this.overlay as unknown as maplibregl.IControl);
     }
-    const layers: Layer[] = [...this.definitions.values()]
+    const layers: Layer[] = [...this.items.values()]
       .sort((a, b) => a.order - b.order)
-      .map((definition) => this.toDeckLayer(definition));
+      .map((item) => this.toDeckLayer(item));
     this.overlay.setProps({ layers });
   }
 
-  private toDeckLayer(definition: LayerDefinition): Layer {
-    if ('grid' in definition) {
-      return renderColormapLayer(definition, this.quality.textureMaxDimension());
+  private toDeckLayer(item: RenderItem): Layer {
+    const look = item.look;
+    if (look.kind === 'colormap') {
+      return renderColormapLayer(
+        {
+          id: item.id,
+          grid: item.grids[0],
+          palette: look.palette,
+          paletteStyle: look.paletteStyle,
+          interpolation: item.interpolation,
+          visibleRange: look.visibleRange,
+          opacity: item.opacity,
+        },
+        this.quality.textureMaxDimension(),
+      );
     }
-    const widthPixels = definition.entry.lineWidthPixels * this.particleSettings.widthScale();
-    return renderParticleLayer(definition, this.particleSystem(definition), widthPixels);
+    const sizeScale = this.zoomScale();
+    const widthPixels = look.lineWidthPixels * this.particleSettings.widthScale() * sizeScale;
+    return renderParticleLayer(
+      item.id,
+      look.appearance,
+      item.opacity,
+      this.particleSystem(item, look),
+      widthPixels,
+      sizeScale,
+    );
   }
 
-  private particleSystem(definition: ParticleLayerDefinition): ParticleSystem {
-    const id = definition.entry.id;
+  private zoomScale(): number {
+    const zoom = this.zoom() ?? 5;
+    return Math.max(0.7, Math.min(2.2, 1 + (zoom - 5) * 0.18));
+  }
+
+  private particleSystem(item: RenderItem, look: ParticleLook): ParticleSystem {
+    const id = item.id;
+    const u = item.grids[0];
+    const v = item.grids[1];
     const existing = this.particleSystems.get(id);
     const cellPx = this.particleSettings.cellSizePx();
+    const viewKey = (this.settledBounds() ?? []).join(',');
     if (
       existing &&
-      existing.vectorField === definition.vectorField &&
-      this.particleGridCellPx.get(id) === cellPx
+      existing.uField === u &&
+      existing.vField === v &&
+      this.particleGridCellPx.get(id) === cellPx &&
+      this.particleViewKey.get(id) === viewKey
     ) {
       return existing;
     }
-    const [cols, rows] = this.gridDimensions(definition.vectorField.bounds);
-    const system = new ParticleSystem(definition.vectorField, cols, rows, definition.entry.motion);
+    const bounds = u.bounds;
+    const [cols, rows] = this.gridDimensions(bounds);
+    const motion = look.motion;
+    let system: ParticleSystem;
+    if (motion.strategy === 'grid') {
+      system = new GridParticles(u, v, cols, rows, motion);
+    } else {
+      const count = Math.min(MAX_PARTICLES, Math.round(cols * rows * motion.densityFactor));
+      const cellDegrees = (bounds[2] - bounds[0]) / cols;
+      system = new FreeParticles(u, v, count, cellDegrees, motion);
+    }
     this.particleSystems.set(id, system);
     this.particleGridCellPx.set(id, cellPx);
+    this.particleViewKey.set(id, viewKey);
     return system;
   }
 
   private gridDimensions(bounds: Bounds): [number, number] {
     const cellPx = this.particleSettings.cellSizePx();
     if (!this.map) {
-      return this.capGrid(
-        Math.round((bounds[2] - bounds[0]) / 3),
-        Math.round((bounds[3] - bounds[1]) / 3),
-      );
+      return [
+        Math.max(1, Math.round((bounds[2] - bounds[0]) / 3)),
+        Math.max(1, Math.round((bounds[3] - bounds[1]) / 3)),
+      ];
     }
     const west = this.map.project([bounds[0], (bounds[1] + bounds[3]) / 2]).x;
     const east = this.map.project([bounds[2], (bounds[1] + bounds[3]) / 2]).x;
     const north = this.map.project([(bounds[0] + bounds[2]) / 2, bounds[3]]).y;
     const south = this.map.project([(bounds[0] + bounds[2]) / 2, bounds[1]]).y;
-    const cols = Math.round(Math.abs(east - west) / cellPx);
-    const rows = Math.round(Math.abs(south - north) / cellPx);
-    return this.capGrid(cols, rows);
-  }
-
-  private capGrid(cols: number, rows: number): [number, number] {
-    const safeCols = Math.max(1, cols);
-    const safeRows = Math.max(1, rows);
-    if (safeCols * safeRows <= MAX_PARTICLE_GRID_CELLS) return [safeCols, safeRows];
-    const scale = Math.sqrt(MAX_PARTICLE_GRID_CELLS / (safeCols * safeRows));
-    return [Math.max(1, Math.round(safeCols * scale)), Math.max(1, Math.round(safeRows * scale))];
+    return [
+      Math.max(1, Math.round(Math.abs(east - west) / cellPx)),
+      Math.max(1, Math.round(Math.abs(south - north) / cellPx)),
+    ];
   }
 
   private animate = (nowMs: number): void => {
@@ -190,9 +230,10 @@ export class MapEngine {
     this.lastTickMs = nowMs;
     const speedFactor = this.particleSettings.speedFactor();
     for (const [id, system] of this.particleSystems) {
-      if (!this.definitions.has(id)) {
+      if (!this.items.has(id)) {
         this.particleSystems.delete(id);
         this.particleGridCellPx.delete(id);
+        this.particleViewKey.delete(id);
         continue;
       }
       system.step(deltaSeconds, speedFactor);
@@ -202,9 +243,7 @@ export class MapEngine {
   };
 
   private updateAnimationLoop(): void {
-    const hasParticles = [...this.definitions.values()].some(
-      (definition) => 'vectorField' in definition,
-    );
+    const hasParticles = [...this.items.values()].some((item) => item.look.kind === 'particles');
     if (hasParticles && this.animationFrame === null) {
       this.lastTickMs = performance.now();
       this.animationFrame = requestAnimationFrame(this.animate);

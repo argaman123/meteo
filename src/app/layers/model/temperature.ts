@@ -1,21 +1,24 @@
-import { ColormapLayerCatalogEntry } from '../layer-definition';
+import { formatNumber } from '../../utils/format';
+import { Layer } from '../layer';
+import { colormap, ColorStop } from '../look';
 
-export const temperatureLayer: ColormapLayerCatalogEntry = {
-  id: 'temperature',
-  label: 'טמפרטורה',
-  type: 'colormap',
-  parameter: 'temperature',
-  palette: [
-    { value: -30, color: '#312e81' },
-    { value: -15, color: '#1d4ed8' },
-    { value: 0, color: '#0ea5e9' },
-    { value: 10, color: '#34d399' },
-    { value: 20, color: '#fbbf24' },
-    { value: 30, color: '#f97316' },
-    { value: 40, color: '#dc2626' },
-  ],
-  paletteStyle: 'smooth',
-  defaultActive: true,
-  defaultOpacity: 0.45,
-  timeWindow: { backHours: 24, forwardHours: 96, stepHours: 3 },
-};
+const PALETTE: ColorStop[] = [
+  { value: -30, color: '#312e81' },
+  { value: -15, color: '#1d4ed8' },
+  { value: 0, color: '#0ea5e9' },
+  { value: 10, color: '#34d399' },
+  { value: 20, color: '#fbbf24' },
+  { value: 30, color: '#f97316' },
+  { value: 40, color: '#dc2626' },
+];
+
+export class Temperature extends Layer {
+  readonly id = 'temperature';
+  readonly label = 'טמפרטורה';
+  readonly parameters = ['temperature'];
+  readonly looks = [colormap(([t]) => t, PALETTE, 'smooth', 0.45)];
+
+  format([t]: number[]): string {
+    return formatNumber(t, 0, '°C');
+  }
+}
