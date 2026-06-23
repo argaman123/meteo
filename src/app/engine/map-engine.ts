@@ -1,25 +1,24 @@
 import { Service, inject } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
-import { MapboxOverlay } from '@deck.gl/mapbox';
-import { BitmapLayer } from '@deck.gl/layers';
+import { Grid } from '../objects/grid';
 import { ViewStore } from '../stores/view-store';
-import { Bounds } from '../types/wrap';
-import { BasemapId, loadBasemapStyle } from './style-loader';
+import { Look } from './looks/look';
+import { Overlay } from './overlay';
 
-export type { BasemapId } from './style-loader';
+export type BasemapId = 'dark' | 'light' | 'colorful';
 
 @Service()
 export class MapEngine {
   private view = inject(ViewStore);
   private map: maplibregl.Map | null = null;
-  private overlay: MapboxOverlay | null = null;
+  private overlay: Overlay | null = null;
 
   async init(container: HTMLElement, basemap: BasemapId): Promise<void> {
     const protocol = new Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
     void maplibregl.setRTLTextPlugin('/basemaps/rtl/mapbox-gl-rtl-text.js', true);
-    const style = await loadBasemapStyle(basemap);
+    const style = await this.loadBasemapStyle(basemap);
     this.map = new maplibregl.Map({
       container,
       style,
@@ -35,22 +34,18 @@ export class MapEngine {
       this.view.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.view.cursor.set(null));
+    this.overlay = new Overlay(this.map);
     this.publishView();
     this.view.settledBbox.set(this.view.bbox());
   }
 
   async setBasemap(id: BasemapId): Promise<void> {
-    const style = await loadBasemapStyle(id);
+    const style = await this.loadBasemapStyle(id);
     this.map?.setStyle(style);
   }
 
-  showColormap(id: string, image: ImageData, bounds: Bounds, opacity: number): void {
-    if (!this.map) return;
-    if (!this.overlay) {
-      this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
-      this.map.addControl(this.overlay as unknown as maplibregl.IControl);
-    }
-    this.overlay.setProps({ layers: [new BitmapLayer({ id, image, bounds, opacity })] });
+  draw(id: string, look: Look, grid: Grid): void {
+    this.overlay?.draw(id, look, grid);
   }
 
   destroy(): void {
@@ -74,5 +69,22 @@ export class MapEngine {
       bounds.getNorth(),
     ]);
     this.view.zoom.set(this.map.getZoom());
+  }
+
+  private async loadBasemapStyle(id: BasemapId): Promise<maplibregl.StyleSpecification> {
+    const response = await fetch(`/basemaps/styles/${id}.json`);
+    const style = (await response.json()) as maplibregl.StyleSpecification;
+    if (typeof style.sprite === 'string' && style.sprite.startsWith('/')) {
+      style.sprite = location.origin + style.sprite;
+    }
+    if (style.glyphs?.startsWith('/')) {
+      style.glyphs = location.origin + style.glyphs;
+    }
+    for (const source of Object.values(style.sources)) {
+      if ('url' in source && source.url?.startsWith('pmtiles:///')) {
+        source.url = `pmtiles://${location.origin}/${source.url.slice('pmtiles:///'.length)}`;
+      }
+    }
+    return style;
   }
 }

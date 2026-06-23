@@ -10,20 +10,10 @@ import {
 } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { BasemapId, MapEngine } from '../../engine/map-engine';
-import { ColorStop, colormapImage, colorScale } from '../../engine/renderers/colormap';
+import { temperature } from '../../layers/temperature';
 import { Grid } from '../../objects/grid';
 import { ViewStore } from '../../stores/view-store';
 import { Wrap } from '../../types/wrap';
-
-const TEMPERATURE_PALETTE: ColorStop[] = [
-  { value: -30, color: '#312e81' },
-  { value: -15, color: '#1d4ed8' },
-  { value: 0, color: '#0ea5e9' },
-  { value: 10, color: '#34d399' },
-  { value: 20, color: '#fbbf24' },
-  { value: 30, color: '#f97316' },
-  { value: 40, color: '#dc2626' },
-];
 
 @Component({
   selector: 'app-home-page',
@@ -43,16 +33,14 @@ export class HomePage implements AfterViewInit, OnDestroy {
   ];
   basemap = signal<BasemapId>('dark');
 
-  private temperatureScale = colorScale(TEMPERATURE_PALETTE, 'smooth');
-
-  private temperature = httpResource<Grid>(
+  private grid = httpResource<Grid>(
     () => {
       const bbox = this.view.settledBbox();
       if (!bbox) return undefined;
       return {
         url: '/api/grids',
         params: {
-          parameter: 'temperature',
+          parameter: temperature.parameter,
           model: 'wide',
           time: String(Math.floor(Date.now() / 1000)),
           bbox: bbox.join(','),
@@ -64,14 +52,11 @@ export class HomePage implements AfterViewInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      const grid = this.temperature.value();
+      const grid = this.grid.value();
       if (!grid) return;
-      this.engine.showColormap(
-        'temperature',
-        colormapImage(grid, this.temperatureScale),
-        grid.bounds,
-        0.6,
-      );
+      temperature.looks.forEach((look, index) => {
+        this.engine.draw(`${temperature.id}:${index}`, look, grid);
+      });
     });
   }
 
