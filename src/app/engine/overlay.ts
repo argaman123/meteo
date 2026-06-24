@@ -1,27 +1,48 @@
+import { Service } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import type { Layer } from '@deck.gl/core';
+import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Grid } from '../objects/grid';
 import { Look } from './looks/look';
 
+@Service()
 export class Overlay {
-  private overlay: MapboxOverlay;
-  private looks = new Map<string, { look: Look; grid: Grid }>();
+  private overlay: MapboxOverlay | null = null;
+  private layers = new Map<Look, DeckLayer>();
+  private ids = new Map<Look, string>();
+  private counter = 0;
 
-  constructor(map: maplibregl.Map) {
+  attach(map: maplibregl.Map): void {
     this.overlay = new MapboxOverlay({ interleaved: true, layers: [] });
     map.addControl(this.overlay as unknown as maplibregl.IControl);
   }
 
-  draw(id: string, look: Look, grid: Grid): void {
-    this.looks.set(id, { look, grid });
-    this.sync();
+  detach(): void {
+    this.overlay = null;
+    this.layers.clear();
+    this.ids.clear();
+    this.counter = 0;
   }
 
-  private sync(): void {
-    const layers: Layer[] = [...this.looks].map(([id, entry]) =>
-      entry.look.deckLayer(id, entry.grid),
-    );
-    this.overlay.setProps({ layers });
+  draw(look: Look, grid: Grid): void {
+    this.layers.set(look, look.deckLayer(this.idFor(look), grid));
+    this.apply();
+  }
+
+  remove(look: Look): void {
+    if (this.layers.delete(look)) this.apply();
+  }
+
+  private idFor(look: Look): string {
+    let id = this.ids.get(look);
+    if (id === undefined) {
+      id = String(this.counter++);
+      this.ids.set(look, id);
+    }
+    return id;
+  }
+
+  private apply(): void {
+    this.overlay?.setProps({ layers: [...this.layers.values()] });
   }
 }

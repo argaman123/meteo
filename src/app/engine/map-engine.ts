@@ -1,9 +1,7 @@
 import { Service, inject } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
-import { Grid } from '../objects/grid';
 import { ViewStore } from '../stores/view-store';
-import { Look } from './looks/look';
 import { Overlay } from './overlay';
 
 export type BasemapId = 'dark' | 'light' | 'colorful';
@@ -11,8 +9,8 @@ export type BasemapId = 'dark' | 'light' | 'colorful';
 @Service()
 export class MapEngine {
   private view = inject(ViewStore);
+  private overlay = inject(Overlay);
   private map: maplibregl.Map | null = null;
-  private overlay: Overlay | null = null;
 
   async init(container: HTMLElement, basemap: BasemapId): Promise<void> {
     const protocol = new Protocol();
@@ -34,7 +32,7 @@ export class MapEngine {
       this.view.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.view.cursor.set(null));
-    this.overlay = new Overlay(this.map);
+    this.overlay.attach(this.map);
     this.publishView();
     this.view.settledBbox.set(this.view.bbox());
   }
@@ -44,12 +42,8 @@ export class MapEngine {
     this.map?.setStyle(style);
   }
 
-  draw(id: string, look: Look, grid: Grid): void {
-    this.overlay?.draw(id, look, grid);
-  }
-
   destroy(): void {
-    this.overlay = null;
+    this.overlay.detach();
     this.map?.remove();
     this.map = null;
     this.view.bbox.set(null);

@@ -1,0 +1,15 @@
+<div
+  class="flex h-full w-44 flex-col gap-2 border-s border-panel-border bg-panel/90 p-3 text-sm"
+>
+  <h2 class="font-medium">שכבות</h2>
+  @for (layer of layers; track layer) {
+    <button
+      class="rounded px-2 py-1 text-start"
+      [class.bg-accent]="store.isActive(layer)"
+      [class.text-app]="store.isActive(layer)"
+      (click)="store.toggle(layer)"
+    >
+      {{ layer.label }}
+    </button>
+  }
+</div>

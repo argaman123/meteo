@@ -12,11 +12,9 @@ const PALETTE: ColorStop[] = [
   { value: 40, color: '#dc2626' },
 ];
 
-class Temperature extends Layer {
+export class Temperature extends Layer {
   readonly id = 'temperature';
   readonly label = 'טמפרטורה';
   readonly parameter = 'temperature';
   readonly looks = [new Colormap(PALETTE, 'smooth')];
 }
-
-export const temperature = new Temperature();
