@@ -66,7 +66,7 @@ Three non-negotiables, in priority order:
 |---|---|---|
 | Framework | **Angular 22** (standalone, **zoneless**, signals-first) | |
 | Components | **Angular CDK** + **Tailwind** now; **add PrimeNG 22 when it ships** | See checkpoint below |
-| State | **Signals + small injectable signal-stores** per domain | No NgRx |
+| State | **Signals in one injectable `@Service` per domain** (signals + the methods that change them, co-located) | No NgRx; no separate stores layer |
 | Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL removed 2026-06; globe/3D temporarily removed — returns after first-party particles are verified) | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
@@ -91,7 +91,9 @@ The system is built as small units, each with one responsibility and a clear int
 
 1. **The engine-adapter rule.** `MapLibre`, `deck.gl`, and `WeatherLayers` may be imported **only**
    inside `src/app/engine/`. Nothing else in the app touches them. This is the lock-in hedge and
-   the junior boundary. If you need a map capability elsewhere, expose it through the adapter.
+   the junior boundary. The map's public API (camera signals + `flyTo`/`setBasemap`/`init`) lives on
+   **`MapService`** in `engine/`, which owns the maplibre instance and *is* the library boundary;
+   other domains read its signals and call its methods rather than touching maplibre.
 2. **A layer is a declarative definition, not engine code.** Adding a weather layer = adding a
    *definition* (id, type, data source, style/colormap, temporal behavior, defaults) to the layer
    registry. The adapter turns definitions into rendered layers. (Definition v1 in Slice 0;
@@ -100,8 +102,12 @@ The system is built as small units, each with one responsibility and a clear int
    charts, readouts) without going through unit conversion/formatting.
 4. **All coordinates/time flow through the Geo module.** Lat/Lon, DMS, MGRS, and Zulu/Local are
    formatted in one place, never ad-hoc.
-5. **State lives in signal-stores**, one per domain (e.g. time, layers, warnings). Components read
-   signals and call store methods; they don't hold cross-cutting state.
+5. **State lives in a domain service** — one injectable `@Service` per domain that **co-locates its
+   signals and the methods that change them**, in the domain's own folder (e.g. `MapService` in
+   `engine/`, `LayersService` in `layers/`). There is **no separate `stores/` layer**: a domain is
+   one inject — its signals *and* its functions together, never split into a data-service + a
+   functions-service (the mainstream Angular pattern, e.g. `ngx-maplibre-gl`'s `MapService`).
+   Components read its signals and call its methods; they don't hold cross-cutting state.
 6. **RTL by construction.** Use CSS logical properties (`margin-inline`, `inset-inline`, etc.) and
    `dir`-aware components — never hard-code left/right.
 
@@ -119,13 +125,17 @@ src/app/
   app.routes.ts       # URL → page map ('/' = the home page)
   pages/              # one subfolder per page of the site
     home/             # the front page: the map view
-  engine/             # rendering machinery — ONLY place importing maplibre/deck.gl/weatherlayers
-    renderers/        # one file per render style (colormap, particles; later contours, barbs…)
-  layers/             # THE CATALOG: one file per layer, grouped by content category
+  engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
+    map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
+    overlay.ts        #   Overlay: deck.gl layer host
+    looks/            #   one file per render style (colormap, particles; later contours, barbs…)
+  layers/             # THE CATALOG (one file per layer) + the layers domain service
+    layers-service.ts #   LayersService: which layers are shown + their fetch/draw
     model/            # layers fed by numerical weather models (temperature, wind, …)
+  objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
-  settings/           # injectable settings stores
+  settings/           # injectable settings stores (domain services, per §4.5)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 public/               # static assets (Angular 22 convention; served from /)
   basemaps/           # self-hosted styles + tiles (vendored)

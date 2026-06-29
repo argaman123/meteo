@@ -5,9 +5,9 @@
   @for (layer of layers; track layer) {
     <button
       class="rounded px-2 py-1 text-start"
-      [class.bg-accent]="store.isActive(layer)"
-      [class.text-app]="store.isActive(layer)"
-      (click)="store.toggle(layer)"
+      [class.bg-accent]="service.isShown(layer)"
+      [class.text-app]="service.isShown(layer)"
+      (click)="service.toggle(layer)"
     >
       {{ layer.label }}
     </button>

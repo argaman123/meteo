@@ -4,10 +4,10 @@ import {
   ElementRef,
   OnDestroy,
   inject,
-  signal,
   viewChild,
 } from '@angular/core';
-import { BasemapId, MapEngine } from '../../engine/map-engine';
+import { MapService } from '../../engine/map-service';
+import { LayersService } from '../../layers/layers-service';
 import { LayerBar } from './layer-bar/layer-bar';
 
 @Component({
@@ -18,30 +18,20 @@ import { LayerBar } from './layer-bar/layer-bar';
   styleUrl: './home-page.css',
 })
 export class HomePage implements AfterViewInit, OnDestroy {
-  private engine = inject(MapEngine);
+  protected map = inject(MapService);
+  private layers = inject(LayersService);
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
-
-  basemaps: { id: BasemapId; label: string }[] = [
-    { id: 'dark', label: 'כהה' },
-    { id: 'light', label: 'בהיר' },
-    { id: 'colorful', label: 'צבעוני' },
-  ];
-  basemap = signal<BasemapId>('dark');
 
   ngAfterViewInit(): void {
     void this.start();
   }
 
-  setBasemap(id: BasemapId): void {
-    this.basemap.set(id);
-    void this.engine.setBasemap(id);
-  }
-
   ngOnDestroy(): void {
-    this.engine.destroy();
+    this.map.destroy();
   }
 
   private async start(): Promise<void> {
-    await this.engine.init(this.container().nativeElement, this.basemap());
+    await this.map.init(this.container().nativeElement);
+    this.layers.showDefaults();
   }
 }

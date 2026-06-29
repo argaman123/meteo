@@ -3,12 +3,12 @@
   <div
     class="absolute end-3 top-3 flex flex-col gap-2 rounded-md border border-panel-border bg-panel/90 p-2"
   >
-    @for (item of basemaps; track item.id) {
+    @for (item of map.basemaps; track item.id) {
       <button
         class="rounded px-2 py-1 text-sm"
-        [class.bg-accent]="basemap() === item.id"
-        [class.text-app]="basemap() === item.id"
-        (click)="setBasemap(item.id)"
+        [class.bg-accent]="map.basemap() === item.id"
+        [class.text-app]="map.basemap() === item.id"
+        (click)="map.setBasemap(item.id)"
       >
         {{ item.label }}
       </button>

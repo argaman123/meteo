@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
+import { LayersService } from '../../../layers/layers-service';
 import { layers } from '../../../layers/registry';
-import { LayersStore } from '../../../stores/layers-store';
 
 @Component({
   selector: 'app-layer-bar',
@@ -9,5 +9,5 @@ import { LayersStore } from '../../../stores/layers-store';
 })
 export class LayerBar {
   protected readonly layers = layers;
-  protected readonly store = inject(LayersStore);
+  protected readonly service = inject(LayersService);
 }
