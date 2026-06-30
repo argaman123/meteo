@@ -1,4 +1,6 @@
 import { Colormap } from '../engine/looks/colormap';
+import { Provider } from '../objects/provider';
+import { Parameter } from '../types/parameter';
 import { ColorStop } from '../utils/color-scale';
 import { Layer } from './layer';
 
@@ -13,8 +15,8 @@ const PALETTE: ColorStop[] = [
 ];
 
 export class Temperature extends Layer {
-  readonly id = 'temperature';
-  readonly label = 'טמפרטורה';
-  readonly parameter = 'temperature';
-  readonly looks = [new Colormap(PALETTE, 'smooth')];
+  readonly parameters = [Parameter.Temperature];
+  readonly looks = [
+    new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth')
+  ];
 }

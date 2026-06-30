@@ -2,14 +2,14 @@
   class="flex h-full w-44 flex-col gap-2 border-s border-panel-border bg-panel/90 p-3 text-sm"
 >
   <h2 class="font-medium">שכבות</h2>
-  @for (layer of layers; track layer) {
+  @for (entry of menu; track entry.layer) {
     <button
       class="rounded px-2 py-1 text-start"
-      [class.bg-accent]="service.isShown(layer)"
-      [class.text-app]="service.isShown(layer)"
-      (click)="service.toggle(layer)"
+      [class.bg-accent]="service.isShown(entry.layer)"
+      [class.text-app]="service.isShown(entry.layer)"
+      (click)="service.toggle(entry.layer)"
     >
-      {{ layer.label }}
+      {{ entry.name }}
     </button>
   }
 </div>

@@ -1,23 +1,25 @@
 import { BitmapLayer } from '@deck.gl/layers';
-import type { Layer } from '@deck.gl/core';
+import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Grid } from '../../objects/grid';
+import { Provider } from '../../objects/provider';
 import { ColorScale, ColorStop, colorScale, PaletteStyle } from '../../utils/color-scale';
 import { inverseMercatorY, mercatorY } from '../../utils/mercator';
 import { Look } from './look';
 
-export class Colormap extends Look {
+export class Colormap extends Look<Grid> {
   private readonly scale: ColorScale;
 
   constructor(
+    provider: Provider<Grid>,
     palette: ColorStop[],
     paletteStyle: PaletteStyle,
     private opacity = 0.6,
   ) {
-    super();
+    super(provider);
     this.scale = colorScale(palette, paletteStyle);
   }
 
-  deckLayer(id: string, grid: Grid): Layer {
+  deckLayer(id: string, grid: Grid): DeckLayer {
     return new BitmapLayer({
       id,
       image: this.image(grid),

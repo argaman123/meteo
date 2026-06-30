@@ -1,12 +1,10 @@
 import { Layer } from './layer';
 import { Temperature } from './temperature';
+import { Wind } from './wind';
 
-const temperature = new Temperature();
+export const layers = {
+  temperature: new Temperature(),
+  wind: new Wind(),
+};
 
-export const layers: Layer[] = [temperature];
-
-export function layerById(id: string): Layer | undefined {
-  return layers.find((layer) => layer.id === id);
-}
-
-export const defaultActive = new Set<Layer>([temperature]);
+export const defaultActive = new Set<Layer>([layers.temperature]);

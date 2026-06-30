@@ -1,20 +1,24 @@
 import { Bounds, Wrap } from '../types/wrap';
 
-export class Grid {
-  readonly info: {
-    baseTime: number;
-    forecastTime: number;
-    model: string;
-    param: string;
-    pressure: string | null;
-    heightFt: string | null;
-  };
-  readonly bounds: Bounds;
-  readonly width: number;
-  readonly height: number;
-  readonly data: Float32Array;
+interface GridInfo {
+  param: string;
+  baseTime: number;
+  forecastTime: number;
+  model: string;
+  pressure: string | null;
+  heightFt: string | null;
+}
 
-  constructor(wrap: Wrap) {
+export class Grid {
+  private constructor(
+    readonly info: GridInfo,
+    readonly bounds: Bounds,
+    readonly width: number,
+    readonly height: number,
+    readonly data: Float32Array,
+  ) {}
+
+  static fromWrap(wrap: Wrap): Grid {
     const height = wrap.values.length;
     const width = height > 0 ? wrap.values[0].length : 0;
     const data = new Float32Array(width * height);
@@ -24,34 +28,31 @@ export class Grid {
         data[r * width + c] = value === null ? NaN : value;
       }
     }
-    this.info = {
+    const info: GridInfo = {
+      param: wrap.wrap_info.param,
       baseTime: wrap.wrap_info.base_time,
       forecastTime: wrap.wrap_info.forecast_time,
       model: wrap.wrap_info.model,
-      param: wrap.wrap_info.param,
       pressure: wrap.wrap_info.pressure,
       heightFt: wrap.wrap_info.height,
     };
-    this.bounds = [
+    const bounds: Bounds = [
       wrap.start_x,
       wrap.start_y + wrap.ry * (height - 1),
       wrap.start_x + wrap.rx * (width - 1),
       wrap.start_y,
     ];
-    this.width = width;
-    this.height = height;
-    this.data = data;
+    return new Grid(info, bounds, width, height, data);
   }
 
-  extent(): [number, number] {
-    let min = Infinity;
-    let max = -Infinity;
-    for (const value of this.data) {
-      if (Number.isNaN(value)) continue;
-      if (value < min) min = value;
-      if (value > max) max = value;
+  static combine(grids: Grid[], fn: (...values: number[]) => number): Grid {
+    const base = grids[0];
+    const data = new Float32Array(base.width * base.height);
+    for (let i = 0; i < data.length; i++) {
+      const values = grids.map((grid) => grid.data[i]);
+      data[i] = values.some((value) => Number.isNaN(value)) ? NaN : fn(...values);
     }
-    return [min, max];
+    return new Grid(base.info, base.bounds, base.width, base.height, data);
   }
 
   valueAt(lon: number, lat: number, interpolation: 'bilinear' | 'nearest'): number {

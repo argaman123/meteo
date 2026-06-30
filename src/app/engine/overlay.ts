@@ -8,8 +8,8 @@ import { Look } from './looks/look';
 @Service()
 export class Overlay {
   private overlay: MapboxOverlay | null = null;
-  private layers = new Map<Look, DeckLayer>();
-  private ids = new Map<Look, string>();
+  private layers = new Map<Look<unknown>, DeckLayer>();
+  private ids = new Map<Look<unknown>, string>();
   private counter = 0;
 
   attach(map: maplibregl.Map): void {
@@ -24,16 +24,16 @@ export class Overlay {
     this.counter = 0;
   }
 
-  draw(look: Look, grid: Grid): void {
-    this.layers.set(look, look.deckLayer(this.idFor(look), grid));
+  draw(look: Look<unknown>, grids: Grid[]): void {
+    this.layers.set(look, look.deckLayer(this.idFor(look), look.provider.provide(grids)));
     this.apply();
   }
 
-  remove(look: Look): void {
+  remove(look: Look<unknown>): void {
     if (this.layers.delete(look)) this.apply();
   }
 
-  private idFor(look: Look): string {
+  private idFor(look: Look<unknown>): string {
     let id = this.ids.get(look);
     if (id === undefined) {
       id = String(this.counter++);

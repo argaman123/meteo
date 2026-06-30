@@ -1,4 +1,4 @@
-import { Injector, Service, Signal, effect, inject, signal } from '@angular/core';
+import { Injector, Service, Signal, computed, effect, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
@@ -13,17 +13,17 @@ export class LayersService {
   private overlay = inject(Overlay);
   private map = inject(MapService);
 
-  readonly enabledLayers = signal(new Map<Layer, Signal<Grid | undefined>>());
+  readonly enabledLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
 
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
   };
 
   private draw = effect(() => {
-    for (const [layer, gridSignal] of this.enabledLayers()) {
-      const grid = gridSignal();
-      if (!grid) continue;
-      for (const look of layer.looks) this.overlay.draw(look, grid);
+    for (const [layer, gridsSignal] of this.enabledLayers()) {
+      const grids = gridsSignal();
+      if (!grids) continue;
+      for (const look of layer.looks) this.overlay.draw(look, grids);
     }
   });
 
@@ -53,10 +53,17 @@ export class LayersService {
     });
   }
 
-  private fetch(layer: Layer): Signal<Grid | undefined> {
-    return httpResource<Grid>(() => layer.request(this.inputs), {
-      parse: (raw) => layer.parse(raw as Wrap),
-      injector: this.injector,
-    }).value;
+  private fetch(layer: Layer): Signal<Grid[] | undefined> {
+    const wraps = layer.parameters.map(
+      (parameter) =>
+        httpResource<Wrap>(() => layer.request(parameter, this.inputs), {
+          injector: this.injector,
+        }).value,
+    );
+    return computed(() => {
+      const loaded = wraps.map((wrap) => wrap());
+      if (loaded.some((wrap) => wrap === undefined)) return undefined;
+      return layer.parse(loaded as Wrap[]);
+    });
   }
 }
