@@ -4,8 +4,8 @@
 > operating law. It is intentionally prescriptive. When something here conflicts with a habit or a
 > default, **this file wins**. For depth, read the linked docs in [`docs/`](docs/).
 >
-> **New session? Read this file, then [`docs/vision.md`](docs/vision.md) and the current spec in
-> [`docs/specs/`](docs/specs/). Nothing important lives only in chat — it lives here and in `docs/`.**
+> **New session? Read this file (§11 = where we are), then [`docs/vision.md`](docs/vision.md).
+> Nothing important lives only in chat — it lives here and in `docs/`.**
 
 ---
 
@@ -171,7 +171,7 @@ render style = exactly one new file in `layers/model/`.
   RTL/theme concerns are handled in one place.
 - **No code comments yet** (see §2).
 
-> Where a convention is not yet chosen, it is decided during the relevant slice and then **locked
+> Where a convention is not yet chosen, it is decided when the need first arises and then **locked
 > here**. Do not invent a second way.
 
 ---
@@ -215,28 +215,31 @@ render style = exactly one new file in `layers/model/`.
 
 - **Product vision & full capability list:** [`docs/vision.md`](docs/vision.md)
 - **Technical decisions & rationale:** [`docs/decisions.md`](docs/decisions.md)
-- **Roadmap (slices):** [`docs/roadmap.md`](docs/roadmap.md)
 - **Domain knowledge:** [`docs/domain/`](docs/domain/) (meteorology, units/coordinates/time)
-- **Per-slice specs:** [`docs/specs/`](docs/specs/)
+- **Past build plans (history only):** [`docs/plans/`](docs/plans/)
 
 ---
 
 ## 11. Current status
 
-**Slice 0 complete (2026-06-10), spike = GO** (tree v4.1 locked in §5; see
-[`docs/plans/2026-06-10-slice-0-review-amendments.md`](docs/plans/2026-06-10-slice-0-review-amendments.md)).
-**Globe/3D remains REMOVED — the app is 2D-only** until the first-party wind-particle path is fully
-trustworthy.
+**Working mode (since 2026-07): no slices.** The earlier slice framing (specs/roadmap/walkthroughs)
+is retired and those docs are deleted. We reimplement the old build's capabilities **piece by piece
+on the current architecture**, verifying each step interactively with the lead before moving on.
 
-**Slice 1 implemented and cleaned (2026-06-15)** ([`docs/specs/slice-1.md`](docs/specs/slice-1.md)):
-first-party renderers (colormap `BitmapLayer` + CPU streamline particles `LineLayer`), bbox-windowed
-continuous-timeline contract with a `dev/` interceptor mock (swapped out in prod), time scrubber +
-keyboard + Now, hover readout + minimal Units, frame-AOI; `weatherlayers-gl` removed. **T11 close-out
-done:** temp Vitest checks deleted, debug scaffolding stripped, particle path simplified — the wind
-**LOOK is frozen for this slice** (revisit later). **Deferred (decided 2026-06-15): the opacity +
-reorder layer controls** — the pipeline already carries `opacity`/`order` with sane defaults, but the
-layer bar exposes on/off only; surface the controls in a later slice.
+**Standing base (from the earlier foundation + rehaul):** 2D map (globe/3D removed until particles
+are fully trustworthy), self-hosted basemaps, dev fixture backend, and the layer/look data pipeline —
+`Layer` declares `parameters` + `looks`; grids fetch per parameter (bbox-windowed); a `Provider`
+shapes `Grid[]` into each look's input; `Look.deckLayer()` produces the rendered layer; keyed
+registry + `LayersService`.
 
-**Pending before sign-off:** the lead's interactive verification walkthrough (the spec's Verification
-list) + RTL/Hebrew spot-check. **Next: the Slice 2 spec** (full layer system + panel + levels, per the
-roadmap).
+**Reimplemented so far:** temperature colormap; wind = speed colormap + particle look.
+
+**Wind particles (2026-07-02): the CODE is approved, the LOOK is not.** Architecture validated:
+a `Look` can host an animated, self-driving deck `CompositeLayer` (own rAF loop, state in
+`layer.state`, sim separated into a pure `ParticleField` class — deck-free) and multi-parameter
+(U+V) flows correctly. The current visual is a placeholder (bare streaks). **Next task: restore the
+proven old-app wind visual (trails/fades/motion) on this architecture.** File-split tripwires agreed:
+when the sim grows, `ParticleField` moves to its own file — flag, lead decides.
+
+**Not yet reimplemented (old build had them):** time scrubber + Now + keyboard, hover readout +
+minimal Units, opacity/reorder layer controls, perf HUD, waves layer.

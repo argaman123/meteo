@@ -1,4 +1,5 @@
 import { Colormap } from '../engine/looks/colormap';
+import { WindField, WindParticles } from '../engine/looks/wind-particles';
 import { Grid } from '../objects/grid';
 import { Provider } from '../objects/provider';
 import { Parameter } from '../types/parameter';
@@ -25,5 +26,6 @@ export class Wind extends Layer {
   readonly parameters = [Parameter.U, Parameter.V];
   readonly looks = [
     new Colormap(new Provider((grids) => Grid.combine(grids, Math.hypot)), SPEED_PALETTE, 'smooth', 0.55),
+    new WindParticles(new Provider((grids): WindField => ({ u: grids[0], v: grids[1] }))),
   ];
 }
