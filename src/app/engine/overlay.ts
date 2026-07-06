@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Grid } from '../objects/grid';
-import { Look } from './looks/look';
+import { Look } from './base/look';
 
 @Service()
 export class Overlay {

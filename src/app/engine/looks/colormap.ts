@@ -3,8 +3,8 @@ import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ColorScale, ColorStop, colorScale, PaletteStyle } from '../../utils/color-scale';
-import { inverseMercatorY, mercatorY } from '../../utils/mercator';
-import { Look } from './look';
+import { MercatorBand } from '../../utils/geo';
+import { Look } from '../base/look';
 
 export class Colormap extends Look<Grid> {
   private readonly scale: ColorScale;
@@ -33,11 +33,10 @@ export class Colormap extends Look<Grid> {
     const width = Math.max(2, Math.round(aspect >= 1 ? resolution : resolution * aspect));
     const height = Math.max(2, Math.round(aspect >= 1 ? resolution / aspect : resolution));
     const [west, south, east, north] = grid.bounds;
-    const yNorth = mercatorY(north);
-    const ySouth = mercatorY(south);
+    const band = new MercatorBand(north, south);
     const rgba = new Uint8ClampedArray(width * height * 4);
     for (let row = 0; row < height; row++) {
-      const lat = inverseMercatorY(yNorth + ((ySouth - yNorth) * row) / (height - 1));
+      const lat = band.latAt(row / (height - 1));
       for (let col = 0; col < width; col++) {
         const lon = west + ((east - west) * col) / (width - 1);
         const value = grid.valueAt(lon, lat, 'bilinear');

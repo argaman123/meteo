@@ -72,7 +72,7 @@ Three non-negotiables, in priority order:
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
 | Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **no committed unit tests for now** — temporary Vitest checks verify pure units/geo/time logic during development, then are deleted | Lead 2026-06-10; wrong conversions remain a flagged hazard — revisit when Units/Geo modules land |
 | Rendering | **Client-side SPA, no SSR** | WebGL needs the browser |
-| Network | **Internal-only**; **dependencies vendored/offline** | Strict dependency budget |
+| Network | **Open internet during development**; delivery target is a closed network | Deps audited & vendored at cutover |
 | Browser floor | **Chrome 112** (fleet-pinned) | `browserslist`-enforced; Chrome-for-Testing 113 smoke test; ratchet at cutover |
 
 **PrimeNG checkpoint:** As of June 2026 PrimeNG supports Angular 21 only (v21.x); Angular-22 support
@@ -128,7 +128,8 @@ src/app/
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
     overlay.ts        #   Overlay: deck.gl layer host
-    looks/            #   one file per render style (colormap, particles; later contours, barbs…)
+    base/             #   building blocks looks are made from (Look, AnimatedLayer, GeoCanvas)
+    looks/            #   one file per render style (colormap, wind-particles; later contours…)
   layers/             # THE CATALOG (one file per layer) + the layers domain service
     layers-service.ts #   LayersService: which layers are shown + their fetch/draw
     model/            # layers fed by numerical weather models (temperature, wind, …)
@@ -176,16 +177,20 @@ render style = exactly one new file in `layers/model/`.
 
 ---
 
-## 7. Dependency policy (offline / vendored)
+## 7. Dependency policy (lead-revised 2026-07-05)
 
-- The runtime network is **internal-only** and there is **no package registry inside**. Dependencies
-  are **vendored/offline** and hand-carried in. **Adding a dependency is a deliberate act.**
-- **Dependency budget:** prefer few, popular, clean-dep-tree libraries. Before adding anything:
-  1. Confirm it's truly needed and nothing we have already covers it.
-  2. Check its transitive tree and that it has **no runtime phone-home** (no CDN/telemetry).
-  3. Get user sign-off, then vendor it (procedure to be documented in Slice 0).
-- Self-host **everything**: fonts, icons, basemap tiles/styles, all assets. No CDNs, no Cesium ion,
-  no Mapbox.
+- **Development happens on the open internet — use good libraries freely.** When a popular,
+  well-fitted library genuinely helps, adopt it (lead sign-off as usual). No dependency budget
+  during development.
+- **The delivered app runs on a closed internal network** with no package registry. At cutover,
+  every dependency is audited (transitive tree, no runtime phone-home/CDN/telemetry) and vendored.
+  Prefer libraries that will survive that audit — that is the only constraint that remains.
+- The shipped app self-hosts **all runtime assets**: fonts, icons, basemap tiles/styles. No runtime
+  CDNs, no Cesium ion, no Mapbox.
+- Standing note: **Turf.js** (`@turf/*` modules) is the chosen geo-geometry library — adopt the
+  specific modules when the first polygon-shaped feature lands (warnings, AOI, measurements).
+  Hot-loop bbox arithmetic stays hand-written (`utils/bounds.ts`) — GeoJSON allocation per call is
+  wrong at 60 fps.
 
 ---
 
@@ -232,14 +237,18 @@ are fully trustworthy), self-hosted basemaps, dev fixture backend, and the layer
 shapes `Grid[]` into each look's input; `Look.deckLayer()` produces the rendered layer; keyed
 registry + `LayersService`.
 
-**Reimplemented so far:** temperature colormap; wind = speed colormap + particle look.
+**Reimplemented so far:** temperature colormap; wind = speed colormap + canvas-trail particle look.
 
-**Wind particles (2026-07-02): the CODE is approved, the LOOK is not.** Architecture validated:
-a `Look` can host an animated, self-driving deck `CompositeLayer` (own rAF loop, state in
-`layer.state`, sim separated into a pure `ParticleField` class — deck-free) and multi-parameter
-(U+V) flows correctly. The current visual is a placeholder (bare streaks). **Next task: restore the
-proven old-app wind visual (trails/fades/motion) on this architecture.** File-split tripwires agreed:
-when the sim grows, `ParticleField` moves to its own file — flag, lead decides.
+**Wind look baseline (2026-07-05, code + concept approved; visual open to later tuning):** the
+windy.com canvas technique — `TrailCanvas` (in `looks/wind-particles.ts`) simulates 2000 particles
+(distance-sampled crumb trails, speed-scaled trail length, drain-out deaths, prime-stride even
+spawning) and strokes them onto a `GeoCanvas`; rendered as a `BitmapLayer` (ping-pong canvases —
+deck caches textures by image reference). ~60 fps measured. Machinery in `engine/base/`:
+`Look` contract, `AnimatedLayer` (owns the rAF loop; subclasses implement `step(dt)` + `rebuild()`,
+invoked via deck's own props diff), `GeoCanvas`. `TrailCanvas` stays a separate class by design:
+deck discards layer instances constantly and migrates only `props`/`state` — the canvas object in
+`state` is what survives. Dev-server note: HMR leaves orphaned rAF loops (page slows over many
+hot-swaps) — a page refresh clears it; production teardown is correct via `finalizeState`.
 
 **Not yet reimplemented (old build had them):** time scrubber + Now + keyboard, hover readout +
 minimal Units, opacity/reorder layer controls, perf HUD, waves layer.

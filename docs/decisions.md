@@ -120,3 +120,15 @@ behavior is still unverified; re-measure on a representative mini-PC at first op
 - **UI font** — decided in Slice 0 (leading candidate: **Heebo**; alternative: Noto Sans + Noto Sans
   Hebrew pair).
 - **PrimeNG 22 availability** at the checkpoint.
+
+## Dependency policy revision (lead, 2026-07-05)
+
+The original "strict dependency budget / vendored offline" rule applied to development. Revised:
+**development happens on the open internet — good libraries are encouraged**; the closed network
+only matters at delivery, where every dependency is audited (transitive tree, no phone-home) and
+vendored. The audit-survivability of a library is the one constraint kept in mind when adopting.
+
+First application: **Turf.js** is the standing choice for geo geometry (`@turf/*` modules, adopted
+per feature when polygons/AOI/measurements arrive). Hot-loop bbox math stays hand-written in
+`utils/bounds.ts` — Turf's GeoJSON-object API allocates per call, wrong inside a 60 fps particle
+loop (~120k checks/sec).

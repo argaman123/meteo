@@ -1,5 +1,5 @@
 import { HttpResourceRequest } from '@angular/common/http';
-import { Look } from '../engine/looks/look';
+import { Look } from '../engine/base/look';
 import { Grid } from '../objects/grid';
 import { Parameter } from '../types/parameter';
 import { Bounds, Wrap } from '../types/wrap';

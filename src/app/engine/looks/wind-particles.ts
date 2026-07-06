@@ -1,9 +1,134 @@
-import { CompositeLayer, UpdateParameters } from '@deck.gl/core';
 import type { Layer as DeckLayer } from '@deck.gl/core';
-import { LineLayer, LineLayerProps } from '@deck.gl/layers';
+import { BitmapLayer } from '@deck.gl/layers';
 import { Grid } from '../../objects/grid';
 import { Bounds } from '../../types/wrap';
-import { Look } from './look';
+import { contains } from '../../utils/geo';
+import { AnimatedLayer, AnimatedState } from '../base/animated-layer';
+import { GeoCanvas } from '../base/geo-canvas';
+import { Look } from '../base/look';
+
+const COUNT = 2000;
+const TRAIL = 16;
+const SPACING = 0.002;
+
+class TrailCanvas {
+  private readonly canvas: GeoCanvas;
+  private readonly cols = 40;
+  private readonly rows: number;
+  private cell = 0;
+  private readonly bounds: Bounds;
+  private readonly lonSpan: number;
+  private readonly trailLon = new Float32Array(COUNT * TRAIL);
+  private readonly trailLat = new Float32Array(COUNT * TRAIL);
+  private readonly sinceCrumb = new Float32Array(COUNT);
+  private readonly age = new Float32Array(COUNT);
+  private readonly life = new Float32Array(COUNT);
+  private readonly dying = new Uint8Array(COUNT);
+
+  constructor(
+    private readonly u: Grid,
+    private readonly v: Grid,
+  ) {
+    this.bounds = u.bounds;
+    const [west, south, east, north] = u.bounds;
+    this.lonSpan = east - west;
+    this.canvas = new GeoCanvas(u.bounds);
+    this.rows = Math.max(1, Math.round((this.cols * (north - south)) / this.lonSpan));
+    for (let i = 0; i < COUNT; i++) {
+      this.spawn(i);
+      this.age[i] = Math.random() * this.life[i];
+    }
+  }
+
+  get image(): HTMLCanvasElement {
+    return this.canvas.image;
+  }
+
+  advance(deltaSeconds: number): void {
+    const move = 0.004 * this.lonSpan * deltaSeconds;
+    for (let i = 0; i < COUNT; i++) {
+      if (this.dying[i] > 0) {
+        this.dropTailCrumb(i);
+        if (--this.dying[i] === 0) this.spawn(i);
+        continue;
+      }
+      this.age[i] += deltaSeconds;
+      const headLon = this.trailLon[i * TRAIL];
+      const headLat = this.trailLat[i * TRAIL];
+      const u = this.u.valueAt(headLon, headLat, 'nearest');
+      const v = this.v.valueAt(headLon, headLat, 'nearest');
+      const speed = Math.hypot(u, v);
+      if (Number.isNaN(u) || speed === 0 || this.age[i] >= this.life[i]) {
+        this.dying[i] = TRAIL - 1;
+        continue;
+      }
+      const step = Math.min(25, Math.max(3, speed)) * move;
+      const nextLon = headLon + (u / speed) * step;
+      const nextLat = headLat + (v / speed) * step;
+      if (!contains(this.bounds, nextLon, nextLat)) {
+        this.dying[i] = TRAIL - 1;
+        continue;
+      }
+      const crumbSpacing = (0.2 + 0.8 * Math.min(1, speed / 18)) * SPACING * this.lonSpan;
+      this.sinceCrumb[i] += step;
+      while (this.sinceCrumb[i] >= crumbSpacing) {
+        this.dropTailCrumb(i);
+        this.sinceCrumb[i] -= crumbSpacing;
+      }
+      this.trailLon[i * TRAIL] = nextLon;
+      this.trailLat[i * TRAIL] = nextLat;
+    }
+    this.draw();
+  }
+
+  private dropTailCrumb(i: number): void {
+    for (let t = TRAIL - 1; t > 0; t--) {
+      this.trailLon[i * TRAIL + t] = this.trailLon[i * TRAIL + t - 1];
+      this.trailLat[i * TRAIL + t] = this.trailLat[i * TRAIL + t - 1];
+    }
+  }
+
+  private draw(): void {
+    const context = this.canvas.begin();
+    context.strokeStyle = '#ffffff';
+    context.lineWidth = 1.5;
+    for (let t = 0; t < TRAIL - 1; t++) {
+      context.globalAlpha = 0.6 * (1 - t / (TRAIL - 1));
+      context.beginPath();
+      for (let i = 0; i < COUNT; i++) {
+        context.moveTo(
+          this.canvas.toX(this.trailLon[i * TRAIL + t]),
+          this.canvas.toY(this.trailLat[i * TRAIL + t]),
+        );
+        context.lineTo(
+          this.canvas.toX(this.trailLon[i * TRAIL + t + 1]),
+          this.canvas.toY(this.trailLat[i * TRAIL + t + 1]),
+        );
+      }
+      context.stroke();
+    }
+  }
+
+  private spawn(i: number): void {
+    const PRIME_STRIDE = 7919;
+    const [west, south, , north] = this.bounds;
+    this.cell = (this.cell + PRIME_STRIDE) % (this.cols * this.rows);
+    const lon = west + (((this.cell % this.cols) + Math.random()) / this.cols) * this.lonSpan;
+    const lat =
+      north - ((Math.floor(this.cell / this.cols) + Math.random()) / this.rows) * (north - south);
+    for (let t = 0; t < TRAIL; t++) {
+      this.trailLon[i * TRAIL + t] = lon;
+      this.trailLat[i * TRAIL + t] = lat;
+    }
+    this.sinceCrumb[i] = 0;
+    this.age[i] = 0;
+    this.life[i] = 1.5 + Math.random() * 2;
+  }
+}
+
+interface State extends AnimatedState {
+  canvas: TrailCanvas;
+}
 
 export interface WindField {
   u: Grid;
@@ -16,109 +141,23 @@ export class WindParticles extends Look<WindField> {
   }
 }
 
-class ParticleField {
-  readonly heads = new Float32Array(1500 * 2);
-  readonly tails = new Float32Array(1500 * 2);
-  private readonly lon = new Float32Array(1500);
-  private readonly lat = new Float32Array(1500);
-  private readonly bounds: Bounds;
-
-  constructor(
-    private readonly u: Grid,
-    private readonly v: Grid,
-  ) {
-    this.bounds = u.bounds;
-    for (let i = 0; i < this.count; i++) this.spawn(i);
-  }
-
-  get count(): number {
-    return this.lon.length;
-  }
-
-  advance(): void {
-    const { lon, lat, heads, tails } = this;
-    const [west, south, east, north] = this.bounds;
-    const span = east - west;
-    for (let i = 0; i < lon.length; i++) {
-      const u = this.u.valueAt(lon[i], lat[i], 'nearest');
-      const v = this.v.valueAt(lon[i], lat[i], 'nearest');
-      const nextLon = lon[i] + u * span * 0.00015;
-      const nextLat = lat[i] + v * span * 0.00015;
-      const outside = nextLon < west || nextLon > east || nextLat < south || nextLat > north;
-      if (Number.isNaN(u) || outside || Math.random() < 0.01) {
-        this.spawn(i);
-        continue;
-      }
-      lon[i] = nextLon;
-      lat[i] = nextLat;
-      heads[i * 2] = nextLon;
-      heads[i * 2 + 1] = nextLat;
-      tails[i * 2] = nextLon - u * span * 0.004;
-      tails[i * 2 + 1] = nextLat - v * span * 0.004;
-    }
-  }
-
-  private spawn(i: number): void {
-    const { lon, lat, heads, tails } = this;
-    const [west, south, east, north] = this.bounds;
-    const newLon = west + Math.random() * (east - west);
-    const newLat = south + Math.random() * (north - south);
-    lon[i] = newLon;
-    lat[i] = newLat;
-    heads[i * 2] = newLon;
-    heads[i * 2 + 1] = newLat;
-    tails[i * 2] = newLon;
-    tails[i * 2 + 1] = newLat;
-  }
-}
-
-interface State {
-  [key: string]: unknown;
-  raf: number;
-  tick: number;
-  field: ParticleField;
-}
-
-class WindParticleLayer extends CompositeLayer<WindField> {
+class WindParticleLayer extends AnimatedLayer<WindField> {
   static override layerName = 'WindParticleLayer';
   declare state: State;
 
-  override initializeState(): void {
-    this.setState({ tick: 0, field: new ParticleField(this.props.u, this.props.v) });
-    this.state.raf = requestAnimationFrame(this.animate);
-  }
-
-  override updateState({ props, oldProps }: UpdateParameters<this>): void {
-    if (props.u !== oldProps.u || props.v !== oldProps.v) {
-      this.setState({ field: new ParticleField(props.u, props.v) });
-    }
-  }
-
-  override finalizeState(): void {
-    cancelAnimationFrame(this.state.raf);
+  rebuild(): void {
+    this.setState({ canvas: new TrailCanvas(this.props.u, this.props.v) });
   }
 
   override renderLayers(): DeckLayer {
-    const { field } = this.state;
-    const data = {
-      length: field.count,
-      attributes: {
-        getSourcePosition: { value: field.heads, size: 2 },
-        getTargetPosition: { value: field.tails, size: 2 },
-      },
-    } as unknown as LineLayerProps['data'];
-    return new LineLayer(this.getSubLayerProps({ id: 'streaks' }), {
-      data,
-      getColor: [255, 255, 255],
-      getWidth: 1.5,
-      widthUnits: 'pixels',
-      opacity: 0.8,
+    return new BitmapLayer(this.getSubLayerProps({ id: 'trails' }), {
+      image: this.state.canvas.image,
+      bounds: this.props.u.bounds,
+      opacity: 0.85,
     });
   }
 
-  private animate = (): void => {
-    this.state.field.advance();
-    this.setState({ tick: this.state.tick + 1 });
-    this.state.raf = requestAnimationFrame(this.animate);
-  };
+  step(deltaSeconds: number): void {
+    this.state.canvas.advance(deltaSeconds);
+  }
 }
