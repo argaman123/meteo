@@ -235,23 +235,23 @@ render style = exactly one new file in `layers/model/`.
 - **Product vision & full capability list:** [`docs/vision.md`](docs/vision.md)
 - **Technical decisions & rationale:** [`docs/decisions.md`](docs/decisions.md)
 - **Domain knowledge:** [`docs/domain/`](docs/domain/) (meteorology, units/coordinates/time)
-- **Past build plans (history only):** [`docs/plans/`](docs/plans/)
 
 ---
 
 ## 11. Current status
 
-**Working mode (since 2026-07): no slices.** The earlier slice framing (specs/roadmap/walkthroughs)
-is retired and those docs are deleted. We reimplement the old build's capabilities **piece by piece
-on the current architecture**, verifying each step interactively with the lead before moving on.
+**Working mode (lead, 2026-07-06): build forward.** The remake framing is retired — no slices, no
+old-build checklist (the slice/plan docs are deleted). The current implementation is the accepted
+baseline; new work is chosen feature by feature, built on the current architecture, verified
+interactively with the lead, and committed on his approval. The old app remains a *domain
+reference* (what data and capabilities exist), never a spec to match.
 
-**Standing base (from the earlier foundation + rehaul):** 2D map (globe/3D removed until particles
-are fully trustworthy), self-hosted basemaps, dev fixture backend, and the layer/look data pipeline —
+**The product today:** 2D map (globe/3D returns only when first-party particles are verified
+trustworthy), self-hosted basemaps, dev fixture backend, and the layer/look data pipeline —
 `Layer` declares `parameters` + `looks`; grids fetch per parameter (bbox-windowed); a `Provider`
 shapes `Grid[]` into each look's input; `Look.deckLayer()` produces the rendered layer; keyed
-registry + `LayersService`.
-
-**Reimplemented so far:** temperature colormap; wind = speed colormap + canvas-trail particle look.
+registry + `LayersService`. Layers: temperature colormap; wind = speed colormap + canvas-trail
+particle look.
 
 **Wind look baseline (2026-07-05, code + concept approved; visual open to later tuning):** the
 windy.com canvas technique — `TrailCanvas` (in `looks/wind-particles.ts`) simulates 2000 particles
@@ -264,7 +264,7 @@ deck discards layer instances constantly and migrates only `props`/`state` — t
 `state` is what survives. Dev-server note: HMR leaves orphaned rAF loops (page slows over many
 hot-swaps) — a page refresh clears it; production teardown is correct via `finalizeState`.
 
-**Time scrubber reimplemented (2026-07-06, lead-verified):** generic
+**Time scrubber (2026-07-06, lead-verified):** generic
 `TimeService` in `services/` (tools + window merging only — no layer knowledge; windows are pushed
 in), `Layer.timeWindow` per layer (default 24/96/3h; may move to menu-side later — lead leaning
 menu, layer chosen for now because cadence is data-nature), `Inputs.time()` feeds `Layer.request`
@@ -288,7 +288,7 @@ Helm components are copied into `src/spartan/` (button, slider, utils so far; de
 `app/` — it's the vendored look layer, rarely touched) and imported as `@spartan-ng/helm/*` through
 tsconfig paths; ESLint's selector-prefix rules are off for that folder (spartan keeps its `hlm*`
 selectors). Header, basemap switcher, layer bar, and time bar use `hlmBtn`/`hlm-slider`; selection
-lists show the active item by switching `variant` (`secondary`↔`ghost`) + `aria-pressed`. The
+lists show the active item by switching `variant` (`default`↔`ghost`) + `aria-pressed`. The
 custom color tokens in `styles.css` are deleted — spartan's CSS-variable theme is the only color
 system (Heebo `--font-sans` kept). **Chrome look (lead, 2026-07-06): full-bleed map, floating
 frosted-glass instrument cards** — one card recipe (`rounded-xl border bg-card/75 backdrop-blur-md
@@ -298,12 +298,10 @@ map (flagged, accepted by the lead — small vs the per-frame canvas upload; can
 quality knob if fleet measurement ever demands). The old custom look is retired — do not imitate
 it in new chrome.
 
-**Hover readout + minimal Units + perf HUD (2026-07-06, pending lead's interactive verification):**
+**Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified):**
 `units/units.ts` seeds the Units module (`Unit` enum + `convert`/`format`; `NaN` → `—`); each layer
 implements `Layer.hover(grids, lon, lat)` (temperature: bilinear °C; wind: u/v-interpolated speed
 converted m/s→kt + met-degrees "from" direction — vector-aware by construction); a cursor-following
 readout chip lives in `pages/home/hover-readout/` (hides off-map and over panels). `dev/perf-hud/`
 ships with the app (§8): Ctrl+Alt+P or `?hud=1`, FPS + JS heap, rAF loop cancelled on toggle-off
 and destroy.
-
-**Not yet reimplemented (old build had them):** opacity/reorder layer controls, waves layer.
