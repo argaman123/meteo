@@ -65,20 +65,22 @@ Three non-negotiables, in priority order:
 | Concern | Choice | Notes |
 |---|---|---|
 | Framework | **Angular 22** (standalone, **zoneless**, signals-first) | |
-| Components | **Angular CDK** + **Tailwind** now; **add PrimeNG 22 when it ships** | See checkpoint below |
+| Components | **spartan/ui** (`@spartan-ng/brain` primitives + Helm components copied into the repo) on CDK + Tailwind | Lead 2026-07-06, replaces the PrimeNG plan — see rule below |
 | State | **Signals in one injectable `@Service` per domain** (signals + the methods that change them, co-located) | No NgRx; no separate stores layer |
 | Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL removed 2026-06; globe/3D temporarily removed — returns after first-party particles are verified) | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
-| Styling/theme | **Design tokens** (CSS variables) → Tailwind + (later) PrimeNG token theme | Presets = declarative config |
+| Styling/theme | **Design tokens** (CSS variables) → Tailwind + spartan's CSS-variable theme | Presets = declarative config |
 | Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **no committed unit tests for now** — temporary Vitest checks verify pure units/geo/time logic during development, then are deleted | Lead 2026-06-10; wrong conversions remain a flagged hazard — revisit when Units/Geo modules land |
 | Rendering | **Client-side SPA, no SSR** | WebGL needs the browser |
 | Network | **Open internet during development**; delivery target is a closed network | Deps audited & vendored at cutover |
 | Browser floor | **Chrome 112** (fleet-pinned) | `browserslist`-enforced; Chrome-for-Testing 113 smoke test; ratchet at cutover |
 
-**PrimeNG checkpoint:** As of June 2026 PrimeNG supports Angular 21 only (v21.x); Angular-22 support
-is not yet released. We start on Angular 22 with CDK + Tailwind for the minimal early chrome. **The
-first time we need heavy components (rich tables/forms): if PrimeNG 22 is out, adopt it; if not,
-brief wait or interim CDK.** Keep component usage behind **thin wrappers** so the swap is contained.
+**Component-library rule (lead, 2026-07-06 — replaces the PrimeNG checkpoint):** UI is built with
+**spartan/ui**. **If spartan has a component for it, use spartan's**; raw Tailwind/CDK only for
+small adjustments or genuine gaps. Keep the code as simple as it can be. Helm components are
+**copied into the repo** (shadcn model) — they are our code; RTL/theme fixes go directly in them,
+no wrapper layer needed. `@spartan-ng/brain` supports Angular 21–22. The **spartan-ui MCP server**
+(registered in `.mcp.json`) is the component/API reference — consult it when building UI.
 
 Full rationale and alternatives considered: [`docs/decisions.md`](docs/decisions.md).
 
@@ -109,7 +111,10 @@ The system is built as small units, each with one responsibility and a clear int
    functions-service (the mainstream Angular pattern, e.g. `ngx-maplibre-gl`'s `MapService`).
    Components read its signals and call its methods; they don't hold cross-cutting state.
 6. **RTL by construction.** Use CSS logical properties (`margin-inline`, `inset-inline`, etc.) and
-   `dir`-aware components — never hard-code left/right.
+   `dir`-aware components — never hard-code left/right. A direction island (e.g. the LTR time
+   slider inside the RTL page) needs the CDK `Dir` directive on its wrapper, not a bare `dir`
+   attribute — CDK/spartan components read direction from `Directionality`, which only sees the
+   directive or the document default.
 
 ---
 
@@ -139,6 +144,9 @@ src/app/
   utils/              # pure functions; similar functions share a file, split when grown
   settings/           # injectable settings stores (domain services, per §4.5)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
+src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
+                      #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
+                      #   rarely touched after the look settles, deliberately outside app/)
 public/               # static assets (Angular 22 convention; served from /)
   basemaps/           # self-hosted styles + tiles (vendored)
   fonts/              # self-hosted Hebrew+Latin font
@@ -169,8 +177,9 @@ render style = exactly one new file in `layers/model/`.
 - **Files stay small and focused.** If a file is doing two things, split it. (Old codebase pain.)
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
-- **Thin wrappers:** wrap CDK/PrimeNG components in our own `shared/` components so swaps and
-  RTL/theme concerns are handled in one place.
+- **spartan components are ours:** Helm components are copied into the repo — RTL/theme concerns
+  are fixed directly in them, no wrapper layer. Thin wrappers only for third-party widgets we
+  don't own.
 - **No code comments yet** (see §2).
 
 > Where a convention is not yet chosen, it is decided when the need first arises and then **locked
@@ -201,6 +210,9 @@ render style = exactly one new file in `layers/model/`.
   stronger hardware; resolution scales with the machine).
 - **Adaptive quality knobs** (particle counts, texture caps) + a dev-toggleable **perf HUD**
   (FPS/memory) ship from Slice 0 — the target fleet isn't directly testable, so tuning is config-only.
+- **Looks are never sacrificed globally for the weakest machines** (lead, 2026-07-06): the few
+  low-end PCs get feature/effect scaling via the quality knobs; perf concerns about visuals are
+  *flagged* at decision time, never silently applied.
 - **Match or beat the current Cesium app's responsiveness.**
 - The Slice 0 spike validates the engine by **best-effort measurement + reasoned assessment**
   (no direct target-hardware access) before we build deep.
@@ -266,6 +278,22 @@ generator tool are gone. `dev/fixture-backend/synthetic-weather.ts` computes any
 scrubbing is visible) + synthetic pressure/temperature/waves, land-masked waves. Sources: two files
 in `public/fixtures/` (`gfs-surface-wind.json`, `land.geojson`). Run time = app load, snapped to
 3h — fixtures can never go stale.
+
+**spartan/ui adopted, chrome rebuilt on it (2026-07-06):** initialized via `@spartan-ng/cli`
+(slate theme; dark is the default via `class="dark"` on `<html>`; CLI config in `components.json`).
+Helm components are copied into `src/spartan/` (button, slider, utils so far; deliberately outside
+`app/` — it's the vendored look layer, rarely touched) and imported as `@spartan-ng/helm/*` through
+tsconfig paths; ESLint's selector-prefix rules are off for that folder (spartan keeps its `hlm*`
+selectors). Header, basemap switcher, layer bar, and time bar use `hlmBtn`/`hlm-slider`; selection
+lists show the active item by switching `variant` (`secondary`↔`ghost`) + `aria-pressed`. The
+custom color tokens in `styles.css` are deleted — spartan's CSS-variable theme is the only color
+system (Heebo `--font-sans` kept). **Chrome look (lead, 2026-07-06): full-bleed map, floating
+frosted-glass instrument cards** — one card recipe (`rounded-xl border bg-card/75 backdrop-blur-md
+shadow-lg`) for the layer card (top-start), basemap switcher (top-end), and centered bottom time
+bar; slim `bg-background` header. Backdrop-blur is an always-on compositor cost over the animating
+map (flagged, accepted by the lead — small vs the per-frame canvas upload; can move behind a
+quality knob if fleet measurement ever demands). The old custom look is retired — do not imitate
+it in new chrome.
 
 **Not yet reimplemented (old build had them):** hover readout + minimal Units, opacity/reorder
 layer controls, perf HUD, waves layer.

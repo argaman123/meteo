@@ -1,12 +1,12 @@
-<div
-  class="flex h-full w-44 flex-col gap-2 border-s border-panel-border bg-panel/90 p-3 text-sm"
->
-  <h2 class="font-medium">שכבות</h2>
+<div class="flex w-44 flex-col gap-1 rounded-xl border bg-card/75 backdrop-blur-md p-1.5 shadow-lg">
+  <h2 class="px-2 py-1 text-xs font-medium text-muted-foreground">שכבות</h2>
   @for (entry of menu; track entry.layer) {
     <button
-      class="rounded px-2 py-1 text-start"
-      [class.bg-accent]="service.isShown(entry.layer)"
-      [class.text-app]="service.isShown(entry.layer)"
+      hlmBtn
+      size="sm"
+      class="justify-start"
+      [variant]="service.isShown(entry.layer) ? 'default' : 'ghost'"
+      [attr.aria-pressed]="service.isShown(entry.layer)"
       (click)="service.toggle(entry.layer)"
     >
       {{ entry.name }}

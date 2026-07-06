@@ -14,10 +14,10 @@ why. Consistency depends on not silently re-opening these.
 | **Viewport-windowed requests** | For **model parameters**, the real backend serves **only the currently visible area** per request (bbox-windowed grids), not the whole domain. The Slice-1+ data-access layer requests by bbox as the camera moves. **Amended 2026-06-11:** the response is a **fixed-size grid (~70×70) regardless of bbox** — the backend interpolates server-side, so zooming in yields finer effective resolution and the client must refetch when the view shrinks substantially (shrink-ratio trigger in `data/field-data.ts`); the dev mock emulates this (incl. vector-aware wind-direction interpolation) | Lead 2026-06-10/11 |
 | **Basemap** | ArcGIS = background ground **only**; + self-hosted local styles (dark/light/colorful) | ArcGIS is an Esri shop standard; local styles are the fast/uncluttered fallback |
 | **Real-time** | **Polling** (no WebSocket/SSE) | Matches how fresh the data needs to be; simpler |
-| **Framework** | **Angular 22** now + **Angular CDK** + **Tailwind**; add **PrimeNG 22** when it ships | Only PrimeNG is Angular-version-coupled; early chrome needs little of it |
+| **Framework** | **Angular 22** now + **Angular CDK** + **Tailwind**. **Amended 2026-07-06:** ~~add PrimeNG 22 when it ships~~ → **spartan/ui** (see Component library row) | Only PrimeNG was Angular-version-coupled; early chrome needs little of it |
 | **State** | **Signals + small injectable signal-stores** | Most junior-readable; matches zoneless/signals-first Angular 22 |
 | **i18n** | **No translation framework**; author each element in its language; **bidi/RTL mandatory** + self-hosted Hebrew+Latin font | User: "some elements Hebrew, some English, by user" — no live toggle, but mixed direction is always present |
-| **Theming** | Design tokens → Tailwind + (later) PrimeNG token theme; presets = declarative config | Presets without code forks; bounded |
+| **Theming** | Design tokens → Tailwind + spartan CSS-variable theme (**amended 2026-07-06**; was "later PrimeNG token theme"); presets = declarative config | Presets without code forks; bounded |
 | **Auth** | **Open / network-trusted** (no login, no roles) | Being on the network is the gate ⇒ preferences are device-local |
 | **Testing** | **Light/manual** + strict TypeScript + ESLint/Prettier; **Vitest tests for pure units/geo/time logic** | Architecture is the safety net; unit/coordinate conversions are pre-known bite points — a silent kt↔m/s or MGRS error is an operational hazard |
 | **Rendering mode** | Client-side **SPA, no SSR** | WebGL needs the browser |
@@ -43,6 +43,7 @@ why. Consistency depends on not silently re-opening these.
 | **Dev data mock** | In-app **HTTP interceptor** in `dev/` answers `/api/*` from fixtures over the real contract; registered via environment `fileReplacements` so prod bundles contain zero mock code — a narrow, recorded exception to the `dev/` quarantine | Lead 2026-06-11 (chose over a standalone mock server) |
 | **Equirectangular-on-mercator fix** | Backend grids are lat/lon-linear; stretching them straight over a mercator map misplaces data at high latitudes (false-data hazard). Colormap colorize emits **mercator-spaced rows** (CPU, once per grid change); particles/hover sample by lat/lon natively and are unaffected | Recorded 2026-06-11; lead delegated the fix choice |
 | **Slice-1 look & chrome** | Particles: uniform white streaks + fading trails (speed = motion). Colormap: per-layer `paletteStyle` `'smooth' \| 'stepped'`. Placeholder palettes + AOIs (lead supplies real, sanitized, later). Frame-AOI ships as a **2D fly-to**. Chrome layout: floating controls + **full-height right layer bar** + bottom time bar, utilitarian pending the UX pass | Lead 2026-06-11 (layout picked from mockups) |
+| **Component library (2026-07-06)** | **spartan/ui** replaces the planned PrimeNG-22 adoption: `@spartan-ng/brain` primitives from npm + **Helm components copied into the repo** via the spartan CLI. Rule: **if spartan has it, use it**; direct Tailwind/CDK only for small adjustments or genuine gaps; simplest code wins. Chrome adopts **spartan's own visual language** — do not recreate the previous custom look (lead, same day). The **spartan-ui MCP server** (`.mcp.json`) is the component/API reference | Lead 2026-07-06. Built on the already-locked CDK+Tailwind base (shadcn model); brain supports Angular 21–22 today — no version wait, killing the coupling that made PrimeNG a checkpoint; copied-in Helm code is junior-readable, directly RTL/theme-fixable (no wrapper layer), and audits/vendors trivially for the closed network since it lives in-repo |
 | **Stack maturity (honest record)** | The 2D path of MapLibre+deck.gl is mature and widely deployed; the **globe path is young** (MapLibre globe GA + WeatherLayers globe support: Jan 2025) — more globe-specific quirks are likely. Treat 2D as the always-solid floor and the globe as progressive enhancement; WeatherLayers (small vendor, active public tracker) is the stack's main concentration risk, contained by the engine adapter + per-renderer replaceability | Recorded 2026-06-10 at the lead's demand for candor about stack risk |
 
 ## Engine alternatives considered (and why not)
@@ -68,13 +69,12 @@ input is **whole equirectangular images** (PNG/WebP/GeoTIFF Float32; vector data
 2. **Declarative layers** — the app describes layers; the adapter renders them.
 3. WeatherLayers being multi-engine means even weather layers stay portable.
 
-## PrimeNG / Angular-22 checkpoint
+## PrimeNG / Angular-22 checkpoint — superseded 2026-07-06
 
-As of June 2026, latest PrimeNG is **21.x (Angular 21 only)**; Angular-22 support is requested but
-unreleased. Plan: build early chrome on **CDK + Tailwind**, wrap components thinly, and adopt
-**PrimeNG 22** the first time heavy components (rich tables/forms) are needed — if it's out by then;
-otherwise brief wait or interim CDK. Also evaluate **Angular Aria** at the checkpoint (stable in
-v22; official headless accessible patterns) — it may shrink the heavy-component need.
+**Superseded: the lead chose spartan/ui** (see the Component library row in the decision log); the
+checkpoint never triggered. Original plan, kept for history: build early chrome on CDK + Tailwind,
+wrap components thinly, adopt PrimeNG 22 the first time heavy components (rich tables/forms) are
+needed — or brief wait / interim CDK — evaluating Angular Aria at the same checkpoint.
 
 ## Slice 0 spike result (2026-06-10) — **GO**
 
@@ -119,7 +119,6 @@ behavior is still unverified; re-measure on a representative mini-PC at first op
   slice needs them.
 - **UI font** — decided in Slice 0 (leading candidate: **Heebo**; alternative: Noto Sans + Noto Sans
   Hebrew pair).
-- **PrimeNG 22 availability** at the checkpoint.
 
 ## Dependency policy revision (lead, 2026-07-05)
 

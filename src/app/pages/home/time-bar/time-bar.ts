@@ -1,9 +1,13 @@
+import { Dir } from '@angular/cdk/bidi';
 import { Component, computed, inject } from '@angular/core';
+import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmSlider } from '@spartan-ng/helm/slider';
 import { TimeService } from '../../../services/time-service';
 import { formatLocalTime } from '../../../utils/time';
 
 @Component({
   selector: 'app-time-bar',
+  imports: [Dir, HlmButton, HlmSlider],
   templateUrl: './time-bar.html',
   styleUrl: './time-bar.css',
   host: {
@@ -19,13 +23,14 @@ export class TimeBar {
   protected forwardLabel = computed(() => this.windowHours(this.time.window().end));
 
   protected onArrow(event: Event, direction: 1 | -1): void {
+    if (event.target instanceof Element && event.target.closest('hlm-slider')) return;
     event.preventDefault();
     if (direction === 1) this.time.stepForward();
     else this.time.stepBack();
   }
 
-  protected onScrub(event: Event): void {
-    this.time.jumpTo(Number((event.target as HTMLInputElement).value));
+  protected onScrub(values: number[]): void {
+    this.time.jumpTo(values[0]);
   }
 
   private windowHours(unixSeconds: number): string {
