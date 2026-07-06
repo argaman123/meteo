@@ -264,12 +264,14 @@ deck discards layer instances constantly and migrates only `props`/`state` — t
 `state` is what survives. Dev-server note: HMR leaves orphaned rAF loops (page slows over many
 hot-swaps) — a page refresh clears it; production teardown is correct via `finalizeState`.
 
-**Time scrubber reimplemented (2026-07-06, pending lead's interactive verification):** generic
+**Time scrubber reimplemented (2026-07-06, lead-verified):** generic
 `TimeService` in `services/` (tools + window merging only — no layer knowledge; windows are pushed
 in), `Layer.timeWindow` per layer (default 24/96/3h; may move to menu-side later — lead leaning
 menu, layer chosen for now because cadence is data-nature), `Inputs.time()` feeds `Layer.request`
 (no more `Date.now()`), bottom `time-bar` (Now/עכשיו + slider + ±h labels + arrow keys, he-IL
-labels), `utils/time.ts` (snap/clamp/format — future Units/Geo seed). **Layer selection is now
+labels; **dragging commits on release only** — mid-drag the label previews the snapped time from a
+local scrub signal, `jumpTo`/refetch fire on pointerup), `utils/time.ts` (snap/clamp/format —
+future Units/Geo seed). **Layer selection is now
 exclusive** (showing a layer hides others; multi-layer stacking returns later with per-look display
 choices).
 

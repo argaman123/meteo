@@ -1,9 +1,9 @@
 import { Dir } from '@angular/cdk/bidi';
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmSlider } from '@spartan-ng/helm/slider';
 import { TimeService } from '../../../services/time-service';
-import { formatLocalTime } from '../../../utils/time';
+import { formatLocalTime, snapToStep } from '../../../utils/time';
 
 @Component({
   selector: 'app-time-bar',
@@ -13,12 +13,23 @@ import { formatLocalTime } from '../../../utils/time';
   host: {
     '(window:keydown.arrowright)': 'onArrow($event, 1)',
     '(window:keydown.arrowleft)': 'onArrow($event, -1)',
+    '(window:pointerup)': 'onPointerUp()',
+    '(window:pointercancel)': 'onPointerUp()',
   },
 })
 export class TimeBar {
   protected time = inject(TimeService);
+  protected scrubValue = signal<number | null>(null);
+  private pointerHeld = false;
+
   protected stepSeconds = computed(() => this.time.stepHours() * 3600);
-  protected currentLabel = computed(() => formatLocalTime(this.time.currentTime()));
+  protected sliderValue = computed(() => [this.scrubValue() ?? this.time.currentTime()]);
+  protected currentLabel = computed(() => {
+    const scrub = this.scrubValue();
+    const shown =
+      scrub === null ? this.time.currentTime() : snapToStep(scrub, this.time.stepHours());
+    return formatLocalTime(shown);
+  });
   protected backLabel = computed(() => this.windowHours(this.time.window().start));
   protected forwardLabel = computed(() => this.windowHours(this.time.window().end));
 
@@ -30,7 +41,20 @@ export class TimeBar {
   }
 
   protected onScrub(values: number[]): void {
-    this.time.jumpTo(values[0]);
+    if (this.pointerHeld) this.scrubValue.set(values[0]);
+    else this.time.jumpTo(values[0]);
+  }
+
+  protected onPointerDown(): void {
+    this.pointerHeld = true;
+  }
+
+  protected onPointerUp(): void {
+    this.pointerHeld = false;
+    const scrub = this.scrubValue();
+    if (scrub === null) return;
+    this.scrubValue.set(null);
+    this.time.jumpTo(scrub);
   }
 
   private windowHours(unixSeconds: number): string {

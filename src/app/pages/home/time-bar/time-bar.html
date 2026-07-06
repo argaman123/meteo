@@ -2,7 +2,7 @@
   class="flex items-center gap-3 rounded-xl border bg-card/75 backdrop-blur-md px-3 py-2 text-sm shadow-lg"
 >
   <button hlmBtn size="sm" (click)="time.jumpToNow()">עכשיו</button>
-  <div class="flex flex-1 items-center gap-2" dir="ltr">
+  <div class="flex flex-1 items-center gap-2" dir="ltr" (pointerdown)="onPointerDown()">
     <span class="text-xs text-muted-foreground">{{ backLabel() }}</span>
     <hlm-slider
       class="flex-1"
@@ -10,7 +10,7 @@
       [min]="time.window().start"
       [max]="time.window().end"
       [step]="stepSeconds()"
-      [value]="[time.currentTime()]"
+      [value]="sliderValue()"
       (valueChange)="onScrub($event)"
     />
     <span class="text-xs text-muted-foreground">{{ forwardLabel() }}</span>
