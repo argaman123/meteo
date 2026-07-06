@@ -1,16 +1,19 @@
 import { HttpResourceRequest } from '@angular/common/http';
 import { Look } from '../engine/base/look';
 import { Grid } from '../objects/grid';
+import { TimeWindow } from '../services/time-service';
 import { Parameter } from '../types/parameter';
 import { Bounds, Wrap } from '../types/wrap';
 
 export interface Inputs {
   bbox(): Bounds | null;
+  time(): number;
 }
 
 export abstract class Layer {
   abstract readonly parameters: Parameter[];
   abstract readonly looks: Look<unknown>[];
+  readonly timeWindow: TimeWindow = { backHours: 24, forwardHours: 96, stepHours: 3 };
 
   request(parameter: Parameter, on: Inputs): HttpResourceRequest | undefined {
     const bbox = on.bbox();
@@ -20,7 +23,7 @@ export abstract class Layer {
       params: {
         parameter,
         model: 'wide',
-        time: String(Math.floor(Date.now() / 1000)),
+        time: String(on.time()),
         bbox: bbox.join(','),
       },
     };

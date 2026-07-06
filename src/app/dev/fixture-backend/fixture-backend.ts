@@ -6,18 +6,18 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { from } from 'rxjs';
-import { Bounds, Wrap } from '../../types/wrap';
-import {
-  FixtureManifest,
-  fixtureFileName,
-  nearestFrameHours,
-  resampleGridDocument,
-} from './grid-window';
+import { Bounds } from '../../types/wrap';
+import { SyntheticWeather } from './synthetic-weather';
 
 const ARTIFICIAL_LATENCY_MS = 150;
+const STEP_HOURS = 3;
+const BACK_HOURS = 24;
+const FORWARD_HOURS = 96;
 
-let manifestPromise: Promise<FixtureManifest> | null = null;
-const documentCache = new Map<string, Promise<Wrap>>();
+const RUN_TIME_UNIX_SECONDS =
+  Math.floor(Date.now() / 1000 / (STEP_HOURS * 3600)) * (STEP_HOURS * 3600);
+
+let weatherPromise: Promise<SyntheticWeather> | null = null;
 
 export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
   if (!request.url.startsWith('/api/')) return next(request);
@@ -33,38 +33,23 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
   const model = request.params.get('model') ?? 'wide';
   const time = Number(request.params.get('time'));
   const bounds = (request.params.get('bbox') ?? '').split(',').map(Number) as Bounds;
-  const manifest = await loadManifest();
-  const hours = nearestFrameHours(time, manifest);
-  const doc = await loadDocument(model, parameter, hours);
-  const windowed = resampleGridDocument(doc, bounds);
-  if (!windowed) {
+  const weather = await loadWeather();
+  const wrap = weather.wrap(model, parameter, bounds, frameHours(time), RUN_TIME_UNIX_SECONDS);
+  if (!wrap) {
     throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Outside coverage' });
   }
-  return new HttpResponse({ status: 200, body: windowed });
+  return new HttpResponse({ status: 200, body: wrap });
 }
 
-function loadManifest(): Promise<FixtureManifest> {
-  manifestPromise ??= fetch('/fixtures/models/manifest.json').then(
-    (response) => response.json() as Promise<FixtureManifest>,
-  );
-  return manifestPromise;
+function frameHours(unixSeconds: number): number {
+  const hours = Math.round((unixSeconds - RUN_TIME_UNIX_SECONDS) / 3600 / STEP_HOURS) * STEP_HOURS;
+  return Math.min(FORWARD_HOURS, Math.max(-BACK_HOURS, hours));
 }
 
-function loadDocument(
-  model: string,
-  parameter: string,
-  hours: number,
-): Promise<Wrap> {
-  const url = `/fixtures/models/${model}/${fixtureFileName(parameter, hours)}`;
-  let cached = documentCache.get(url);
-  if (!cached) {
-    cached = fetch(url).then((response) => {
-      if (!response.ok) {
-        throw new HttpErrorResponse({ url, status: 404, statusText: 'Unknown fixture' });
-      }
-      return response.json() as Promise<Wrap>;
-    });
-    documentCache.set(url, cached);
-  }
-  return cached;
+function loadWeather(): Promise<SyntheticWeather> {
+  weatherPromise ??= Promise.all([
+    fetch('/fixtures/gfs-surface-wind.json').then((response) => response.json()),
+    fetch('/fixtures/land.geojson').then((response) => response.json()),
+  ]).then(([gfsRecords, landGeojson]) => new SyntheticWeather(gfsRecords, landGeojson));
+  return weatherPromise;
 }

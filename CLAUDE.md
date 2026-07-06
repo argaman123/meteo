@@ -124,7 +124,8 @@ src/app/
   app.config.ts       # app wiring (providers)
   app.routes.ts       # URL → page map ('/' = the home page)
   pages/              # one subfolder per page of the site
-    home/             # the front page: the map view
+    home/             # the front page: the map view (layer-bar, time-bar)
+  services/           # domain services with no natural feature folder (TimeService)
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
     overlay.ts        #   Overlay: deck.gl layer host
@@ -250,5 +251,21 @@ deck discards layer instances constantly and migrates only `props`/`state` — t
 `state` is what survives. Dev-server note: HMR leaves orphaned rAF loops (page slows over many
 hot-swaps) — a page refresh clears it; production teardown is correct via `finalizeState`.
 
-**Not yet reimplemented (old build had them):** time scrubber + Now + keyboard, hover readout +
-minimal Units, opacity/reorder layer controls, perf HUD, waves layer.
+**Time scrubber reimplemented (2026-07-06, pending lead's interactive verification):** generic
+`TimeService` in `services/` (tools + window merging only — no layer knowledge; windows are pushed
+in), `Layer.timeWindow` per layer (default 24/96/3h; may move to menu-side later — lead leaning
+menu, layer chosen for now because cadence is data-nature), `Inputs.time()` feeds `Layer.request`
+(no more `Date.now()`), bottom `time-bar` (Now/עכשיו + slider + ±h labels + arrow keys, he-IL
+labels), `utils/time.ts` (snap/clamp/format — future Units/Geo seed). **Layer selection is now
+exclusive** (showing a layer hides others; multi-layer stacking returns later with per-look display
+choices).
+
+**Fixture backend synthesizes on request (2026-07-06):** the 287 pre-generated grid JSONs and the
+generator tool are gone. `dev/fixture-backend/synthetic-weather.ts` computes any requested
+(param, model, bbox, time) `Wrap` analytically — real GFS wind (drifted by forecast hour so time
+scrubbing is visible) + synthetic pressure/temperature/waves, land-masked waves. Sources: two files
+in `public/fixtures/` (`gfs-surface-wind.json`, `land.geojson`). Run time = app load, snapped to
+3h — fixtures can never go stale.
+
+**Not yet reimplemented (old build had them):** hover readout + minimal Units, opacity/reorder
+layer controls, perf HUD, waves layer.

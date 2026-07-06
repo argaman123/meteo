@@ -3,6 +3,7 @@ import { httpResource } from '@angular/common/http';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
 import { Grid } from '../objects/grid';
+import { TimeService } from '../services/time-service';
 import { Wrap } from '../types/wrap';
 import { Inputs, Layer } from './layer';
 import { defaultActive } from './registry';
@@ -12,11 +13,13 @@ export class LayersService {
   private injector = inject(Injector);
   private overlay = inject(Overlay);
   private map = inject(MapService);
+  private time = inject(TimeService);
 
   readonly enabledLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
 
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
+    time: () => this.time.currentTime(),
   };
 
   private draw = effect(() => {
@@ -41,7 +44,9 @@ export class LayersService {
   }
 
   private show(layer: Layer): void {
+    for (const shown of this.enabledLayers().keys()) this.hide(shown);
     this.enabledLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
+    this.syncTimeWindows();
   }
 
   private hide(layer: Layer): void {
@@ -51,6 +56,11 @@ export class LayersService {
       next.delete(layer);
       return next;
     });
+    this.syncTimeWindows();
+  }
+
+  private syncTimeWindows(): void {
+    this.time.windows.set([...this.enabledLayers().keys()].map((layer) => layer.timeWindow));
   }
 
   private fetch(layer: Layer): Signal<Grid[] | undefined> {

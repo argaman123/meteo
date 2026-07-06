@@ -9,10 +9,11 @@ import {
 import { MapService } from '../../engine/map-service';
 import { LayersService } from '../../layers/layers-service';
 import { LayerBar } from './layer-bar/layer-bar';
+import { TimeBar } from './time-bar/time-bar';
 
 @Component({
   selector: 'app-home-page',
-  imports: [LayerBar],
+  imports: [LayerBar, TimeBar],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
   styleUrl: './home-page.css',
