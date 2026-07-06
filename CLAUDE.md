@@ -89,7 +89,7 @@ Full rationale and alternatives considered: [`docs/decisions.md`](docs/decisions
 ## 4. Architecture rules (the spine)
 
 The system is built as small units, each with one responsibility and a clear interface
-(full list in [`docs/vision.md`](docs/vision.md) §pillars). The rules that must never be broken:
+The rules that must never be broken:
 
 1. **The engine-adapter rule.** `MapLibre`, `deck.gl`, and `WeatherLayers` may be imported **only**
    inside `src/app/engine/`. Nothing else in the app touches them. This is the lock-in hedge and
@@ -138,7 +138,7 @@ src/app/
     looks/            #   one file per render style (colormap, wind-particles; later contours…)
   layers/             # THE CATALOG (one file per layer) + the layers domain service
     layers-service.ts #   LayersService: which layers are shown + their fetch/draw
-    model/            # layers fed by numerical weather models (temperature, wind, …)
+    temperature.ts    #   one file per layer (temperature, wind, …), flat until the list turns vague
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
@@ -155,9 +155,8 @@ public/               # static assets (Angular 22 convention; served from /)
   icons/
 ```
 
-Future domain folders (units, geo, warnings, charts, reporting, theming — see vision §pillars) are
-added when their slice arrives, following the same hybrid rule. Adding a model layer of an existing
-render style = exactly one new file in `layers/model/`.
+Future domain folders (e.g. geo) are added when their feature arrives, following the same hybrid
+rule. Adding a layer of an existing render style = exactly one new file in `layers/`.
 
 ---
 
@@ -232,7 +231,7 @@ render style = exactly one new file in `layers/model/`.
 
 ## 10. Where things live
 
-- **Product vision & full capability list:** [`docs/vision.md`](docs/vision.md)
+- **Product context (why it exists, users, usage):** [`docs/vision.md`](docs/vision.md)
 - **Technical decisions & rationale:** [`docs/decisions.md`](docs/decisions.md)
 - **Domain knowledge:** [`docs/domain/`](docs/domain/) (meteorology, units/coordinates/time)
 
