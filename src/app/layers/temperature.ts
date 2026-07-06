@@ -1,6 +1,8 @@
 import { Colormap } from '../engine/looks/colormap';
+import { Grid } from '../objects/grid';
 import { Provider } from '../objects/provider';
 import { Parameter } from '../types/parameter';
+import { Unit, format } from '../units/units';
 import { ColorStop } from '../utils/color-scale';
 import { Layer } from './layer';
 
@@ -16,7 +18,9 @@ const PALETTE: ColorStop[] = [
 
 export class Temperature extends Layer {
   readonly parameters = [Parameter.Temperature];
-  readonly looks = [
-    new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth')
-  ];
+  readonly looks = [new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth')];
+
+  hover(grids: Grid[], lon: number, lat: number): string {
+    return format(grids[0].valueAt(lon, lat, 'bilinear'), Unit.Celsius);
+  }
 }

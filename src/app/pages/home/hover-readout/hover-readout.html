@@ -1,0 +1,12 @@
+@if (text(); as value) {
+  @if (pointer(); as at) {
+    <div
+      dir="ltr"
+      class="pointer-events-none fixed z-50 rounded-md border bg-card/75 px-2 py-1 text-xs font-medium tabular-nums shadow-md backdrop-blur-md"
+      [style.left.px]="at.x + 14"
+      [style.top.px]="at.y + 14"
+    >
+      {{ value }}
+    </div>
+  }
+}

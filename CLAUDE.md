@@ -142,6 +142,7 @@ src/app/
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
+  units/              # the Units module: unit conversion + formatting (§4.3 — every rendered value flows through it)
   settings/           # injectable settings stores (domain services, per §4.5)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
@@ -295,5 +296,12 @@ map (flagged, accepted by the lead — small vs the per-frame canvas upload; can
 quality knob if fleet measurement ever demands). The old custom look is retired — do not imitate
 it in new chrome.
 
-**Not yet reimplemented (old build had them):** hover readout + minimal Units, opacity/reorder
-layer controls, perf HUD, waves layer.
+**Hover readout + minimal Units + perf HUD (2026-07-06, pending lead's interactive verification):**
+`units/units.ts` seeds the Units module (`Unit` enum + `convert`/`format`; `NaN` → `—`); each layer
+implements `Layer.hover(grids, lon, lat)` (temperature: bilinear °C; wind: u/v-interpolated speed
+converted m/s→kt + met-degrees "from" direction — vector-aware by construction); a cursor-following
+readout chip lives in `pages/home/hover-readout/` (hides off-map and over panels). `dev/perf-hud/`
+ships with the app (§8): Ctrl+Alt+P or `?hud=1`, FPS + JS heap, rAF loop cancelled on toggle-off
+and destroy.
+
+**Not yet reimplemented (old build had them):** opacity/reorder layer controls, waves layer.

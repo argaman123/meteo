@@ -1,0 +1,11 @@
+@if (visible()) {
+  <div
+    dir="ltr"
+    class="pointer-events-none fixed bottom-3 start-3 z-50 rounded-md border bg-card/75 px-2 py-1 text-xs tabular-nums backdrop-blur-md"
+  >
+    {{ fps() }} fps
+    @if (heapMb() !== null) {
+      · {{ heapMb() }} MB
+    }
+  </div>
+}

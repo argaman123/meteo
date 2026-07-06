@@ -3,6 +3,7 @@ import { WindField, WindParticles } from '../engine/looks/wind-particles';
 import { Grid } from '../objects/grid';
 import { Provider } from '../objects/provider';
 import { Parameter } from '../types/parameter';
+import { Unit, convert, format } from '../units/units';
 import { ColorStop } from '../utils/color-scale';
 import { Layer } from './layer';
 
@@ -25,7 +26,21 @@ const SPEED_PALETTE: ColorStop[] = [
 export class Wind extends Layer {
   readonly parameters = [Parameter.U, Parameter.V];
   readonly looks = [
-    new Colormap(new Provider((grids) => Grid.combine(grids, Math.hypot)), SPEED_PALETTE, 'smooth', 0.55),
+    new Colormap(
+      new Provider((grids) => Grid.combine(grids, Math.hypot)),
+      SPEED_PALETTE,
+      'smooth',
+      0.55,
+    ),
     new WindParticles(new Provider((grids): WindField => ({ u: grids[0], v: grids[1] }))),
   ];
+
+  hover(grids: Grid[], lon: number, lat: number): string {
+    const u = grids[0].valueAt(lon, lat, 'bilinear');
+    const v = grids[1].valueAt(lon, lat, 'bilinear');
+    const speed = Math.hypot(u, v);
+    if (Number.isNaN(speed)) return format(NaN, Unit.Knots);
+    const direction = 270 - (Math.atan2(v, u) * 180) / Math.PI;
+    return `${format(convert(speed, Unit.MetersPerSecond, Unit.Knots), Unit.Knots)} · ${format(direction, Unit.MetDegrees)}`;
+  }
 }

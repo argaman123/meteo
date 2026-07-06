@@ -15,6 +15,8 @@ export abstract class Layer {
   abstract readonly looks: Look<unknown>[];
   readonly timeWindow: TimeWindow = { backHours: 24, forwardHours: 96, stepHours: 3 };
 
+  abstract hover(grids: Grid[], lon: number, lat: number): string;
+
   request(parameter: Parameter, on: Inputs): HttpResourceRequest | undefined {
     const bbox = on.bbox();
     if (!bbox) return undefined;
