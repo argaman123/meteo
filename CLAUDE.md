@@ -232,7 +232,7 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
 ## 10. Where things live
 
 - **Product context (why it exists, users, usage):** [`docs/vision.md`](docs/vision.md)
-- **The plan (agreed next features, living list):** [`docs/plan.md`](docs/plan.md)
+- **The plan (full task pool, dynamic priorities):** [`docs/plan.md`](docs/plan.md)
 - **Technical decisions & rationale:** [`docs/decisions.md`](docs/decisions.md)
 - **Domain knowledge:** [`docs/domain/`](docs/domain/) (meteorology, units/coordinates/time)
 
@@ -240,12 +240,13 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
 
 ## 11. Current status
 
-**Working mode (lead, 2026-07-06): build forward.** The current implementation is the accepted
-baseline. The original Angular 10 site is the **destination**: Claude proposes the order and
-concrete steps, shaped by questions to the lead as each feature begins — priorities are never
-inferred silently. The agreed next few features live in [`docs/plan.md`](docs/plan.md) (short
-living list, nothing speculative). Each feature is built on the current architecture, verified
-interactively with the lead, and committed on his approval.
+**Working mode (lead, 2026-07-07): build forward, one small task at a time.** The current
+implementation is the accepted baseline. The original Angular 10 site is the **destination**.
+[`docs/plan.md`](docs/plan.md) is the **full task pool** — everything left, one list, each item
+carrying a rough **dynamic** priority (Claude adjusts it as the app evolves, or asks; no stages,
+no predefined steps — those proved too rigid). The lead picks the next task by moment and mood —
+priorities are never inferred silently. Each task: questions first, built small, verified
+interactively with the lead, committed on his approval.
 
 **The product today:** 2D map (globe/3D returns only when first-party particles are verified
 trustworthy), self-hosted basemaps, dev fixture backend, and the layer/look data pipeline —
