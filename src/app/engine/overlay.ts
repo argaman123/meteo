@@ -8,7 +8,7 @@ import { Look } from './base/look';
 @Service()
 export class Overlay {
   private overlay: MapboxOverlay | null = null;
-  private layers = new Map<Look<unknown>, DeckLayer>();
+  private layers = new Map<Look<unknown>, DeckLayer | DeckLayer[]>();
   private ids = new Map<Look<unknown>, string>();
   private counter = 0;
 

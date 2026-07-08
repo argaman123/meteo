@@ -3,5 +3,5 @@ import { Provider } from '../../objects/provider';
 
 export abstract class Look<I> {
   constructor(readonly provider: Provider<I>) {}
-  abstract deckLayer(id: string, input: I): DeckLayer;
+  abstract deckLayer(id: string, input: I): DeckLayer | DeckLayer[];
 }

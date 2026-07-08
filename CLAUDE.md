@@ -180,7 +180,9 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
 - **spartan components are ours:** Helm components are copied into the repo — RTL/theme concerns
   are fixed directly in them, no wrapper layer. Thin wrappers only for third-party widgets we
   don't own.
-- **No code comments yet** (see §2).
+- **No code comments yet** (see §2). One exception: the lead marks code he skipped during review
+  with `// TODO: UNVERIFIED CODE BELOW` — his read-tracking, never remove or move it; only he
+  clears it.
 
 > Where a convention is not yet chosen, it is decided when the need first arises and then **locked
 > here**. Do not invent a second way.
@@ -300,10 +302,34 @@ map (flagged, accepted by the lead — small vs the per-frame canvas upload; can
 quality knob if fleet measurement ever demands). The old custom look is retired — do not imitate
 it in new chrome.
 
-**Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified):**
-`units/units.ts` seeds the Units module (`Unit` enum + `convert`/`format`; `NaN` → `—`); each layer
-implements `Layer.hover(grids, lon, lat)` (temperature: bilinear °C; wind: u/v-interpolated speed
-converted m/s→kt + met-degrees "from" direction — vector-aware by construction); a cursor-following
-readout chip lives in `pages/home/hover-readout/` (hides off-map and over panels). `dev/perf-hud/`
-ships with the app (§8): Ctrl+Alt+P or `?hud=1`, FPS + JS heap, rAF loop cancelled on toggle-off
-and destroy.
+**Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified; Units API reshaped
+2026-07-08):** `units/units.ts` is quantity-based, windy's settings screen as the model: callers
+state what a value is and which unit it's in — `convert(value, Quantity, from)` /
+`format(value, Quantity, from)` — and the module resolves the display unit via its `displayUnit`
+record (hard-coded °C/kt/met° today; the future per-quantity settings UI plugs in there with zero
+call-site changes). `NaN` → `—`. Conversions stay a hand-rolled factor table — generic libs
+(convert-units, js-quantities) don't cover Beaufort/dBZ/kilofeet/met-degrees. Each layer implements
+`Layer.hover(grids, lon, lat)` (temperature: bilinear °C; wind: u/v-interpolated speed +
+met-degrees "from" direction — vector-aware by construction); a cursor-following readout chip lives
+in `pages/home/hover-readout/` (hides off-map and over panels). `dev/perf-hud/` ships with the app
+(§8): Ctrl+Alt+P or `?hud=1`, FPS + JS heap, rAF loop cancelled on toggle-off and destroy.
+
+**Contours look (2026-07-08, lead-verified):** `utils/contours.ts` traces labeled isolines from a
+`Grid`: NaN-aware 3×3 blur ×2 (kills staircases from value quantization — real backend data rounds
+too) → 3× bilinear upsample → marching squares (edge-id segment stitching into open polylines that
+stop at data edges; saddles disambiguated by cell center) → Chaikin ×2. Hand-rolled over d3-contour
+deliberately: d3 returns closed polygons, meaning border-frame segments and NaN-hole outlines that
+cost more to strip than the tracer itself. `engine/looks/contours.ts` renders a `PathLayer` plus
+windy-style label sprites: each unique level text is canvas-rendered once (white stadium pill, dark
+text, cached per look) and drawn via `IconLayer` at fixed pixel size — constant at every zoom, chip
+and text inseparable — rotated to the line's local direction (mercator-corrected, never upside
+down) and anchored on each label-span's flattest stretch (score `1.5·|tilt| + bend`). Constructor
+`(provider, LevelPicker, label)`: temperature adds isotherms via `levelsEvery(5)`, wind adds
+isotachs via a fixed kt array (provider converts m/s→kt through the Units module — note: level sets
+are display-unit literals, revisit with switchable conventions). `Look.deckLayer()` may now return
+`DeckLayer[]`. Two engine-wide fixes rode along: maplibre's context gets
+`canvasContextAttributes: { antialias: true }` (interleaved deck draws into it; without MSAA all
+deck geometry is aliased — flagged: extra GPU cost on integrated GPUs, quality-knob candidate), and
+`MapService.init` awaits `document.fonts.ready` (font atlases/canvas sprites must never bake a
+fallback font). A pressure/isobar layer was built then descoped to keep focus on the look —
+re-adding it is one file + a registry entry (plan.md filler row).

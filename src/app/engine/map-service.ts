@@ -23,6 +23,7 @@ export class MapService {
   ];
 
   async init(container: HTMLElement): Promise<void> {
+    await document.fonts.ready;
     const protocol = new Protocol();
     maplibregl.addProtocol('pmtiles', protocol.tile);
     void maplibregl.setRTLTextPlugin('/basemaps/rtl/mapbox-gl-rtl-text.js', true);
@@ -34,6 +35,7 @@ export class MapService {
       zoom: 4,
       minZoom: Math.max(0, Math.log2(container.clientWidth / 512)),
       attributionControl: false,
+      canvasContextAttributes: { antialias: true },
     });
     this.map.keyboard.disable();
     this.map.on('move', () => this.publish());

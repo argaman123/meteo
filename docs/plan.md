@@ -12,7 +12,6 @@
 |---|---|---|---|
 | Multi-layer stacking | Layer system | High | Retire exclusive selection; hover readout shows all active layers' values |
 | Per-layer opacity + draw order | Layer system | High | Natural follow-on to stacking, in the layer card |
-| Contours/isolines look, labeled | Looks | High | Isobars first — synthetic pressure data already in the fixture backend |
 | Satellite imagery look (image projection) | Looks | High | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source |
 | Radar layer | Looks | High | Same raster machinery as satellite; own palette/cadence |
 | Imagery loops (playback for imagery layers) | Time | High | Radar/satellite watched as animated loops; model layers stay jumps-only |
@@ -39,7 +38,7 @@
 | MGRS grid overlay | Units/Geo | Low | Map overlay, after the Geo module |
 | Lines/paths look | Looks | Low | Routes, tracks, fronts |
 | Text-labels look | Looks | Low | RTL-aware place/value labels as a data layer |
-| More layers on existing looks | Layer system | Low | Waves/humidity/pressure colormaps — cheap filler tasks; synthetic waves data already exists |
+| More layers on existing looks | Layer system | Low | Waves/humidity colormaps, pressure isobars (contours look) — cheap filler tasks; synthetic waves + pressure data already exist |
 | Warning notifications | Warnings | Low | Polling-driven alerts on new/changed warnings |
 | Forecaster timeline tables | Tables | Low | Published products from the authoring team, displayed here |
 | Tabular forecasts | Tables | Low | Parameter × time for a location/route |
