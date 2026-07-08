@@ -1,5 +1,6 @@
 import { Injector, Service, Signal, computed, effect, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
+import { Look, LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
 import { Grid } from '../objects/grid';
@@ -15,7 +16,8 @@ export class LayersService {
   private map = inject(MapService);
   private time = inject(TimeService);
 
-  readonly enabledLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
+  readonly shownLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
+  readonly shownLooks = signal(new Set<Look<unknown>>());
 
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
@@ -23,35 +25,37 @@ export class LayersService {
   };
 
   private draw = effect(() => {
-    for (const [layer, gridsSignal] of this.enabledLayers()) {
+    for (const [layer, gridsSignal] of this.shownLayers()) {
       const grids = gridsSignal();
       if (!grids) continue;
-      for (const look of layer.looks) this.overlay.draw(look, grids);
+      for (const look of layer.looks) {
+        if (this.shownLooks().has(look)) this.overlay.draw(look, grids);
+      }
     }
   });
 
   showDefaults(): void {
-    for (const layer of defaultActive) this.show(layer);
+    for (const layer of defaultActive) this.showLayer(layer);
   }
 
-  isShown(layer: Layer): boolean {
-    return this.enabledLayers().has(layer);
+  isLayerShown(layer: Layer): boolean {
+    return this.shownLayers().has(layer);
   }
 
-  toggle(layer: Layer): void {
-    if (this.isShown(layer)) this.hide(layer);
-    else this.show(layer);
+  toggleLayer(layer: Layer): void {
+    if (this.isLayerShown(layer)) this.hideLayer(layer);
+    else this.showLayer(layer);
   }
 
-  private show(layer: Layer): void {
-    for (const shown of this.enabledLayers().keys()) this.hide(shown);
-    this.enabledLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
+  private showLayer(layer: Layer): void {
+    this.shownLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
+    for (const look of layer.looks) this.showLook(look);
     this.syncTimeWindows();
   }
 
-  private hide(layer: Layer): void {
-    for (const look of layer.looks) this.overlay.remove(look);
-    this.enabledLayers.update((current) => {
+  private hideLayer(layer: Layer): void {
+    for (const look of layer.looks) this.hideLook(look);
+    this.shownLayers.update((current) => {
       const next = new Map(current);
       next.delete(layer);
       return next;
@@ -59,8 +63,26 @@ export class LayersService {
     this.syncTimeWindows();
   }
 
+  private showLook(look: Look<unknown>): void {
+    if (look.kind === LookKind.Colormap) {
+      for (const shown of this.shownLooks()) {
+        if (shown.kind === LookKind.Colormap) this.hideLook(shown);
+      }
+    }
+    this.shownLooks.update((current) => new Set(current).add(look));
+  }
+
+  private hideLook(look: Look<unknown>): void {
+    this.overlay.remove(look);
+    this.shownLooks.update((current) => {
+      const next = new Set(current);
+      next.delete(look);
+      return next;
+    });
+  }
+
   private syncTimeWindows(): void {
-    this.time.windows.set([...this.enabledLayers().keys()].map((layer) => layer.timeWindow));
+    this.time.windows.set([...this.shownLayers().keys()].map((layer) => layer.timeWindow));
   }
 
   private fetch(layer: Layer): Signal<Grid[] | undefined> {

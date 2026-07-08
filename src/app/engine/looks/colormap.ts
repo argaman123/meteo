@@ -4,9 +4,10 @@ import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ColorScale, ColorStop, colorScale, PaletteStyle } from '../../utils/color-scale';
 import { MercatorBand } from '../../utils/geo';
-import { Look } from '../base/look';
+import { Look, LookKind } from '../base/look';
 
 export class Colormap extends Look<Grid> {
+  readonly kind = LookKind.Colormap;
   private readonly scale: ColorScale;
 
   constructor(

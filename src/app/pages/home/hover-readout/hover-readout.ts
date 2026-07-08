@@ -16,7 +16,7 @@ export class HoverReadout {
   protected text = computed(() => {
     const cursor = this.map.cursor();
     if (!cursor) return null;
-    for (const [layer, grids] of this.layers.enabledLayers()) {
+    for (const [layer, grids] of this.layers.shownLayers()) {
       const loaded = grids();
       if (loaded) return layer.hover(loaded, cursor[0], cursor[1]);
     }

@@ -10,11 +10,13 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
-| Multi-layer stacking | Layer system | High | Retire exclusive selection; hover readout shows all active layers' values |
+| Multi-layer stacking | Layer system | High | **In progress (2026-07-08), stepped:** per-look activation, LookKind draw ranks, colormap exclusivity, foldable layer-bar groups, labeled multi-line hover, geopotential layer; spec approved, built step-by-step |
+| Shortcut menu entries (composite groups) | Layer system | High | A menu group like "מזג אוויר" whose checkbox lines are looks of *other* layers (temp colormap + geopotential contours + wind particles) — self-contained, doesn't reference the other groups; designed after the stacking steps land |
 | Per-layer opacity + draw order | Layer system | High | Natural follow-on to stacking, in the layer card |
-| Satellite imagery look (image projection) | Looks | High | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source |
-| Radar layer | Looks | High | Same raster machinery as satellite; own palette/cadence |
-| Imagery loops (playback for imagery layers) | Time | High | Radar/satellite watched as animated loops; model layers stay jumps-only |
+| Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-layer stacking + multi-cadence time sync first (5-min satellite over 15-min radars over model grids, lightning/obs on top) |
+| Radar layer | Looks | Med | Same raster machinery as satellite; own palette/cadence; same gate as satellite |
+| Imagery loops (playback for imagery layers) | Time | Med | Radar/satellite watched as animated loops; model layers stay jumps-only; same gate as satellite |
+| Multi-cadence time sync | Time | High | Layers with mismatched cadences (5-min satellite, 15-min radar, 3-h models) each show their nearest frame for the scrubbed time; prerequisite for imagery layers |
 | Polygons look | Looks | High | Warning/advisory/analysis areas, forecaster-authored, display-only; Turf.js adoption point |
 | Units module: switchable conventions | Units/Geo | High | kt↔m/s, °C↔°F, NM/km/ft/kilofeet, hPa/inHg; settings UI; every rendered value flows through (§4.3); conversion hazard — temp Vitest checks |
 | Geo module: Lat/Lon + DMS + MGRS | Units/Geo | Med | Coordinate formatting/input in one place (§4.4); cursor coordinate readout |

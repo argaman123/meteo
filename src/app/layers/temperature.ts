@@ -21,7 +21,7 @@ export class Temperature extends Layer {
   readonly parameters = [Parameter.Temperature];
   readonly looks = [
     new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth'),
-    new Contours(new Provider((grids) => grids[0]), levelsEvery(5), String),
+    new Contours(new Provider((grids) => grids[0]), levelsEvery(5), String, '#f43f5e'),
   ];
 
   hover(grids: Grid[], lon: number, lat: number): string {

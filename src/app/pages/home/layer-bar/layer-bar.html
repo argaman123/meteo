@@ -5,9 +5,9 @@
       hlmBtn
       size="sm"
       class="justify-start"
-      [variant]="service.isShown(entry.layer) ? 'default' : 'ghost'"
-      [attr.aria-pressed]="service.isShown(entry.layer)"
-      (click)="service.toggle(entry.layer)"
+      [variant]="service.isLayerShown(entry.layer) ? 'default' : 'ghost'"
+      [attr.aria-pressed]="service.isLayerShown(entry.layer)"
+      (click)="service.toggleLayer(entry.layer)"
     >
       {{ entry.name }}
     </button>

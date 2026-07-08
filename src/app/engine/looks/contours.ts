@@ -1,9 +1,10 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { IconLayer, PathLayer } from '@deck.gl/layers';
+import { rgb } from 'd3-color';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ContourLine, contourLines } from '../../utils/contours';
-import { Look } from '../base/look';
+import { Look, LookKind } from '../base/look';
 
 interface ContourLabel {
   position: [number, number];
@@ -31,17 +32,20 @@ export function levelsEvery(interval: number): LevelPicker {
 }
 
 export class Contours extends Look<Grid> {
+  readonly kind = LookKind.Contours;
   private iconsCache = new Map<string, LabelIcon>();
 
   constructor(
     provider: Provider<Grid>,
     private pickLevels: LevelPicker,
     private label: (level: number) => string,
+    private color: string,
   ) {
     super(provider);
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer[] {
+    const line = rgb(this.color);
     const lines = contourLines(grid, this.levels(grid));
     const labels: ContourLabel[] = [];
     for (const { level, path } of lines) {
@@ -52,11 +56,19 @@ export class Contours extends Look<Grid> {
     }
     return [
       new PathLayer<ContourLine>({
+        id: `${id}-casing`,
+        data: lines,
+        getPath: (line) => line.path,
+        getColor: [15, 23, 42, 140],
+        getWidth: 4,
+        widthUnits: 'pixels',
+      }),
+      new PathLayer<ContourLine>({
         id: `${id}-lines`,
         data: lines,
         getPath: (line) => line.path,
-        getColor: [255, 255, 255, 180],
-        getWidth: 1.5,
+        getColor: [line.r, line.g, line.b, 230],
+        getWidth: 2,
         widthUnits: 'pixels',
       }),
       new IconLayer<ContourLabel>({
@@ -65,7 +77,7 @@ export class Contours extends Look<Grid> {
         getPosition: (label) => label.position,
         getIcon: (label) => this.icon(label.text),
         getAngle: (label) => label.angle,
-        getSize: 14,
+        getSize: 16,
       }),
     ];
   }
@@ -74,22 +86,27 @@ export class Contours extends Look<Grid> {
     const cached = this.iconsCache.get(text);
     if (cached) return cached;
     const scale = 2;
-    const height = 14 * scale;
+    const height = 16 * scale;
     const canvas = document.createElement('canvas');
     canvas.height = height;
     const context = canvas.getContext('2d')!;
     const font = `400 ${11 * scale}px 'Heebo Variable', sans-serif`;
     context.font = font;
-    const width = Math.ceil(context.measureText(text).width + 8 * scale);
+    const width = Math.ceil(context.measureText(text).width + 12 * scale);
     canvas.width = width;
     context.font = font;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillStyle = 'rgb(255 255 255 / 92%)';
+    const pill = rgb(this.color);
+    context.fillStyle = `rgb(${pill.r} ${pill.g} ${pill.b} / 92%)`;
     context.beginPath();
-    context.roundRect(0, 0, width, height, height / 2);
+    context.roundRect(scale / 2, scale / 2, width - scale, height - scale, (height - scale) / 2);
     context.fill();
-    context.fillStyle = '#0f172a';
+    context.strokeStyle = 'rgb(15 23 42 / 55%)';
+    context.lineWidth = scale;
+    context.stroke();
+    const luminance = 0.299 * pill.r + 0.587 * pill.g + 0.114 * pill.b;
+    context.fillStyle = luminance > 150 ? '#0f172a' : '#ffffff';
     context.fillText(text, width / 2, height / 2 + scale * 0.5);
     const icon = {
       url: canvas.toDataURL(),

@@ -5,7 +5,7 @@ import { Bounds } from '../../types/wrap';
 import { contains } from '../../utils/geo';
 import { AnimatedLayer, AnimatedState } from '../base/animated-layer';
 import { GeoCanvas } from '../base/geo-canvas';
-import { Look } from '../base/look';
+import { Look, LookKind } from '../base/look';
 
 const COUNT = 2000;
 const TRAIL = 16;
@@ -136,6 +136,8 @@ export interface WindField {
 }
 
 export class WindParticles extends Look<WindField> {
+  readonly kind = LookKind.Particles;
+
   deckLayer(id: string, field: WindField): DeckLayer {
     return new WindParticleLayer({ id, ...field });
   }

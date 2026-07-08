@@ -43,6 +43,9 @@ export class Overlay {
   }
 
   private apply(): void {
-    this.overlay?.setProps({ layers: [...this.layers.values()] });
+    const ordered = [...this.layers.entries()]
+      .sort(([a], [b]) => a.kind - b.kind)
+      .flatMap(([, layer]) => layer);
+    this.overlay?.setProps({ layers: ordered });
   }
 }

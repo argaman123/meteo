@@ -319,14 +319,17 @@ in `pages/home/hover-readout/` (hides off-map and over panels). `dev/perf-hud/` 
 too) → 3× bilinear upsample → marching squares (edge-id segment stitching into open polylines that
 stop at data edges; saddles disambiguated by cell center) → Chaikin ×2. Hand-rolled over d3-contour
 deliberately: d3 returns closed polygons, meaning border-frame segments and NaN-hole outlines that
-cost more to strip than the tracer itself. `engine/looks/contours.ts` renders a `PathLayer` plus
-windy-style label sprites: each unique level text is canvas-rendered once (white stadium pill, dark
-text, cached per look) and drawn via `IconLayer` at fixed pixel size — constant at every zoom, chip
-and text inseparable — rotated to the line's local direction (mercator-corrected, never upside
-down) and anchored on each label-span's flattest stretch (score `1.5·|tilt| + bend`). Constructor
-`(provider, LevelPicker, label)`: temperature adds isotherms via `levelsEvery(5)`, wind adds
-isotachs via a fixed kt array (provider converts m/s→kt through the Units module — note: level sets
-are display-unit literals, revisit with switchable conventions). `Look.deckLayer()` may now return
+cost more to strip than the tracer itself. `engine/looks/contours.ts` renders two `PathLayer`s (dark casing
+under a colored core — readable on any background) plus windy-style label sprites: each unique
+level text is canvas-rendered once (stadium pill in the look's color, luminance-picked white/black
+text, dark outline matching the casing, cached per look) and drawn via `IconLayer` at fixed pixel
+size — constant at every zoom, chip and text inseparable — rotated to the line's local direction
+(mercator-corrected, never upside down) and anchored on each label-span's flattest stretch (score
+`1.5·|tilt| + bend`). Constructor `(provider, LevelPicker, label, color)` — each contour set
+carries a fixed identity color (lead 2026-07-08, the classic-synoptic model; simultaneous sets are
+told apart by color, never made exclusive): temperature adds rose isotherms via `levelsEvery(5)`,
+wind adds violet isotachs via a fixed kt array (provider converts m/s→kt through the Units module —
+note: level sets are display-unit literals, revisit with switchable conventions). `Look.deckLayer()` may now return
 `DeckLayer[]`. Two engine-wide fixes rode along: maplibre's context gets
 `canvasContextAttributes: { antialias: true }` (interleaved deck draws into it; without MSAA all
 deck geometry is aliased — flagged: extra GPU cost on integrated GPUs, quality-knob candidate), and
