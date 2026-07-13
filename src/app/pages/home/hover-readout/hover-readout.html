@@ -1,12 +1,16 @@
-@if (text(); as value) {
+@if (lines().length > 0) {
   @if (pointer(); as at) {
     <div
-      dir="ltr"
-      class="pointer-events-none fixed z-50 rounded-md border bg-card/75 px-2 py-1 text-xs font-medium tabular-nums shadow-md backdrop-blur-md"
+      class="pointer-events-none fixed z-50 flex flex-col gap-0.5 rounded-md border bg-card/75 px-2 py-1 text-xs font-medium shadow-md backdrop-blur-md"
       [style.left.px]="at.x + 14"
       [style.top.px]="at.y + 14"
     >
-      {{ value }}
+      @for (line of lines(); track line.name) {
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-muted-foreground">{{ line.name }}</span>
+          <span dir="ltr" class="tabular-nums">{{ line.value }}</span>
+        </div>
+      }
     </div>
   }
 }

@@ -7,7 +7,6 @@ import { Grid } from '../objects/grid';
 import { TimeService } from '../services/time-service';
 import { Wrap } from '../types/wrap';
 import { Inputs, Layer } from './layer';
-import { defaultActive } from './registry';
 
 @Service()
 export class LayersService {
@@ -16,8 +15,8 @@ export class LayersService {
   private map = inject(MapService);
   private time = inject(TimeService);
 
-  readonly shownLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
-  readonly shownLooks = signal(new Set<Look<unknown>>());
+  readonly activeLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
+  readonly activeLooks = signal(new Set<Look<unknown>>());
 
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
@@ -25,37 +24,44 @@ export class LayersService {
   };
 
   private draw = effect(() => {
-    for (const [layer, gridsSignal] of this.shownLayers()) {
+    for (const [layer, gridsSignal] of this.activeLayers()) {
       const grids = gridsSignal();
       if (!grids) continue;
-      for (const look of layer.looks) {
-        if (this.shownLooks().has(look)) this.overlay.draw(look, grids);
+      for (const { look } of layer.looks) {
+        if (this.activeLooks().has(look)) this.overlay.draw(look, grids);
       }
     }
   });
 
-  showDefaults(): void {
-    for (const layer of defaultActive) this.showLayer(layer);
-  }
-
-  isLayerShown(layer: Layer): boolean {
-    return this.shownLayers().has(layer);
+  isLayerActive(layer: Layer): boolean {
+    return this.activeLayers().has(layer);
   }
 
   toggleLayer(layer: Layer): void {
-    if (this.isLayerShown(layer)) this.hideLayer(layer);
+    if (this.isLayerActive(layer)) this.hideLayer(layer);
     else this.showLayer(layer);
   }
 
-  private showLayer(layer: Layer): void {
-    this.shownLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
-    for (const look of layer.looks) this.showLook(look);
+  isLookActive(look: Look<unknown>): boolean {
+    return this.activeLooks().has(look);
+  }
+
+  toggleLook(look: Look<unknown>): void {
+    if (this.isLookActive(look)) this.hideLook(look);
+    else this.showLook(look);
+  }
+
+  showLayer(layer: Layer): void {
+    this.activeLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
+    for (const { look, defaultOn } of layer.looks) {
+      if (defaultOn) this.showLook(look);
+    }
     this.syncTimeWindows();
   }
 
-  private hideLayer(layer: Layer): void {
-    for (const look of layer.looks) this.hideLook(look);
-    this.shownLayers.update((current) => {
+  hideLayer(layer: Layer): void {
+    for (const { look } of layer.looks) this.hideLook(look);
+    this.activeLayers.update((current) => {
       const next = new Map(current);
       next.delete(layer);
       return next;
@@ -65,16 +71,16 @@ export class LayersService {
 
   private showLook(look: Look<unknown>): void {
     if (look.kind === LookKind.Colormap) {
-      for (const shown of this.shownLooks()) {
+      for (const shown of this.activeLooks()) {
         if (shown.kind === LookKind.Colormap) this.hideLook(shown);
       }
     }
-    this.shownLooks.update((current) => new Set(current).add(look));
+    this.activeLooks.update((current) => new Set(current).add(look));
   }
 
   private hideLook(look: Look<unknown>): void {
     this.overlay.remove(look);
-    this.shownLooks.update((current) => {
+    this.activeLooks.update((current) => {
       const next = new Set(current);
       next.delete(look);
       return next;
@@ -82,7 +88,7 @@ export class LayersService {
   }
 
   private syncTimeWindows(): void {
-    this.time.windows.set([...this.shownLayers().keys()].map((layer) => layer.timeWindow));
+    this.time.windows.set([...this.activeLayers().keys()].map((layer) => layer.timeWindow));
   }
 
   private fetch(layer: Layer): Signal<Grid[] | undefined> {

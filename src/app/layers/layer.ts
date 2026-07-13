@@ -10,9 +10,16 @@ export interface Inputs {
   time(): number;
 }
 
+export interface LookEntry {
+  look: Look<unknown>;
+  name: string;
+  defaultOn: boolean;
+}
+
 export abstract class Layer {
+  abstract readonly name: string;
   abstract readonly parameters: Parameter[];
-  abstract readonly looks: Look<unknown>[];
+  abstract readonly looks: LookEntry[];
   readonly timeWindow: TimeWindow = { backHours: 24, forwardHours: 96, stepHours: 3 };
 
   abstract hover(grids: Grid[], lon: number, lat: number): string;

@@ -1,3 +1,4 @@
+import { WritableSignal, signal } from '@angular/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Grid } from '../../objects/grid';
@@ -8,16 +9,19 @@ import { Look, LookKind } from '../base/look';
 
 export class Colormap extends Look<Grid> {
   readonly kind = LookKind.Colormap;
+  readonly opacity: WritableSignal<number>;
   private readonly scale: ColorScale;
+  private last?: { grid: Grid; image: ImageData } = undefined;
 
   constructor(
     provider: Provider<Grid>,
     palette: ColorStop[],
     paletteStyle: PaletteStyle,
-    private opacity = 0.6,
+    opacity = 0.6,
   ) {
     super(provider);
     this.scale = colorScale(palette, paletteStyle);
+    this.opacity = signal(opacity);
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer {
@@ -25,11 +29,12 @@ export class Colormap extends Look<Grid> {
       id,
       image: this.image(grid),
       bounds: grid.bounds,
-      opacity: this.opacity,
+      opacity: this.opacity(),
     });
   }
 
   private image(grid: Grid, resolution = 1024): ImageData {
+    if (this.last && this.last.grid === grid) return this.last.image;
     const aspect = grid.width / grid.height;
     const width = Math.max(2, Math.round(aspect >= 1 ? resolution : resolution * aspect));
     const height = Math.max(2, Math.round(aspect >= 1 ? resolution / aspect : resolution));
@@ -50,6 +55,7 @@ export class Colormap extends Look<Grid> {
         rgba[offset + 3] = 255;
       }
     }
-    return new ImageData(rgba, width, height);
+    this.last = { grid, image: new ImageData(rgba, width, height) };
+    return this.last.image;
   }
 }

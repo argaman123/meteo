@@ -10,7 +10,7 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
-| Multi-layer stacking | Layer system | High | **In progress (2026-07-08), stepped:** per-look activation, LookKind draw ranks, colormap exclusivity, foldable layer-bar groups, labeled multi-line hover, geopotential layer; spec approved, built step-by-step |
+| Multi-layer stacking | Layer system | High | **In progress (2026-07-08), stepped:** per-look activation, LookKind draw ranks, colormap exclusivity, foldable layer-bar groups, labeled multi-line hover, geopotential layer; spec approved, built step-by-step. **Before closing (lead, 2026-07-09):** revisit the shownLooks↔shownLayers seam — invariant (look shown ⇒ layer shown) is held by service paths + disabled checkboxes, not the model; shortcut groups need the reverse (look activation drives layer fetch), likely invert so fetching derives from active looks |
 | Shortcut menu entries (composite groups) | Layer system | High | A menu group like "מזג אוויר" whose checkbox lines are looks of *other* layers (temp colormap + geopotential contours + wind particles) — self-contained, doesn't reference the other groups; designed after the stacking steps land |
 | Per-layer opacity + draw order | Layer system | High | Natural follow-on to stacking, in the layer card |
 | Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-layer stacking + multi-cadence time sync first (5-min satellite over 15-min radars over model grids, lightning/obs on top) |

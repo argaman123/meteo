@@ -7,4 +7,4 @@ export const layers = {
   wind: new Wind(),
 };
 
-export const defaultActive = new Set<Layer>([layers.wind]);
+export const defaultActiveLayers = new Set<Layer>([layers.temperature, layers.wind]);

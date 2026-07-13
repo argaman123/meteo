@@ -73,7 +73,9 @@ export class SyntheticWeather {
       const row: (number | null)[] = [];
       for (let c = 0; c < RESPONSE_SIZE; c++) {
         const lon = west + ((east - west) * c) / (RESPONSE_SIZE - 1);
-        row.push(maskWaves && this.isLand(lat, lon) ? null : this.field(lat, lon, hours, parameter));
+        row.push(
+          maskWaves && this.isLand(lat, lon) ? null : this.field(lat, lon, hours, parameter),
+        );
       }
       values.push(row);
     }
@@ -102,7 +104,9 @@ export class SyntheticWeather {
     const radians = (wind.directionDegrees * Math.PI) / 180;
     if (parameter === 'waveU' || parameter === 'waveV') {
       const height = waveHeightAt(lat, lon, hours);
-      return round1(parameter === 'waveU' ? -height * Math.sin(radians) : -height * Math.cos(radians));
+      return round1(
+        parameter === 'waveU' ? -height * Math.sin(radians) : -height * Math.cos(radians),
+      );
     }
     const speedMs = wind.speedKnots / KNOTS_PER_METER_PER_SECOND;
     return round1(parameter === 'u' ? -speedMs * Math.sin(radians) : -speedMs * Math.cos(radians));
@@ -216,7 +220,9 @@ function findWindRecords(gfsRecords: unknown): { u: GfsRecord; v: GfsRecord } | 
 }
 
 function collectLandPolygons(landGeojson: unknown): LandPolygon[] {
-  const geojson = landGeojson as { features: { geometry: { type: string; coordinates: unknown } }[] };
+  const geojson = landGeojson as {
+    features: { geometry: { type: string; coordinates: unknown } }[];
+  };
   const polygons: LandPolygon[] = [];
   for (const feature of geojson.features) {
     const { type, coordinates } = feature.geometry;

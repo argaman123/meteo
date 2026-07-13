@@ -9,11 +9,7 @@ export interface FixtureManifest {
 
 export const RESPONSE_SIZE = 70;
 
-export function resampleGridDocument(
-  doc: Wrap,
-  bounds: Bounds,
-  size = RESPONSE_SIZE,
-): Wrap | null {
+export function resampleGridDocument(doc: Wrap, bounds: Bounds, size = RESPONSE_SIZE): Wrap | null {
   const rows = doc.values.length;
   const cols = rows > 0 ? doc.values[0].length : 0;
   const gridWest = doc.start_x;
@@ -59,12 +55,7 @@ function sampleDocument(doc: Wrap, lon: number, lat: number): number | null {
   const r1 = Math.min(r0 + 1, rows - 1);
   const fc = Math.min(1, Math.max(0, col - c0));
   const fr = Math.min(1, Math.max(0, row - r0));
-  const corners = [
-    doc.values[r0][c0],
-    doc.values[r0][c1],
-    doc.values[r1][c0],
-    doc.values[r1][c1],
-  ];
+  const corners = [doc.values[r0][c0], doc.values[r0][c1], doc.values[r1][c0], doc.values[r1][c1]];
   const weights = [(1 - fc) * (1 - fr), fc * (1 - fr), (1 - fc) * fr, fc * fr];
   if (doc.wrap_info.param === 'windDirection') return interpolateDirection(corners, weights);
   let sum = 0;

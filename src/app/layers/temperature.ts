@@ -18,10 +18,19 @@ const PALETTE: ColorStop[] = [
 ];
 
 export class Temperature extends Layer {
+  readonly name = 'טמפרטורה';
   readonly parameters = [Parameter.Temperature];
   readonly looks = [
-    new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth'),
-    new Contours(new Provider((grids) => grids[0]), levelsEvery(5), String, '#f43f5e'),
+    {
+      look: new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth'),
+      name: 'צבעים',
+      defaultOn: true,
+    },
+    {
+      look: new Contours(new Provider((grids) => grids[0]), levelsEvery(5), String, '#f43f5e'),
+      name: 'קונטורים',
+      defaultOn: false,
+    },
   ];
 
   hover(grids: Grid[], lon: number, lat: number): string {

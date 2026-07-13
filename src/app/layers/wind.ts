@@ -25,25 +25,29 @@ const SPEED_PALETTE: ColorStop[] = [
 ];
 
 export class Wind extends Layer {
+  readonly name = 'רוח';
   readonly parameters = [Parameter.U, Parameter.V];
   readonly looks = [
-    new Colormap(
-      new Provider((grids) => Grid.combine(grids, Math.hypot)),
-      SPEED_PALETTE,
-      'smooth',
-      0.55,
-    ),
-    new WindParticles(new Provider((grids): WindField => ({ u: grids[0], v: grids[1] }))),
-    new Contours(
-      new Provider((grids) =>
-        Grid.combine(grids, (u, v) =>
-          convert(Math.hypot(u, v), Quantity.WindSpeed, Unit.MetersPerSecond),
-        ),
-      ),
-      () => [10, 20, 30, 40, 50],
-      String,
-      '#a855f7',
-    ),
+    {
+      look: new Colormap(
+        new Provider((grids) => Grid.combine(grids, Math.hypot)),
+        SPEED_PALETTE, 'smooth', 0.55,),
+      name: 'צבעים',
+      defaultOn: false,
+    },
+    {
+      look: new WindParticles(new Provider((grids): WindField => ({ u: grids[0], v: grids[1] }))),
+      name: 'אנימציה',
+      defaultOn: true,
+    },
+    {
+      look: new Contours(
+        new Provider((grids) => Grid.combine(grids, (u, v) =>
+            convert(Math.hypot(u, v), Quantity.WindSpeed, Unit.MetersPerSecond),),),
+        () => [10, 20, 30, 40, 50], String, '#a855f7',),
+      name: 'קונטורים',
+      defaultOn: false,
+    },
   ];
 
   hover(grids: Grid[], lon: number, lat: number): string {

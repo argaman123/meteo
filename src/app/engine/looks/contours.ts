@@ -39,7 +39,7 @@ export class Contours extends Look<Grid> {
     provider: Provider<Grid>,
     private pickLevels: LevelPicker,
     private label: (level: number) => string,
-    private color: string,
+    readonly color: string,
   ) {
     super(provider);
   }

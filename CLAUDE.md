@@ -174,6 +174,9 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
   exception: `environment.development.ts` registers the dev fixture-backend interceptor; prod
   builds swap the file out via `fileReplacements`, so no mock ships.)
 - **Naming:** descriptive, no abbreviations a junior wouldn't know. One concept = one name everywhere.
+  Methods are verb+noun with the noun explicit (`showLayer`, `hideLook`, `toggleGroup` — never a bare
+  `show()`/`activate()`); **state** uses the "active" adjective (`activeLayers`, `isLookActive`,
+  `defaultActiveLayers`), **actions** use show/hide verbs (lead, 2026-07-13).
 - **Files stay small and focused.** If a file is doing two things, split it. (Old codebase pain.)
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
@@ -275,9 +278,10 @@ menu, layer chosen for now because cadence is data-nature), `Inputs.time()` feed
 (no more `Date.now()`), bottom `time-bar` (Now/עכשיו + slider + ±h labels + arrow keys, he-IL
 labels; **dragging commits on release only** — mid-drag the label previews the snapped time from a
 local scrub signal, `jumpTo`/refetch fire on pointerup), `utils/time.ts` (snap/clamp/format —
-future Units/Geo seed). **Layer selection is now
-exclusive** (showing a layer hides others; multi-layer stacking returns later with per-look display
-choices).
+future Units/Geo seed). **Multi-layer stacking landed
+2026-07-13** (steps 1–3: per-look activation with colormap exclusivity, kind-ranked draw order,
+foldable look menu with per-kind row controls, labeled multi-line hover; geopotential layer and
+shortcut groups still pending — see plan.md, including the activeLooks↔activeLayers seam revisit).
 
 **Fixture backend synthesizes on request (2026-07-06):** the 287 pre-generated grid JSONs and the
 generator tool are gone. `dev/fixture-backend/synthetic-weather.ts` computes any requested

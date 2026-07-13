@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import { Grid } from '../../objects/grid';
@@ -28,11 +29,13 @@ class TrailCanvas {
   constructor(
     private readonly u: Grid,
     private readonly v: Grid,
+    canvasWidth: number,
+    private readonly lineWidth: number,
   ) {
     this.bounds = u.bounds;
     const [west, south, east, north] = u.bounds;
     this.lonSpan = east - west;
-    this.canvas = new GeoCanvas(u.bounds);
+    this.canvas = new GeoCanvas(u.bounds, canvasWidth);
     this.rows = Math.max(1, Math.round((this.cols * (north - south)) / this.lonSpan));
     for (let i = 0; i < COUNT; i++) {
       this.spawn(i);
@@ -91,7 +94,7 @@ class TrailCanvas {
   private draw(): void {
     const context = this.canvas.begin();
     context.strokeStyle = '#ffffff';
-    context.lineWidth = 1.5;
+    context.lineWidth = this.lineWidth;
     for (let t = 0; t < TRAIL - 1; t++) {
       context.globalAlpha = 0.6 * (1 - t / (TRAIL - 1));
       context.beginPath();
@@ -137,18 +140,31 @@ export interface WindField {
 
 export class WindParticles extends Look<WindField> {
   readonly kind = LookKind.Particles;
+  readonly speed = signal(1);
 
   deckLayer(id: string, field: WindField): DeckLayer {
-    return new WindParticleLayer({ id, ...field });
+    return new WindParticleLayer({ id, ...field, speed: this.speed });
   }
 }
 
-class WindParticleLayer extends AnimatedLayer<WindField> {
+interface ParticleProps extends WindField {
+  speed: () => number;
+}
+
+class WindParticleLayer extends AnimatedLayer<ParticleProps> {
   static override layerName = 'WindParticleLayer';
   declare state: State;
 
   rebuild(): void {
-    this.setState({ canvas: new TrailCanvas(this.props.u, this.props.v) });
+    const [west, south, east, north] = this.props.u.bounds;
+    const midLat = (south + north) / 2;
+    const viewport = this.context.viewport;
+    const cssSpan = Math.abs(
+      viewport.project([east, midLat])[0] - viewport.project([west, midLat])[0],
+    );
+    const width = Math.max(256, Math.min(2048, Math.round(cssSpan * devicePixelRatio)));
+    const lineWidth = 1.5 * (width / cssSpan);
+    this.setState({ canvas: new TrailCanvas(this.props.u, this.props.v, width, lineWidth) });
   }
 
   override renderLayers(): DeckLayer {
@@ -160,6 +176,6 @@ class WindParticleLayer extends AnimatedLayer<WindField> {
   }
 
   step(deltaSeconds: number): void {
-    this.state.canvas.advance(deltaSeconds);
+    this.state.canvas.advance(deltaSeconds * this.props.speed());
   }
 }

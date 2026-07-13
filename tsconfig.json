@@ -14,7 +14,9 @@
     "paths": {
       "@spartan-ng/helm/button": ["./src/spartan/button/src/index.ts"],
       "@spartan-ng/helm/utils": ["./src/spartan/utils/src/index.ts"],
-      "@spartan-ng/helm/slider": ["./src/spartan/slider/src/index.ts"]
+      "@spartan-ng/helm/slider": ["./src/spartan/slider/src/index.ts"],
+      "@spartan-ng/helm/checkbox": ["./src/spartan/checkbox/src/index.ts"],
+      "@spartan-ng/helm/popover": ["./src/spartan/popover/src/index.ts"]
     }
   },
   "angularCompilerOptions": {
