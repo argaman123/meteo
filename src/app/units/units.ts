@@ -3,18 +3,21 @@ export enum Unit {
   MetersPerSecond = 'meters-per-second',
   Knots = 'knots',
   MetDegrees = 'met-degrees',
+  Meters = 'meters',
 }
 
 export enum Quantity {
   Temperature = 'temperature',
   WindSpeed = 'wind-speed',
   Direction = 'direction',
+  GeopotentialHeight = 'geopotential-height',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
   [Quantity.Temperature]: Unit.Celsius,
   [Quantity.WindSpeed]: Unit.Knots,
   [Quantity.Direction]: Unit.MetDegrees,
+  [Quantity.GeopotentialHeight]: Unit.Meters,
 };
 
 const knotsPerMeterPerSecond = 1.943844;
@@ -39,5 +42,7 @@ export function format(value: number, quantity: Quantity, from: Unit): string {
       return `${rounded} m/s`;
     case Unit.MetDegrees:
       return `${(rounded + 360) % 360}°`;
+    case Unit.Meters:
+      return `${rounded} m`;
   }
 }

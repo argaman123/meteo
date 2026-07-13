@@ -89,7 +89,7 @@ export class SyntheticWeather {
         forecast_time: hours,
         model: modelName,
         param: parameter,
-        pressure: null,
+        pressure: parameter === 'hgt' ? '1000' : null,
         height: null,
       },
       values,
@@ -99,6 +99,7 @@ export class SyntheticWeather {
   private field(lat: number, lon: number, hours: number, parameter: string): number {
     if (parameter === 'waveHeight') return round1(waveHeightAt(lat, lon, hours));
     if (parameter === 'temperature') return round1(temperatureAt(lat, lon, hours));
+    if (parameter === 'hgt') return round1(8 * (pressureAt(lat, lon, hours) - 1000));
     const wind = this.windAt(lat, lon, hours);
     if (parameter === 'windSpeed') return round1(wind.speedKnots);
     const radians = (wind.directionDegrees * Math.PI) / 180;
