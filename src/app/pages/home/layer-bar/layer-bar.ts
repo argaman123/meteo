@@ -16,7 +16,7 @@ import { Colormap } from '../../../engine/looks/colormap';
 import { WindParticles } from '../../../engine/looks/wind-particles';
 import { Layer } from '../../../layers/layer';
 import { LayersService } from '../../../layers/layers-service';
-import { layers } from '../../../layers/registry';
+import { layers, shortcuts } from '../../../layers/registry';
 
 @Component({
   selector: 'app-layer-bar',
@@ -40,6 +40,7 @@ export class LayerBar {
 
   protected readonly service = inject(LayersService);
   protected readonly layers = Object.values(layers);
+  protected readonly shortcuts = Object.values(shortcuts);
   protected readonly openGroups = signal(new Set<Layer>());
 
   protected isGroupOpen(layer: Layer): boolean {

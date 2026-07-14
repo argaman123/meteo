@@ -7,6 +7,7 @@ import { Grid } from '../objects/grid';
 import { TimeService } from '../services/time-service';
 import { Wrap } from '../types/wrap';
 import { Inputs, Layer } from './layer';
+import { Shortcut } from './shortcut';
 
 @Service()
 export class LayersService {
@@ -49,6 +50,29 @@ export class LayersService {
   toggleLook(look: Look<unknown>): void {
     if (this.isLookActive(look)) this.hideLook(look);
     else this.showLook(look);
+  }
+
+  isShortcutActive(shortcut: Shortcut): boolean {
+    return shortcut.parts.every(({ layer }) => this.isLayerActive(layer));
+  }
+
+  toggleShortcut(shortcut: Shortcut): void {
+    if (this.isShortcutActive(shortcut)) this.hideShortcut(shortcut);
+    else this.showShortcut(shortcut);
+  }
+
+  showShortcut(shortcut: Shortcut): void {
+    for (const { layer, looks } of shortcut.parts) {
+      if (!this.isLayerActive(layer)) this.showLayer(layer);
+      for (const { look } of layer.looks) {
+        if (looks.includes(look.kind)) this.showLook(look);
+        else this.hideLook(look);
+      }
+    }
+  }
+
+  hideShortcut(shortcut: Shortcut): void {
+    for (const { layer } of shortcut.parts) this.hideLayer(layer);
   }
 
   showLayer(layer: Layer): void {

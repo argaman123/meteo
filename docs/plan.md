@@ -10,10 +10,9 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
-| Multi-layer stacking | Layer system | High | **In progress (2026-07-08), stepped:** per-look activation, LookKind draw ranks, colormap exclusivity, foldable layer-bar groups, labeled multi-line hover, geopotential layer; spec approved, built step-by-step. **Before closing (lead, 2026-07-09):** revisit the shownLooks↔shownLayers seam — invariant (look shown ⇒ layer shown) is held by service paths + disabled checkboxes, not the model; shortcut groups need the reverse (look activation drives layer fetch), likely invert so fetching derives from active looks |
-| Shortcut menu entries (composite groups) | Layer system | High | A menu group like "מזג אוויר" whose checkbox lines are looks of *other* layers (temp colormap + geopotential contours + wind particles) — self-contained, doesn't reference the other groups; designed after the stacking steps land |
-| Per-layer opacity + draw order | Layer system | High | Natural follow-on to stacking, in the layer card |
-| Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-layer stacking + multi-cadence time sync first (5-min satellite over 15-min radars over model grids, lightning/obs on top) |
+| Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
+| More shortcuts (bundles) | Layer system | Med | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles |
+| Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-cadence time sync (stacking landed 2026-07-14) |
 | Radar layer | Looks | Med | Same raster machinery as satellite; own palette/cadence; same gate as satellite |
 | Imagery loops (playback for imagery layers) | Time | Med | Radar/satellite watched as animated loops; model layers stay jumps-only; same gate as satellite |
 | Multi-cadence time sync | Time | High | Layers with mismatched cadences (5-min satellite, 15-min radar, 3-h models) each show their nearest frame for the scrubbed time; prerequisite for imagery layers |

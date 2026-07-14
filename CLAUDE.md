@@ -279,9 +279,24 @@ menu, layer chosen for now because cadence is data-nature), `Inputs.time()` feed
 labels; **dragging commits on release only** — mid-drag the label previews the snapped time from a
 local scrub signal, `jumpTo`/refetch fire on pointerup), `utils/time.ts` (snap/clamp/format —
 future Units/Geo seed). **Multi-layer stacking landed
-2026-07-13** (steps 1–3: per-look activation with colormap exclusivity, kind-ranked draw order,
-foldable look menu with per-kind row controls, labeled multi-line hover; geopotential layer and
-shortcut groups still pending — see plan.md, including the activeLooks↔activeLayers seam revisit).
+2026-07-14 (complete, 5 steps):** layers stack; `Look` carries a `kind` and the `Overlay`
+stable-sorts by the `LookKind` rank order (image < colormap < particles < contours < polygons <
+icons < text); colormap-kind looks are mutually exclusive across layers; state vocabulary is
+*active* (`activeLayers`/`activeLooks`/`isLookActive`), actions are show/hide verbs. Definitions
+carry `Layer.name` + per-look `{ look, name, defaultOn }` (kind vocabulary: צבעים/אנימציה/קונטורים).
+The layer card: foldable groups (explicit chevron, never auto-unfold), checkbox per look, per-kind
+trailing control on one aligned column — contours show their identity-color square, colormaps an
+opacity popover (signal on the look; image memoized per grid so drags cost a uniform), particles a
+×0.5/×1/×2 speed cycle (signal read per frame). Hover readout: one labeled line per active layer.
+Trail canvas sizes to the bounds' on-screen pixel footprint (capped 2048) — particle thickness no
+longer varies with window size. Geopotential-height layer (wire name `hgt`, 1000 hPa, sky-blue
+contours every 20 m) joined on the contours look. **Shortcuts (`layers/shortcut.ts` + registry
+`shortcuts` record) are package-deal bundles and the primary UX (vision.md):** a קיצורים section
+tops the menu; pressing מזג אוויר applies exact per-layer look sets (`{ layer, looks: LookKind[] }`);
+pressed state derives (all member layers active) so turning a member off releases the pill while
+the rest stay; settings tweaks don't break the package; startup applies the weather shortcut.
+The look⇒layer seam resolved itself: shortcuts activate layers, the invariant stands. Watch:
+`LayersService` is growing — propose a split when it next grows (lead, 2026-07-14).
 
 **Fixture backend synthesizes on request (2026-07-06):** the 287 pre-generated grid JSONs and the
 generator tool are gone. `dev/fixture-backend/synthetic-weather.ts` computes any requested

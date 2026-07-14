@@ -38,6 +38,15 @@ authoring/editing here.
 3. **Situational monitoring** — always-on, often on control-room walls.
 4. **Briefing & decision support** — assemble a picture to drive a go/no-go call.
 
+## Layer-menu usage model (lead, 2026-07-14)
+
+**Shortcuts (bundles) are the primary interaction** — most users pick a preset like מזג אוויר
+(temperature colors + wind animation + geopotential contours) and never open the per-layer groups.
+The individual layers with their look checkboxes and settings are the **experienced-user / niche
+surface**. Some parameters exist mainly *inside* bundles and would never be a primary standalone
+button — geopotential height rides along in most shortcuts, sea-level pressure similarly when it
+lands. Design menu emphasis accordingly.
+
 ## Design principle
 
 **Function & data-completeness first, polish second.** Modern/clean by default, but never hide a

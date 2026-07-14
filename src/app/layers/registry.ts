@@ -1,5 +1,6 @@
+import { LookKind } from '../engine/base/look';
 import { Geopotential } from './geopotential';
-import { Layer } from './layer';
+import { Shortcut } from './shortcut';
 import { Temperature } from './temperature';
 import { Wind } from './wind';
 
@@ -9,8 +10,10 @@ export const layers = {
   geopotential: new Geopotential(),
 };
 
-export const defaultActiveLayers = new Set<Layer>([
-  layers.temperature,
-  layers.wind,
-  layers.geopotential,
-]);
+export const shortcuts = {
+  weather: new Shortcut('מזג אוויר', [
+    { layer: layers.temperature, looks: [LookKind.Colormap] },
+    { layer: layers.wind, looks: [LookKind.Particles] },
+    { layer: layers.geopotential, looks: [LookKind.Contours] },
+  ]),
+};
