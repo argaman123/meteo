@@ -1,12 +1,12 @@
-import { Colormap } from '../engine/looks/colormap';
-import { Contours } from '../engine/looks/contours';
-import { WindField, WindParticles } from '../engine/looks/wind-particles';
-import { Grid } from '../objects/grid';
-import { Provider } from '../objects/provider';
-import { Parameter } from '../types/parameter';
-import { Quantity, Unit, convert, format } from '../units/units';
-import { ColorStop } from '../utils/color-scale';
-import { Layer } from './layer';
+import { Colormap } from '../../engine/looks/colormap';
+import { Contours } from '../../engine/looks/contours';
+import { WindField, WindParticles } from '../../engine/looks/wind-particles';
+import { Grid } from '../../objects/grid';
+import { Provider } from '../../objects/provider';
+import { Parameter } from '../../types/parameter';
+import { Quantity, Unit, convert, format } from '../../utils/units';
+import { ColorStop } from '../../utils/color-scale';
+import { Layer } from '../base/layer';
 
 const SPEED_PALETTE: ColorStop[] = [
   { value: 0, color: '#6271b7' },
@@ -33,12 +33,12 @@ export class Wind extends Layer {
         new Provider((grids) => Grid.combine(grids, Math.hypot)),
         SPEED_PALETTE, 'smooth', 0.55,),
       name: 'צבעים',
-      defaultOn: false,
+      checked: false,
     },
     {
       look: new WindParticles(new Provider((grids): WindField => ({ u: grids[0], v: grids[1] }))),
       name: 'אנימציה',
-      defaultOn: true,
+      checked: true,
     },
     {
       look: new Contours(
@@ -46,7 +46,7 @@ export class Wind extends Layer {
             convert(Math.hypot(u, v), Quantity.WindSpeed, Unit.MetersPerSecond),),),
         () => [10, 20, 30, 40, 50], String, '#a855f7',),
       name: 'קונטורים',
-      defaultOn: false,
+      checked: false,
     },
   ];
 

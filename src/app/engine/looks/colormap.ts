@@ -1,6 +1,7 @@
-import { WritableSignal, signal } from '@angular/core';
+import type { WritableSignal } from '@angular/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import type { Layer as DeckLayer } from '@deck.gl/core';
+import { setting } from '../../utils/settings';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ColorScale, ColorStop, colorScale, PaletteStyle } from '../../utils/color-scale';
@@ -21,7 +22,7 @@ export class Colormap extends Look<Grid> {
   ) {
     super(provider);
     this.scale = colorScale(palette, paletteStyle);
-    this.opacity = signal(opacity);
+    this.opacity = setting(opacity);
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer {

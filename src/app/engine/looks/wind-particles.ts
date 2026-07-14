@@ -1,6 +1,6 @@
-import { signal } from '@angular/core';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { BitmapLayer } from '@deck.gl/layers';
+import { setting } from '../../utils/settings';
 import { Grid } from '../../objects/grid';
 import { Bounds } from '../../types/wrap';
 import { contains } from '../../utils/geo';
@@ -140,7 +140,7 @@ export interface WindField {
 
 export class WindParticles extends Look<WindField> {
   readonly kind = LookKind.Particles;
-  readonly speed = signal(1);
+  readonly speed = setting<number>(1);
 
   deckLayer(id: string, field: WindField): DeckLayer {
     return new WindParticleLayer({ id, ...field, speed: this.speed });

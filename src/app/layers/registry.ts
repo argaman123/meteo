@@ -1,14 +1,15 @@
 import { LookKind } from '../engine/base/look';
-import { Geopotential } from './geopotential';
-import { Shortcut } from './shortcut';
-import { Temperature } from './temperature';
-import { Wind } from './wind';
+import { registerLayers } from '../utils/settings';
+import { Geopotential } from './parameters/geopotential';
+import { Shortcut } from './base/shortcut';
+import { Temperature } from './parameters/temperature';
+import { Wind } from './parameters/wind';
 
-export const layers = {
+export const layers = registerLayers({
   temperature: new Temperature(),
   wind: new Wind(),
   geopotential: new Geopotential(),
-};
+});
 
 export const shortcuts = {
   weather: new Shortcut('מזג אוויר', [

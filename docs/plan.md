@@ -17,9 +17,12 @@
 | Imagery loops (playback for imagery layers) | Time | Med | Radar/satellite watched as animated loops; model layers stay jumps-only; same gate as satellite |
 | Multi-cadence time sync | Time | High | Layers with mismatched cadences (5-min satellite, 15-min radar, 3-h models) each show their nearest frame for the scrubbed time; prerequisite for imagery layers |
 | Polygons look | Looks | High | Warning/advisory/analysis areas, forecaster-authored, display-only; Turf.js adoption point |
+| Borders & labels above weather | Engine | Med | Colormaps paint over basemap borders/labels. First attempt (2026-07-14) slotted deck layers via beforeId 'boundaries_country' — wedged map loading + looked bad, reverted; next candidate: a dedicated borders overlay (own LookKind rank above all) |
+| Boot draw-effect cost | Engine | Low | First deck-layer construction blocks ~450ms (contour tracing + colormap raster + label sprites in one sync run); split/defer if boot feel ever matters (measured 2026-07-14) |
 | Units module: switchable conventions | Units/Geo | High | kt↔m/s, °C↔°F, NM/km/ft/kilofeet, hPa/inHg; settings UI; every rendered value flows through (§4.3); conversion hazard — temp Vitest checks |
 | Geo module: Lat/Lon + DMS + MGRS | Units/Geo | Med | Coordinate formatting/input in one place (§4.4); cursor coordinate readout |
 | Level selector (surface / pressure / kilofeet) | Layer system | Med | Vertical dimension enters `Layer.request`; aviation kilofeet |
+| Per-button option subsettings | Layer system | Med | Lead 2026-07-14: a layer/look button needs multi-option subsettings — e.g. temperature choosing its model; design alongside the settings UI |
 | Legends (color scale of active layers) | Layer system | Med | |
 | Model auto-switch by zoom | Layer system | Med | Regional model on zoom-in; model identity stays an internal layer parameter |
 | Wind barbs/arrows look | Looks | Med | Classic aviation glyphs on a grid |

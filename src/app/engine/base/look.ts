@@ -4,8 +4,8 @@ import { Provider } from '../../objects/provider';
 export enum LookKind {
   Image,
   Colormap,
-  Particles,
   Contours,
+  Particles,
   Polygons,
   Icons,
   Text,

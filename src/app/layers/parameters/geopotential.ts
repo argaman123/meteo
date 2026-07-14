@@ -1,9 +1,9 @@
-import { Contours, levelsEvery } from '../engine/looks/contours';
-import { Grid } from '../objects/grid';
-import { Provider } from '../objects/provider';
-import { Parameter } from '../types/parameter';
-import { Quantity, Unit, format } from '../units/units';
-import { Layer } from './layer';
+import { Contours, levelsEvery } from '../../engine/looks/contours';
+import { Grid } from '../../objects/grid';
+import { Provider } from '../../objects/provider';
+import { Parameter } from '../../types/parameter';
+import { Quantity, Unit, format } from '../../utils/units';
+import { Layer } from '../base/layer';
 
 export class Geopotential extends Layer {
   readonly name = 'גובה גיאופוטנציאלי';
@@ -12,7 +12,7 @@ export class Geopotential extends Layer {
     {
       look: new Contours(new Provider((grids) => grids[0]), levelsEvery(20), String, '#38bdf8'),
       name: 'קונטורים',
-      defaultOn: true,
+      checked: true,
     },
   ];
 

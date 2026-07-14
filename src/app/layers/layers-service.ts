@@ -1,13 +1,13 @@
 import { Injector, Service, Signal, computed, effect, inject, signal } from '@angular/core';
 import { httpResource } from '@angular/common/http';
-import { Look, LookKind } from '../engine/base/look';
+import { LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
 import { Grid } from '../objects/grid';
 import { TimeService } from '../services/time-service';
 import { Wrap } from '../types/wrap';
-import { Inputs, Layer } from './layer';
-import { Shortcut } from './shortcut';
+import { Inputs, Layer, LookEntry } from './base/layer';
+import { Shortcut } from './base/shortcut';
 
 @Service()
 export class LayersService {
@@ -17,7 +17,7 @@ export class LayersService {
   private time = inject(TimeService);
 
   readonly activeLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
-  readonly activeLooks = signal(new Set<Look<unknown>>());
+  readonly activeLooks = signal(new Set<LookEntry>());
 
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
@@ -28,8 +28,8 @@ export class LayersService {
     for (const [layer, gridsSignal] of this.activeLayers()) {
       const grids = gridsSignal();
       if (!grids) continue;
-      for (const { look } of layer.looks) {
-        if (this.activeLooks().has(look)) this.overlay.draw(look, grids);
+      for (const entry of layer.looks) {
+        if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, grids);
       }
     }
   });
@@ -43,13 +43,13 @@ export class LayersService {
     else this.showLayer(layer);
   }
 
-  isLookActive(look: Look<unknown>): boolean {
-    return this.activeLooks().has(look);
+  isLookActive(entry: LookEntry): boolean {
+    return this.activeLooks().has(entry);
   }
 
-  toggleLook(look: Look<unknown>): void {
-    if (this.isLookActive(look)) this.hideLook(look);
-    else this.showLook(look);
+  toggleLook(entry: LookEntry): void {
+    if (this.isLookActive(entry)) this.hideLook(entry);
+    else this.showLook(entry);
   }
 
   isShortcutActive(shortcut: Shortcut): boolean {
@@ -62,11 +62,13 @@ export class LayersService {
   }
 
   showShortcut(shortcut: Shortcut): void {
-    for (const { layer, looks } of shortcut.parts) {
+    for (const { layer } of shortcut.parts) {
       if (!this.isLayerActive(layer)) this.showLayer(layer);
-      for (const { look } of layer.looks) {
-        if (looks.includes(look.kind)) this.showLook(look);
-        else this.hideLook(look);
+    }
+    for (const { layer, looks } of shortcut.parts) {
+      for (const entry of layer.looks) {
+        if (looks.includes(entry.look.kind)) this.showLook(entry);
+        else this.hideLook(entry);
       }
     }
   }
@@ -77,14 +79,14 @@ export class LayersService {
 
   showLayer(layer: Layer): void {
     this.activeLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
-    for (const { look, defaultOn } of layer.looks) {
-      if (defaultOn) this.showLook(look);
+    for (const entry of layer.looks) {
+      if (entry.checked) this.showLook(entry);
     }
     this.syncTimeWindows();
   }
 
   hideLayer(layer: Layer): void {
-    for (const { look } of layer.looks) this.hideLook(look);
+    for (const entry of layer.looks) this.removeLook(entry);
     this.activeLayers.update((current) => {
       const next = new Map(current);
       next.delete(layer);
@@ -93,20 +95,26 @@ export class LayersService {
     this.syncTimeWindows();
   }
 
-  private showLook(look: Look<unknown>): void {
-    if (look.kind === LookKind.Colormap) {
-      for (const shown of this.activeLooks()) {
-        if (shown.kind === LookKind.Colormap) this.hideLook(shown);
+  private showLook(entry: LookEntry): void {
+    if (entry.look.kind === LookKind.Colormap) {
+      for (const active of this.activeLooks()) {
+        if (active.look.kind === LookKind.Colormap) this.hideLook(active);
       }
     }
-    this.activeLooks.update((current) => new Set(current).add(look));
+    this.activeLooks.update((current) => new Set(current).add(entry));
+    entry.checked = true;
   }
 
-  private hideLook(look: Look<unknown>): void {
-    this.overlay.remove(look);
+  private hideLook(entry: LookEntry): void {
+    this.removeLook(entry);
+    entry.checked = false;
+  }
+
+  private removeLook(entry: LookEntry): void {
+    this.overlay.remove(entry.look);
     this.activeLooks.update((current) => {
       const next = new Set(current);
-      next.delete(look);
+      next.delete(entry);
       return next;
     });
   }

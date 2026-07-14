@@ -1,9 +1,9 @@
 import { HttpResourceRequest } from '@angular/common/http';
-import { Look } from '../engine/base/look';
-import { Grid } from '../objects/grid';
-import { TimeWindow } from '../services/time-service';
-import { Parameter } from '../types/parameter';
-import { Bounds, Wrap } from '../types/wrap';
+import { Look } from '../../engine/base/look';
+import { Grid } from '../../objects/grid';
+import { TimeWindow } from '../../services/time-service';
+import { Parameter } from '../../types/parameter';
+import { Bounds, Wrap } from '../../types/wrap';
 
 export interface Inputs {
   bbox(): Bounds | null;
@@ -13,7 +13,7 @@ export interface Inputs {
 export interface LookEntry {
   look: Look<unknown>;
   name: string;
-  defaultOn: boolean;
+  checked: boolean;
 }
 
 export abstract class Layer {

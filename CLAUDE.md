@@ -136,14 +136,16 @@ src/app/
     overlay.ts        #   Overlay: deck.gl layer host
     base/             #   building blocks looks are made from (Look, AnimatedLayer, GeoCanvas)
     looks/            #   one file per render style (colormap, wind-particles; later contours…)
-  layers/             # THE CATALOG (one file per layer) + the layers domain service
-    layers-service.ts #   LayersService: which layers are shown + their fetch/draw
-    temperature.ts    #   one file per layer (temperature, wind, …), flat until the list turns vague
+  layers/             # THE CATALOG + the layers domain service
+    layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
+    registry.ts       #   the keyed layers record + shortcut bundles
+    base/             #   the definition machinery (Layer + LookEntry, Shortcut)
+    parameters/       #   one file per layer (temperature, wind, geopotential, …)
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
-  units/              # the Units module: unit conversion + formatting (§4.3 — every rendered value flows through it)
-  settings/           # injectable settings stores (domain services, per §4.5)
+                      #   units.ts = the Units module (§4.3 — every rendered value flows through it)
+                      #   settings.ts = setting() persistent signals + registerLayers (localStorage; keys derive from registry key + LookKind + field)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
                       #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
@@ -280,17 +282,19 @@ labels; **dragging commits on release only** — mid-drag the label previews the
 local scrub signal, `jumpTo`/refetch fire on pointerup), `utils/time.ts` (snap/clamp/format —
 future Units/Geo seed). **Multi-layer stacking landed
 2026-07-14 (complete, 5 steps):** layers stack; `Look` carries a `kind` and the `Overlay`
-stable-sorts by the `LookKind` rank order (image < colormap < particles < contours < polygons <
-icons < text); colormap-kind looks are mutually exclusive across layers; state vocabulary is
+stable-sorts by the `LookKind` rank order (image < colormap < contours < particles < polygons <
+icons < text — lead reordered contours below particles 2026-07-14); colormap-kind looks are mutually exclusive across layers; state vocabulary is
 *active* (`activeLayers`/`activeLooks`/`isLookActive`), actions are show/hide verbs. Definitions
-carry `Layer.name` + per-look `{ look, name, defaultOn }` (kind vocabulary: צבעים/אנימציה/קונטורים).
+carry `Layer.name` + per-look `{ look, name, checked }` — `checked` starts as the definition default
+and mutates in place as the layer's session memory of its checkbox states (kind vocabulary:
+צבעים/אנימציה/קונטורים).
 The layer card: foldable groups (explicit chevron, never auto-unfold), checkbox per look, per-kind
 trailing control on one aligned column — contours show their identity-color square, colormaps an
 opacity popover (signal on the look; image memoized per grid so drags cost a uniform), particles a
 ×0.5/×1/×2 speed cycle (signal read per frame). Hover readout: one labeled line per active layer.
 Trail canvas sizes to the bounds' on-screen pixel footprint (capped 2048) — particle thickness no
 longer varies with window size. Geopotential-height layer (wire name `hgt`, 1000 hPa, sky-blue
-contours every 20 m) joined on the contours look. **Shortcuts (`layers/shortcut.ts` + registry
+contours every 20 m) joined on the contours look. **Shortcuts (`layers/base/shortcut.ts` + registry
 `shortcuts` record) are package-deal bundles and the primary UX (vision.md):** a קיצורים section
 tops the menu; pressing מזג אוויר applies exact per-layer look sets (`{ layer, looks: LookKind[] }`);
 pressed state derives (all member layers active) so turning a member off releases the pill while
@@ -322,7 +326,7 @@ quality knob if fleet measurement ever demands). The old custom look is retired 
 it in new chrome.
 
 **Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified; Units API reshaped
-2026-07-08):** `units/units.ts` is quantity-based, windy's settings screen as the model: callers
+2026-07-08; moved to `utils/units.ts` 2026-07-14):** the Units module is quantity-based, windy's settings screen as the model: callers
 state what a value is and which unit it's in — `convert(value, Quantity, from)` /
 `format(value, Quantity, from)` — and the module resolves the display unit via its `displayUnit`
 record (hard-coded °C/kt/met° today; the future per-quantity settings UI plugs in there with zero

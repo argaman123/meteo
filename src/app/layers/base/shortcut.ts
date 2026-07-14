@@ -1,4 +1,4 @@
-import { LookKind } from '../engine/base/look';
+import { LookKind } from '../../engine/base/look';
 import { Layer } from './layer';
 
 export class Shortcut {

@@ -14,7 +14,7 @@ import { HlmSlider } from '@spartan-ng/helm/slider';
 import { LookKind } from '../../../engine/base/look';
 import { Colormap } from '../../../engine/looks/colormap';
 import { WindParticles } from '../../../engine/looks/wind-particles';
-import { Layer } from '../../../layers/layer';
+import { Layer } from '../../../layers/base/layer';
 import { LayersService } from '../../../layers/layers-service';
 import { layers, shortcuts } from '../../../layers/registry';
 

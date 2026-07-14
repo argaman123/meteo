@@ -1,11 +1,11 @@
-import { Colormap } from '../engine/looks/colormap';
-import { Contours, levelsEvery } from '../engine/looks/contours';
-import { Grid } from '../objects/grid';
-import { Provider } from '../objects/provider';
-import { Parameter } from '../types/parameter';
-import { Quantity, Unit, format } from '../units/units';
-import { ColorStop } from '../utils/color-scale';
-import { Layer } from './layer';
+import { Colormap } from '../../engine/looks/colormap';
+import { Contours, levelsEvery } from '../../engine/looks/contours';
+import { Grid } from '../../objects/grid';
+import { Provider } from '../../objects/provider';
+import { Parameter } from '../../types/parameter';
+import { Quantity, Unit, format } from '../../utils/units';
+import { ColorStop } from '../../utils/color-scale';
+import { Layer } from '../base/layer';
 
 const PALETTE: ColorStop[] = [
   { value: -30, color: '#312e81' },
@@ -24,12 +24,12 @@ export class Temperature extends Layer {
     {
       look: new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth'),
       name: 'צבעים',
-      defaultOn: true,
+      checked: true,
     },
     {
       look: new Contours(new Provider((grids) => grids[0]), levelsEvery(5), String, '#f43f5e'),
       name: 'קונטורים',
-      defaultOn: false,
+      checked: false,
     },
   ];
 

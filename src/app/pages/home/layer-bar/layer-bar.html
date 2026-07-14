@@ -20,12 +20,12 @@
         <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="isGroupOpen(layer)"/>
       </button>
     </div>
-    @if (isGroupOpen(layer)) {
-      @for (entry of layer.looks; track entry.look) {
+    @for (entry of layer.looks; track entry.look) {
+      @if (isGroupOpen(layer) || service.isLookActive(entry)) {
         <div class="flex items-center gap-2 py-1 ps-1.5 text-sm" [class.opacity-50]="!service.isLayerActive(layer)">
           <label class="flex grow items-center gap-2">
-            <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="service.isLookActive(entry.look)"
-              [disabled]="!service.isLayerActive(layer)" (checkedChange)="service.toggleLook(entry.look)"/>
+            <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="service.isLookActive(entry)"
+              [disabled]="!service.isLayerActive(layer)" (checkedChange)="service.toggleLook(entry)"/>
             {{ entry.name }}
           </label>
           @switch (entry.look.kind) {

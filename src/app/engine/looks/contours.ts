@@ -1,4 +1,5 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
+import { CollisionFilterExtension, CollisionFilterExtensionProps } from '@deck.gl/extensions';
 import { IconLayer, PathLayer } from '@deck.gl/layers';
 import { rgb } from 'd3-color';
 import { Grid } from '../../objects/grid';
@@ -10,6 +11,7 @@ interface ContourLabel {
   position: [number, number];
   text: string;
   angle: number;
+  priority: number;
 }
 
 interface LabelIcon {
@@ -31,6 +33,8 @@ export function levelsEvery(interval: number): LevelPicker {
   };
 }
 
+const MAX_COLLISION_PRIORITY = 999;
+
 export class Contours extends Look<Grid> {
   readonly kind = LookKind.Contours;
   private iconsCache = new Map<string, LabelIcon>();
@@ -51,7 +55,12 @@ export class Contours extends Look<Grid> {
     for (const { level, path } of lines) {
       const text = this.label(level);
       for (const anchor of this.anchors(path)) {
-        labels.push({ position: path[anchor], text, angle: directionAt(path, anchor) });
+        labels.push({
+          position: path[anchor],
+          text,
+          angle: directionAt(path, anchor),
+          priority: Math.min(MAX_COLLISION_PRIORITY, path.length),
+        });
       }
     }
     return [
@@ -71,13 +80,17 @@ export class Contours extends Look<Grid> {
         getWidth: 2,
         widthUnits: 'pixels',
       }),
-      new IconLayer<ContourLabel>({
+      new IconLayer<ContourLabel, CollisionFilterExtensionProps<ContourLabel>>({
         id: `${id}-labels`,
         data: labels,
         getPosition: (label) => label.position,
         getIcon: (label) => this.icon(label.text),
         getAngle: (label) => label.angle,
         getSize: 16,
+        extensions: [new CollisionFilterExtension()],
+        collisionGroup: 'contour-labels',
+        getCollisionPriority: (label: ContourLabel) => label.priority,
+        collisionTestProps: { sizeScale: 2 },
       }),
     ];
   }
@@ -133,7 +146,7 @@ export class Contours extends Look<Grid> {
   // TODO: UNVERIFIED CODE BELOW
 
   private anchors(path: [number, number][]): number[] {
-    if (path.length < 120) return [];
+    if (path.length < 64) return [];
     const count = Math.max(1, Math.round(path.length / 1000));
     const anchors: number[] = [];
     for (let slot = 0; slot < count; slot++) {

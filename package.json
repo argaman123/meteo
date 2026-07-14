@@ -24,6 +24,7 @@
     "@angular/platform-browser": "^22.0.0",
     "@angular/router": "^22.0.0",
     "@deck.gl/core": "^9.3.3",
+    "@deck.gl/extensions": "^9.3.6",
     "@deck.gl/layers": "^9.3.3",
     "@deck.gl/mapbox": "^9.3.3",
     "@ng-icons/core": ">=32.0.0 <34.0.0",
