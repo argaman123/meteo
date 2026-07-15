@@ -5,7 +5,7 @@ import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
-import { Layer } from '../base/layer';
+import { ModelLayer } from '../base/model-layer';
 
 const PALETTE: ColorStop[] = [
   { value: -30, color: '#312e81' },
@@ -17,17 +17,17 @@ const PALETTE: ColorStop[] = [
   { value: 40, color: '#dc2626' },
 ];
 
-export class Temperature extends Layer {
+export class Temperature extends ModelLayer {
   readonly name = 'טמפרטורה';
   readonly parameters = [Parameter.Temperature];
   readonly looks = [
     {
-      look: new Colormap(new Provider((grids) => grids[0]), PALETTE, 'smooth'),
+      look: new Colormap(new Provider((grids: Grid[]) => grids[0]), PALETTE, 'smooth'),
       name: 'צבעים',
       checked: true,
     },
     {
-      look: new Contours(new Provider((grids) => grids[0]), levelsEvery(5), String, '#f43f5e'),
+      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(5), String, '#f43f5e'),
       name: 'קונטורים',
       checked: false,
     },

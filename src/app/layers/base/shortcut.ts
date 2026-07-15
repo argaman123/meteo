@@ -4,6 +4,6 @@ import { Layer } from './layer';
 export class Shortcut {
   constructor(
     readonly name: string,
-    readonly parts: { layer: Layer; looks: LookKind[] }[],
+    readonly parts: { layer: Layer<unknown>; looks: LookKind[] }[],
   ) {}
 }

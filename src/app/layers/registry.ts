@@ -1,9 +1,9 @@
 import { LookKind } from '../engine/base/look';
 import { registerLayers } from '../utils/settings';
-import { Geopotential } from './parameters/geopotential';
+import { Geopotential } from './model/geopotential';
 import { Shortcut } from './base/shortcut';
-import { Temperature } from './parameters/temperature';
-import { Wind } from './parameters/wind';
+import { Temperature } from './model/temperature';
+import { Wind } from './model/wind';
 
 export const layers = registerLayers({
   temperature: new Temperature(),

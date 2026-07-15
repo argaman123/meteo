@@ -6,7 +6,7 @@ import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, convert, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
-import { Layer } from '../base/layer';
+import { ModelLayer } from '../base/model-layer';
 
 const SPEED_PALETTE: ColorStop[] = [
   { value: 0, color: '#6271b7' },
@@ -24,25 +24,27 @@ const SPEED_PALETTE: ColorStop[] = [
   { value: 24, color: '#6d61a3' },
 ];
 
-export class Wind extends Layer {
+export class Wind extends ModelLayer {
   readonly name = 'רוח';
   readonly parameters = [Parameter.U, Parameter.V];
   readonly looks = [
     {
       look: new Colormap(
-        new Provider((grids) => Grid.combine(grids, Math.hypot)),
+        new Provider((grids: Grid[]) => Grid.combine(grids, Math.hypot)),
         SPEED_PALETTE, 'smooth', 0.55,),
       name: 'צבעים',
       checked: false,
     },
     {
-      look: new WindParticles(new Provider((grids): WindField => ({ u: grids[0], v: grids[1] }))),
+      look: new WindParticles(
+        new Provider((grids: Grid[]): WindField => ({ u: grids[0], v: grids[1] })),
+      ),
       name: 'אנימציה',
       checked: true,
     },
     {
       look: new Contours(
-        new Provider((grids) => Grid.combine(grids, (u, v) =>
+        new Provider((grids: Grid[]) => Grid.combine(grids, (u, v) =>
             convert(Math.hypot(u, v), Quantity.WindSpeed, Unit.MetersPerSecond),),),
         () => [10, 20, 30, 40, 50], String, '#a855f7',),
       name: 'קונטורים',

@@ -1,6 +1,6 @@
 import { WritableSignal, signal } from '@angular/core';
 import { LookKind } from '../engine/base/look';
-import { Layer } from '../layers/base/layer';
+import type { Layer } from '../layers/base/layer';
 
 const bindings = new Map<object, { key: string }>();
 
@@ -16,8 +16,9 @@ export function setting<T>(initial: T): WritableSignal<T> {
   return value;
 }
 
-export function registerLayers<T extends Record<string, Layer>>(layers: T): T {
+export function registerLayers<T extends Record<string, Layer<unknown>>>(layers: T): T {
   for (const [key, layer] of Object.entries(layers)) {
+    bindSettings(layer, key);
     for (const { look } of layer.looks) bindSettings(look, `${key}.${LookKind[look.kind]}`);
   }
   return layers;

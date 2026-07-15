@@ -139,7 +139,7 @@ src/app/
   layers/             # THE CATALOG + the layers domain service
     layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
     registry.ts       #   the keyed layers record + shortcut bundles
-    base/             #   the definition machinery (Layer + LookEntry, Shortcut)
+    base/             #   the definition machinery (Layer<D> + LookEntry, ModelLayer, Shortcut)
     parameters/       #   one file per layer (temperature, wind, geopotential, …)
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
@@ -257,8 +257,12 @@ interactively with the lead, committed on his approval.
 
 **The product today:** 2D map (globe/3D returns only when first-party particles are verified
 trustworthy), self-hosted basemaps, dev fixture backend, and the layer/look data pipeline —
-`Layer` declares `parameters` + `looks`; grids fetch per parameter (bbox-windowed); a `Provider`
-shapes `Grid[]` into each look's input; `Look.deckLayer()` produces the rendered layer; keyed
+layer kinds subclass the generic `Layer<D>` (name, looks, timeWindow, `hover(data)`, `fetch()`;
+2026-07-15 split): `ModelLayer` (D = `Grid[]`) carries `parameters`/`models` and fetches grids per
+parameter (bbox-windowed); future kinds (satellite/radar/observations) implement their own
+`fetch`/data. A `Provider<I>` shapes each layer's data into each look's input — the
+data side is untyped in the class; each definition annotates its lambda (`(grids: Grid[]) => …`),
+so looks and providers stay source-blind; `Look<I>.deckLayer()` produces the rendered layer; keyed
 registry + `LayersService`. Layers: temperature colormap; wind = speed colormap + canvas-trail
 particle look.
 

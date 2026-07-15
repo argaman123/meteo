@@ -41,13 +41,13 @@ export class LayerBar {
   protected readonly service = inject(LayersService);
   protected readonly layers = Object.values(layers);
   protected readonly shortcuts = Object.values(shortcuts);
-  protected readonly openGroups = signal(new Set<Layer>());
+  protected readonly openGroups = signal(new Set<Layer<unknown>>());
 
-  protected isGroupOpen(layer: Layer): boolean {
+  protected isGroupOpen(layer: Layer<unknown>): boolean {
     return this.openGroups().has(layer);
   }
 
-  protected toggleGroup(layer: Layer): void {
+  protected toggleGroup(layer: Layer<unknown>): void {
     this.openGroups.update((current) => {
       const next = new Set(current);
       if (!next.delete(layer)) next.add(layer);
@@ -63,4 +63,5 @@ export class LayerBar {
     const speeds = [0.5, 1, 2];
     look.speed.set(speeds[(speeds.indexOf(look.speed()) + 1) % speeds.length]);
   }
+
 }

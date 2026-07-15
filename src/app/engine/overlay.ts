@@ -2,7 +2,6 @@ import { Service } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer as DeckLayer } from '@deck.gl/core';
-import { Grid } from '../objects/grid';
 import { Look } from './base/look';
 
 @Service()
@@ -24,8 +23,8 @@ export class Overlay {
     this.counter = 0;
   }
 
-  draw(look: Look<unknown>, grids: Grid[]): void {
-    this.layers.set(look, look.deckLayer(this.idFor(look), look.provider.provide(grids)));
+  draw(look: Look<unknown>, data: unknown): void {
+    this.layers.set(look, look.deckLayer(this.idFor(look), look.provider.provide(data)));
     this.apply();
   }
 

@@ -1,7 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { MapService } from '../../../engine/map-service';
 import { LayersService } from '../../../layers/layers-service';
-import { layers } from '../../../layers/registry';
 
 @Component({
   selector: 'app-hover-readout',
@@ -18,10 +17,10 @@ export class HoverReadout {
     const cursor = this.map.cursor();
     if (!cursor) return [];
     const result: { name: string; value: string }[] = [];
-    for (const layer of Object.values(layers)) {
-      const grids = this.layerService.activeLayers().get(layer)?.();
-      if (grids) {
-        result.push({ name: layer.name, value: layer.hover(grids, cursor[0], cursor[1]) });
+    for (const [layer, dataSignal] of this.layerService.activeLayers()) {
+      const data = dataSignal();
+      if (data !== undefined) {
+        result.push({ name: layer.name, value: layer.hover(data, cursor[0], cursor[1]) });
       }
     }
     return result;

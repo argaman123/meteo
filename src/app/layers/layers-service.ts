@@ -1,11 +1,8 @@
-import { Injector, Service, Signal, computed, effect, inject, signal } from '@angular/core';
-import { httpResource } from '@angular/common/http';
+import { Injector, Service, Signal, effect, inject, signal } from '@angular/core';
 import { LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
-import { Grid } from '../objects/grid';
 import { TimeService } from '../services/time-service';
-import { Wrap } from '../types/wrap';
 import { Inputs, Layer, LookEntry } from './base/layer';
 import { Shortcut } from './base/shortcut';
 
@@ -16,7 +13,7 @@ export class LayersService {
   private map = inject(MapService);
   private time = inject(TimeService);
 
-  readonly activeLayers = signal(new Map<Layer, Signal<Grid[] | undefined>>());
+  readonly activeLayers = signal(new Map<Layer<unknown>, Signal<unknown>>());
   readonly activeLooks = signal(new Set<LookEntry>());
 
   private inputs: Inputs = {
@@ -25,20 +22,20 @@ export class LayersService {
   };
 
   private draw = effect(() => {
-    for (const [layer, gridsSignal] of this.activeLayers()) {
-      const grids = gridsSignal();
-      if (!grids) continue;
+    for (const [layer, dataSignal] of this.activeLayers()) {
+      const data = dataSignal();
+      if (data === undefined) continue;
       for (const entry of layer.looks) {
-        if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, grids);
+        if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, data);
       }
     }
   });
 
-  isLayerActive(layer: Layer): boolean {
+  isLayerActive(layer: Layer<unknown>): boolean {
     return this.activeLayers().has(layer);
   }
 
-  toggleLayer(layer: Layer): void {
+  toggleLayer(layer: Layer<unknown>): void {
     if (this.isLayerActive(layer)) this.hideLayer(layer);
     else this.showLayer(layer);
   }
@@ -77,15 +74,17 @@ export class LayersService {
     for (const { layer } of shortcut.parts) this.hideLayer(layer);
   }
 
-  showLayer(layer: Layer): void {
-    this.activeLayers.update((current) => new Map(current).set(layer, this.fetch(layer)));
+  showLayer(layer: Layer<unknown>): void {
+    this.activeLayers.update((current) =>
+      new Map(current).set(layer, layer.fetch(this.inputs, this.injector)),
+    );
     for (const entry of layer.looks) {
       if (entry.checked) this.showLook(entry);
     }
     this.syncTimeWindows();
   }
 
-  hideLayer(layer: Layer): void {
+  hideLayer(layer: Layer<unknown>): void {
     for (const entry of layer.looks) this.removeLook(entry);
     this.activeLayers.update((current) => {
       const next = new Map(current);
@@ -121,19 +120,5 @@ export class LayersService {
 
   private syncTimeWindows(): void {
     this.time.windows.set([...this.activeLayers().keys()].map((layer) => layer.timeWindow));
-  }
-
-  private fetch(layer: Layer): Signal<Grid[] | undefined> {
-    const wraps = layer.parameters.map(
-      (parameter) =>
-        httpResource<Wrap>(() => layer.request(parameter, this.inputs), {
-          injector: this.injector,
-        }).value,
-    );
-    return computed(() => {
-      const loaded = wraps.map((wrap) => wrap());
-      if (loaded.some((wrap) => wrap === undefined)) return undefined;
-      return layer.parse(loaded as Wrap[]);
-    });
   }
 }
