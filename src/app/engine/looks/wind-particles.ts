@@ -1,6 +1,6 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { BitmapLayer } from '@deck.gl/layers';
-import { setting } from '../../utils/settings';
+import { Control, options } from '../../utils/controls';
 import { Grid } from '../../objects/grid';
 import { Bounds } from '../../types/wrap';
 import { contains } from '../../utils/geo';
@@ -140,7 +140,12 @@ export interface WindField {
 
 export class WindParticles extends Look<WindField> {
   readonly kind = LookKind.Particles;
-  readonly speed = setting<number>(1);
+  readonly speed = options<number>(1, [
+    { value: 0.5, label: '×0.5' },
+    { value: 1, label: '×1' },
+    { value: 2, label: '×2' },
+  ]);
+  override readonly controls: Control[] = [this.speed];
 
   deckLayer(id: string, field: WindField): DeckLayer {
     return new WindParticleLayer({ id, ...field, speed: this.speed });

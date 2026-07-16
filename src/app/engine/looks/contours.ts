@@ -5,6 +5,7 @@ import { rgb } from 'd3-color';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ContourLine, contourLines } from '../../utils/contours';
+import { Control, color as colorControl } from '../../utils/controls';
 import { Look, LookKind } from '../base/look';
 
 interface ContourLabel {
@@ -39,6 +40,8 @@ export class Contours extends Look<Grid> {
   readonly kind = LookKind.Contours;
   private iconsCache = new Map<string, LabelIcon>();
 
+  override readonly controls: Control[];
+
   constructor(
     provider: Provider<Grid>,
     private pickLevels: LevelPicker,
@@ -46,6 +49,7 @@ export class Contours extends Look<Grid> {
     readonly color: string,
   ) {
     super(provider);
+    this.controls = [colorControl(color)];
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer[] {

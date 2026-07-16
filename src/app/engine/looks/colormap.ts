@@ -1,7 +1,6 @@
-import type { WritableSignal } from '@angular/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import type { Layer as DeckLayer } from '@deck.gl/core';
-import { setting } from '../../utils/settings';
+import { Control, PercentControl, percent } from '../../utils/controls';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ColorScale, ColorStop, colorScale, PaletteStyle } from '../../utils/color-scale';
@@ -10,7 +9,8 @@ import { Look, LookKind } from '../base/look';
 
 export class Colormap extends Look<Grid> {
   readonly kind = LookKind.Colormap;
-  readonly opacity: WritableSignal<number>;
+  readonly opacity: PercentControl;
+  override readonly controls: Control[];
   private readonly scale: ColorScale;
   private last?: { grid: Grid; image: ImageData } = undefined;
 
@@ -22,7 +22,8 @@ export class Colormap extends Look<Grid> {
   ) {
     super(provider);
     this.scale = colorScale(palette, paletteStyle);
-    this.opacity = setting(opacity);
+    this.opacity = percent(opacity);
+    this.controls = [this.opacity];
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer {

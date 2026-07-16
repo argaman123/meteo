@@ -4,6 +4,12 @@ import { lucideChevronDown } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import {
+  HlmDropdownMenu,
+  HlmDropdownMenuRadio,
+  HlmDropdownMenuRadioIndicator,
+  HlmDropdownMenuTrigger,
+} from '@spartan-ng/helm/dropdown-menu';
+import {
   HlmPopover,
   HlmPopoverContent,
   HlmPopoverPortal,
@@ -11,18 +17,20 @@ import {
 } from '@spartan-ng/helm/popover';
 import { DecimalPipe } from '@angular/common';
 import { HlmSlider } from '@spartan-ng/helm/slider';
-import { LookKind } from '../../../engine/base/look';
-import { Colormap } from '../../../engine/looks/colormap';
-import { WindParticles } from '../../../engine/looks/wind-particles';
 import { Layer } from '../../../layers/base/layer';
 import { LayersService } from '../../../layers/layers-service';
 import { layers, shortcuts } from '../../../layers/registry';
+import { ControlType, OptionsControl, PercentControl } from '../../../utils/controls';
 
 @Component({
   selector: 'app-layer-bar',
   imports: [
     HlmButton,
     HlmCheckbox,
+    HlmDropdownMenu,
+    HlmDropdownMenuRadio,
+    HlmDropdownMenuRadioIndicator,
+    HlmDropdownMenuTrigger,
     HlmPopover,
     HlmPopoverContent,
     HlmPopoverPortal,
@@ -36,7 +44,7 @@ import { layers, shortcuts } from '../../../layers/registry';
   styleUrl: './layer-bar.css',
 })
 export class LayerBar {
-  protected readonly LookKind = LookKind;
+  protected readonly ControlType = ControlType;
 
   protected readonly service = inject(LayersService);
   protected readonly layers = Object.values(layers);
@@ -55,13 +63,16 @@ export class LayerBar {
     });
   }
 
-  protected setOpacity(look: Colormap, values: number[]): void {
-    look.opacity.set(values[0]);
+  protected cycleOptions(control: OptionsControl<unknown>): void {
+    const index = control.choices.findIndex((choice) => choice.value === control());
+    control.set(control.choices[(index + 1) % control.choices.length].value);
   }
 
-  protected cycleSpeed(look: WindParticles): void {
-    const speeds = [0.5, 1, 2];
-    look.speed.set(speeds[(speeds.indexOf(look.speed()) + 1) % speeds.length]);
+  protected optionLabel(control: OptionsControl<unknown>): string {
+    return control.choices.find((choice) => choice.value === control())?.label ?? String(control());
   }
 
+  protected setPercent(control: PercentControl, values: number[]): void {
+    control.set(values[0]);
+  }
 }

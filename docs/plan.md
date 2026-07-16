@@ -22,7 +22,6 @@
 | Units module: switchable conventions | Units/Geo | High | kt↔m/s, °C↔°F, NM/km/ft/kilofeet, hPa/inHg; settings UI; every rendered value flows through (§4.3); conversion hazard — temp Vitest checks |
 | Geo module: Lat/Lon + DMS + MGRS | Units/Geo | Med | Coordinate formatting/input in one place (§4.4); cursor coordinate readout |
 | Level selector (surface / pressure / kilofeet) | Layer system | Med | Vertical dimension enters `Layer.request`; aviation kilofeet |
-| Generic option controls | Layer system | High | Lead 2026-07-15, next up: one control mechanism per control *type*, bound generically — an options cycle (cycleOptions, not cycleModel) shared by model picking and particle speed; the percent popover and contour color dot stay their own types. First picker attempt built then scraped to redo properly; ModelLayer.model setting kept and waiting |
 | Legends (color scale of active layers) | Layer system | Med | |
 | Model auto-switch by zoom | Layer system | Med | Regional model on zoom-in; model identity stays an internal layer parameter |
 | Wind barbs/arrows look | Looks | Med | Classic aviation glyphs on a grid |

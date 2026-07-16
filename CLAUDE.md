@@ -140,12 +140,13 @@ src/app/
     layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
     registry.ts       #   the keyed layers record + shortcut bundles
     base/             #   the definition machinery (Layer<D> + LookEntry, ModelLayer, Shortcut)
-    parameters/       #   one file per layer (temperature, wind, geopotential, …)
+    model/            #   one file per model layer (temperature, wind, geopotential, …); future kinds get sibling folders
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
                       #   units.ts = the Units module (§4.3 — every rendered value flows through it)
                       #   settings.ts = setting() persistent signals + registerLayers (localStorage; keys derive from registry key + LookKind + field)
+                      #   controls.ts = the Control vocabulary (options/percent/color) — setting-signals with UI metadata attached
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
                       #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
@@ -292,10 +293,14 @@ icons < text — lead reordered contours below particles 2026-07-14); colormap-k
 carry `Layer.name` + per-look `{ look, name, checked }` — `checked` starts as the definition default
 and mutates in place as the layer's session memory of its checkbox states (kind vocabulary:
 צבעים/אנימציה/קונטורים).
-The layer card: foldable groups (explicit chevron, never auto-unfold), checkbox per look, per-kind
-trailing control on one aligned column — contours show their identity-color square, colormaps an
-opacity popover (signal on the look; image memoized per grid so drags cost a uniform), particles a
-×0.5/×1/×2 speed cycle (signal read per frame). Hover readout: one labeled line per active layer.
+The layer card: foldable groups (explicit chevron, never auto-unfold), checkbox per look, and
+**generic controls** (2026-07-15): looks/layers expose `controls: Control[]` — typed descriptors
+rendered by one template switch — `options(initial, choices, label?)` (a persisted setting-signal
+with metadata attached; one `cycleOptions` serves particle speed ×0.5/×1/×2 AND temperature's
+מודל picker, which refetches via the signal read inside `fetch`), `percent(initial)` (colormap
+opacity popover; image memoized per grid so drags cost a uniform), and `{ type: 'color' }`
+(contour identity squares). Caution: control metadata attaches via `Object.assign` onto the signal
+function — `name` is read-only on functions, hence the `label` field. Hover readout: one labeled line per active layer.
 Trail canvas sizes to the bounds' on-screen pixel footprint (capped 2048) — particle thickness no
 longer varies with window size. Geopotential-height layer (wire name `hgt`, 1000 hPa, sky-blue
 contours every 20 m) joined on the contours look. **Shortcuts (`layers/base/shortcut.ts` + registry
@@ -315,8 +320,8 @@ in `public/fixtures/` (`gfs-surface-wind.json`, `land.geojson`). Run time = app 
 
 **spartan/ui adopted, chrome rebuilt on it (2026-07-06):** initialized via `@spartan-ng/cli`
 (slate theme; dark is the default via `class="dark"` on `<html>`; CLI config in `components.json`).
-Helm components are copied into `src/spartan/` (button, slider, utils so far; deliberately outside
-`app/` — it's the vendored look layer, rarely touched) and imported as `@spartan-ng/helm/*` through
+Helm components are copied into `src/spartan/` (button, checkbox, dropdown-menu, popover, slider,
+utils so far; deliberately outside `app/` — it's the vendored look layer, rarely touched) and imported as `@spartan-ng/helm/*` through
 tsconfig paths; ESLint's selector-prefix rules are off for that folder (spartan keeps its `hlm*`
 selectors). Header, basemap switcher, layer bar, and time bar use `hlmBtn`/`hlm-slider`; selection
 lists show the active item by switching `variant` (`default`↔`ghost`) + `aria-pressed`. The
