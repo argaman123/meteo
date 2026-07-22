@@ -43,7 +43,7 @@
                      [class.opacity-50]="!layersService.isLayerActive(layer)">
                   <span class="grow">{{ control.label }}</span>
                   @if (control.presentation === OptionsPresentation.Select) {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 w-9 px-0 text-xs tabular-nums"
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
                             [attr.aria-label]="control.label" [hlmDropdownMenuTrigger]="choicesMenu">
                       {{ optionLabel(control) }}
                     </button>
@@ -59,7 +59,7 @@
                       </hlm-dropdown-menu>
                     </ng-template>
                   } @else {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 w-9 px-0 text-xs tabular-nums"
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
                             [attr.aria-label]="control.label" (click)="cycleOptions(control)">
                       {{ optionLabel(control) }}
                     </button>
@@ -87,7 +87,7 @@
                   @case (ControlType.Percent) {
                     <hlm-popover class="contents">
                       <button hlmPopoverTrigger hlmBtn variant="ghost" size="sm"
-                              class="h-5 w-9 px-0 text-xs tabular-nums" aria-label="שקיפות">
+                              class="h-5 min-w-9 px-1 text-xs tabular-nums" aria-label="שקיפות">
                         {{ control() * 100 | number: '1.0-0' }}%
                       </button>
                       <hlm-popover-content *hlmPopoverPortal class="w-44 p-3">
@@ -99,7 +99,7 @@
                   @case (ControlType.Options) {
                     @switch (control.presentation) {
                       @case (OptionsPresentation.Select) {
-                        <button hlmBtn variant="ghost" size="sm" class="h-5 w-9 px-0 text-xs tabular-nums"
+                        <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
                                 [attr.aria-label]="control.label ?? 'אפשרויות'"
                                 [hlmDropdownMenuTrigger]="choicesMenu">
                           {{ optionLabel(control) }}
@@ -117,7 +117,7 @@
                         </ng-template>
                       }
                       @case (OptionsPresentation.Toggle) {
-                        <button hlmBtn variant="ghost" size="sm" class="h-5 w-9 px-0 text-xs tabular-nums"
+                        <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
                                 [attr.aria-label]="control.label ?? 'אפשרויות'" (click)="cycleOptions(control)">
                           {{ optionLabel(control) }}
                         </button>

@@ -143,10 +143,12 @@ src/app/
     base/             #   the shared definition machinery (Layer<D> + LookEntry, Shortcut)
     model/            #   ModelLayer machinery + one file per model layer (temperature, wind, …); future kinds get sibling folders
     polygons/         #   PolygonsLayer (+ EVENT_APPEARANCES record + SECTORS) + one file per forecast-event kind
+    coordinates/      #   Coordinates readout layer (no looks; hover-only + persisted format control)
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
                       #   units.ts = the Units module (§4.3 — every rendered value flows through it)
+                      #   geo.ts = the Geo module (§4.4 — formatCoordinates decimal/DMS/MGRS) + mercator/bounds math
                       #   settings.ts = setting() persistent signals + registerLayers (localStorage; keys derive from registry key + LookKind + field)
                       #   controls.ts = the Control vocabulary (options/percent/color) — setting-signals with UI metadata attached
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
@@ -452,6 +454,18 @@ deck geometry is aliased — flagged: extra GPU cost on integrated GPUs, quality
 `MapService.init` awaits `document.fonts.ready` (font atlases/canvas sprites must never bake a
 fallback font). A pressure/isobar layer was built then descoped to keep focus on the look —
 re-adding it is one file + a registry entry (plan.md filler row).
+
+**Geo module v1 (2026-07-23):** coordinate formatting joined `utils/geo.ts` (already the
+mercator/bounds home): pure `formatCoordinates(lon, lat, CoordinateFormat)` — decimal (lat-first)
+and DMS (seconds-carry math). MGRS and its `mgrs` package were built then removed same day (lead:
+"no need right now" — restoring is one enum member + one case + the dep, noted on the plan's MGRS
+row). The readout is a **layer** (lead's call): `Coordinates` in `layers/coordinates/` — no looks,
+`timeWindow: null` (the base field went nullable; timeless layers contribute no window,
+`syncTimeWindows` filters), `fetch()` returns `signal(null)`, and `hover` formats the cursor
+through its persisted format control (DD/DMS Select, `settings.coordinates.format`) — so the
+chip line, the menu row, and the picker all fall out of existing machinery; value chips became
+`min-w-9` so long labels don't overflow. Startup shows it alongside the polygons layer (lead
+2026-07-23). Typed-coordinate parsing waits for its first consumer (search/fly-to).
 
 **Legends (2026-07-22):** `Look.legend` (`engine/base/look.ts`, default null) — typed like the
 Control vocabulary: `Legend = GradientLegend | SwatchesLegend`, discriminated by a `LegendType`

@@ -120,6 +120,8 @@ export class LayersService {
   }
 
   private syncTimeWindows(): void {
-    this.time.windows.set([...this.activeLayers().keys()].map((layer) => layer.timeWindow));
+    this.time.windows.set(
+      [...this.activeLayers().keys()].map((layer) => layer.timeWindow).filter((window) => window !== null),
+    );
   }
 }

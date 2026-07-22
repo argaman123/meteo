@@ -10,6 +10,7 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
+| Coordinates readout: own button + own hover style | Chrome | Low | Lead 2026-07-23: maybe retire the Coordinates layer in favor of a dedicated toggle button, with a distinct coordinates style in the hover chip (not a layer-line lookalike); the layer shape is accepted for now |
 | Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
 | More shortcuts (bundles) | Layer system | Med | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles |
 | Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-cadence time sync (stacking landed 2026-07-14) |
@@ -20,7 +21,6 @@
 | Borders & labels above weather | Engine | Med | Colormaps paint over basemap borders/labels. First attempt (2026-07-14) slotted deck layers via beforeId 'boundaries_country' — wedged map loading + looked bad, reverted; next candidate: a dedicated borders overlay (own LookKind rank above all) |
 | Boot draw-effect cost | Engine | Low | First deck-layer construction blocks ~450ms (contour tracing + colormap raster + label sprites in one sync run); split/defer if boot feel ever matters (measured 2026-07-14) |
 | Units module: switchable conventions | Units/Geo | Low | Deprioritized by lead 2026-07-16. kt↔m/s, °C↔°F, NM/km/ft/kilofeet, hPa/inHg; settings UI; every rendered value flows through (§4.3); conversion hazard — temp Vitest checks |
-| Geo module: Lat/Lon + DMS + MGRS | Units/Geo | Med | Coordinate formatting/input in one place (§4.4); cursor coordinate readout |
 | Level selector (surface / pressure / kilofeet) | Layer system | Med | Vertical dimension enters `Layer.request`; aviation kilofeet |
 | Model auto-switch by zoom | Layer system | Med | Regional model on zoom-in; model identity stays an internal layer parameter |
 | Wind barbs/arrows look | Looks | Low | Classic aviation glyphs on a grid (lead lowered 2026-07-22) |
@@ -36,8 +36,8 @@
 | Globe/3D return + 2D toggle | Engine | Med | Gated on verifying first-party particles trustworthy (the center-circle hazard died with the vendor renderer — verify, then re-enable) |
 | Skew-T sounding | Interaction | Low | Vertical profile chart at a point/time |
 | Cross-section | Interaction | Low | Vertical slice along a drawn line |
-| Search & locate | Interaction | Low | Needs an offline place index — source TBD with the lead |
-| MGRS grid overlay | Units/Geo | Low | Map overlay, after the Geo module |
+| Search & locate | Interaction | Low | Needs an offline place index — source TBD with the lead; also owns typed-coordinate parsing (Geo module extension, deferred 2026-07-23) |
+| MGRS grid overlay | Units/Geo | Low | Map overlay; also restores the MGRS coordinate format (one CoordinateFormat member + the `mgrs` package — built and removed 2026-07-23, "no need right now") |
 | Lines/paths look | Looks | Low | Routes, tracks, fronts |
 | Text-labels look | Looks | Low | RTL-aware place/value labels as a data layer |
 | More layers on existing looks | Layer system | Low | Waves/humidity colormaps, pressure isobars (contours look) — cheap filler tasks; synthetic waves + pressure data already exist |

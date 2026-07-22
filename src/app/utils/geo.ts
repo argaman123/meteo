@@ -1,5 +1,28 @@
 import { Bounds } from '../types/wrap';
 
+export enum CoordinateFormat {
+  Decimal = 'decimal',
+  DegreesMinutesSeconds = 'degrees-minutes-seconds',
+}
+
+export function formatCoordinates(lon: number, lat: number, format: CoordinateFormat): string {
+  switch (format) {
+    case CoordinateFormat.Decimal:
+      return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+    case CoordinateFormat.DegreesMinutesSeconds:
+      return `${formatDegreesMinutesSeconds(lat, 'N', 'S')} ${formatDegreesMinutesSeconds(lon, 'E', 'W')}`;
+  }
+}
+
+function formatDegreesMinutesSeconds(value: number, positive: string, negative: string): string {
+  const totalSeconds = Math.round(Math.abs(value) * 3600);
+  const degrees = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${degrees}°${pad(minutes)}'${pad(seconds)}"${value < 0 ? negative : positive}`;
+}
+
 export function contains(bounds: Bounds, lon: number, lat: number): boolean {
   const [west, south, east, north] = bounds;
   return lon >= west && lon <= east && lat >= south && lat <= north;

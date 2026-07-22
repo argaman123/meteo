@@ -20,7 +20,7 @@ export abstract class Layer<D> {
   abstract readonly name: string;
   abstract readonly looks: LookEntry[];
   readonly controls: Control[] = [];
-  abstract readonly timeWindow: TimeWindow;
+  abstract readonly timeWindow: TimeWindow | null;
 
   abstract hover(data: D, lon: number, lat: number): string;
 
