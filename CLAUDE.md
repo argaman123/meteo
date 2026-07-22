@@ -125,11 +125,12 @@ Hybrid grouping: junior-obvious type folders + dedicated folders only for the bi
 
 ```
 src/app/
-  app.ts/.html/.css   # the frame itself: header bar + page slot (no separate "shell" concept)
+  app.ts/.html        # the page slot only (a bare router-outlet; no global chrome — each page
+                      #   owns its own top bar, lead 2026-07-22)
   app.config.ts       # app wiring (providers)
   app.routes.ts       # URL → page map ('/' = the home page)
   pages/              # one subfolder per page of the site
-    home/             # the front page: the map view (layer-bar, time-bar, legend-bar, hover-readout)
+    home/             # the front page: top bar + map view (layer-bar, time-bar, legend-bar, hover-readout)
   services/           # domain services with no natural feature folder (TimeService)
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
@@ -336,8 +337,11 @@ lists show the active item by switching `variant` (`default`↔`ghost`) + `aria-
 custom color tokens in `styles.css` are deleted — spartan's CSS-variable theme is the only color
 system (Heebo `--font-sans` kept). **Chrome look (lead, 2026-07-06): full-bleed map, floating
 frosted-glass instrument cards** — one card recipe (`rounded-xl border bg-card/75 backdrop-blur-md
-shadow-lg`) for the layer card (top-start), basemap switcher (top-end), and centered bottom time
-bar; slim `bg-background` header. Backdrop-blur is an always-on compositor cost over the animating
+shadow-lg`) for the layer card (top-start), legend accordion (bottom-end), and centered bottom
+time bar; slim `bg-background` top bar owned by the home page itself (no global header — the
+frame is a bare page slot, lead 2026-07-22). The basemap picker is a top-bar icon button
+(lucidePalette, end side) opening a spartan dropdown of the styles (lead 2026-07-22 — the floating
+top-end card is gone). Backdrop-blur is an always-on compositor cost over the animating
 map (flagged, accepted by the lead — small vs the per-frame canvas upload; can move behind a
 quality knob if fleet measurement ever demands). The old custom look is retired — do not imitate
 it in new chrome.

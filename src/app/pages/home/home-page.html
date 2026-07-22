@@ -1,23 +1,29 @@
-<div class="relative h-full">
-  <div #mapContainer class="h-full w-full"></div>
-  <div
-    class="absolute end-3 top-3 flex flex-col gap-1 rounded-xl border bg-card/75 backdrop-blur-md p-1 shadow-lg"
-  >
-    @for (item of map.basemaps; track item.id) {
-      <button
-        hlmBtn
-        size="sm"
-        [variant]="map.basemap() === item.id ? 'default' : 'ghost'"
-        [attr.aria-pressed]="map.basemap() === item.id"
-        (click)="map.setBasemap(item.id)"
-      >
-        {{ item.label }}
-      </button>
-    }
+<div class="flex h-full flex-col">
+  <header class="flex h-12 items-center gap-2 border-b bg-background px-4">
+    <span class="text-base font-semibold">מטאו</span>
+    <span class="text-sm text-muted-foreground">Meteo</span>
+    <button hlmBtn variant="ghost" size="sm" class="ms-auto w-9 px-0" aria-label="מפת רקע"
+            [hlmDropdownMenuTrigger]="basemapMenu">
+      <ng-icon name="lucidePalette"/>
+    </button>
+    <ng-template #basemapMenu>
+      <hlm-dropdown-menu>
+        @for (item of map.basemaps; track item.id) {
+          <button hlmDropdownMenuRadio [checked]="map.basemap() === item.id"
+                  [keepOpen]="false" (triggered)="map.setBasemap(item.id)">
+            <hlm-dropdown-menu-radio-indicator/>
+            {{ item.label }}
+          </button>
+        }
+      </hlm-dropdown-menu>
+    </ng-template>
+  </header>
+  <div class="relative min-h-0 flex-1">
+    <div #mapContainer class="h-full w-full"></div>
+    <app-legend-bar class="absolute bottom-3 end-3" />
+    <app-layer-bar class="absolute start-3 top-3" />
+    <app-time-bar class="absolute inset-x-3 bottom-3 mx-auto block max-w-2xl" />
+    <app-hover-readout />
+    <app-perf-hud />
   </div>
-  <app-legend-bar class="absolute bottom-3 end-3" />
-  <app-layer-bar class="absolute start-3 top-3" />
-  <app-time-bar class="absolute inset-x-3 bottom-3 mx-auto block max-w-2xl" />
-  <app-hover-readout />
-  <app-perf-hud />
 </div>

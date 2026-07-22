@@ -1,5 +1,13 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import { lucidePalette } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
+import {
+  HlmDropdownMenu,
+  HlmDropdownMenuRadio,
+  HlmDropdownMenuRadioIndicator,
+  HlmDropdownMenuTrigger,
+} from '@spartan-ng/helm/dropdown-menu';
 import { PerfHud } from '../../dev/perf-hud/perf-hud';
 import { MapService } from '../../engine/map-service';
 import { LayersService } from '../../layers/layers-service';
@@ -11,7 +19,20 @@ import { layers } from '../../layers/registry';
 
 @Component({
   selector: 'app-home-page',
-  imports: [HlmButton, PerfHud, HoverReadout, LayerBar, LegendBar, TimeBar],
+  imports: [
+    HlmButton,
+    HlmDropdownMenu,
+    HlmDropdownMenuRadio,
+    HlmDropdownMenuRadioIndicator,
+    HlmDropdownMenuTrigger,
+    NgIcon,
+    PerfHud,
+    HoverReadout,
+    LayerBar,
+    LegendBar,
+    TimeBar,
+  ],
+  viewProviders: [provideIcons({ lucidePalette })],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
 })

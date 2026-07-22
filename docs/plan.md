@@ -10,7 +10,6 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
-| Basemap selector → top-bar icon button | Chrome | High | Lead 2026-07-22: right after legends. Replace the floating basemap card with a single theme-selector icon button in the header bar, opening a popup with the options |
 | Layer-bar visual separation | Chrome | High | Lead 2026-07-22: right after legends. With controls + look rows the layers all look scrambled — make it obvious which rows belong to which layer |
 | Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
 | More shortcuts (bundles) | Layer system | Med | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles |
