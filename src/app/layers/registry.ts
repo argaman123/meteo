@@ -4,11 +4,13 @@ import { Geopotential } from './model/geopotential';
 import { Shortcut } from './base/shortcut';
 import { Temperature } from './model/temperature';
 import { Wind } from './model/wind';
+import { PolygonsLayer } from './polygons/polygons-layer';
 
 export const layers = registerLayers({
   temperature: new Temperature(),
   wind: new Wind(),
   geopotential: new Geopotential(),
+  polygons: new PolygonsLayer(),
 });
 
 export const shortcuts = {

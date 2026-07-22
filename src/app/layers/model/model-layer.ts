@@ -3,10 +3,11 @@ import { Injector, Signal, computed, signal } from '@angular/core';
 import { Grid } from '../../objects/grid';
 import { Parameter } from '../../types/parameter';
 import { Wrap } from '../../types/wrap';
-import { Inputs, Layer } from './layer';
+import { Inputs, Layer } from '../base/layer';
 
 export abstract class ModelLayer extends Layer<Grid[]> {
   abstract readonly parameters: Parameter[];
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 3 }
   readonly model = signal('wide');
 
   fetch(on: Inputs, injector: Injector): Signal<Grid[] | undefined> {

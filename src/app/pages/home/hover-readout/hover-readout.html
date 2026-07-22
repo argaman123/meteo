@@ -6,9 +6,9 @@
       [style.top.px]="at.y + 14"
     >
       @for (line of lines(); track line.name) {
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex items-baseline justify-between gap-3">
           <span class="text-muted-foreground">{{ line.name }}</span>
-          <span dir="ltr" class="tabular-nums">{{ line.value }}</span>
+          <span dir="auto" class="tabular-nums whitespace-pre-line">{{ line.value }}</span>
         </div>
       }
     </div>

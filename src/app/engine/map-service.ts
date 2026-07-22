@@ -14,6 +14,7 @@ export class MapService {
   readonly bbox = signal<Bounds | null>(null);
   readonly settledBbox = signal<Bounds | null>(null);
   readonly zoom = signal<number | null>(null);
+  readonly settledZoom = signal<number | null>(null);
   readonly cursor = signal<[number, number] | null>(null);
   readonly basemap = signal<BasemapId>('dark');
   readonly basemaps: { id: BasemapId; label: string }[] = [
@@ -39,7 +40,10 @@ export class MapService {
     });
     this.map.keyboard.disable();
     this.map.on('move', () => this.publish());
-    this.map.on('moveend', () => this.settledBbox.set(this.bbox()));
+    this.map.on('moveend', () => {
+      this.settledBbox.set(this.bbox());
+      this.settledZoom.set(this.zoom());
+    });
     this.map.on('mousemove', (event) => {
       this.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
@@ -47,6 +51,7 @@ export class MapService {
     this.overlay.attach(this.map);
     this.publish();
     this.settledBbox.set(this.bbox());
+    this.settledZoom.set(this.zoom());
   }
 
   destroy(): void {
@@ -56,6 +61,7 @@ export class MapService {
     this.bbox.set(null);
     this.settledBbox.set(null);
     this.zoom.set(null);
+    this.settledZoom.set(null);
     this.cursor.set(null);
     maplibregl.removeProtocol('pmtiles');
   }

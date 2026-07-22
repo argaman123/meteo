@@ -6,7 +6,7 @@ import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, convert, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
-import { ModelLayer } from '../base/model-layer';
+import { ModelLayer } from './model-layer';
 
 const SPEED_PALETTE: ColorStop[] = [
   { value: 0, color: '#6271b7' },

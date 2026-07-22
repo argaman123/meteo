@@ -19,6 +19,7 @@ export class LayersService {
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
     time: () => this.time.currentTime(),
+    zoom: () => this.map.settledZoom() ?? 0,
   };
 
   private draw = effect(() => {

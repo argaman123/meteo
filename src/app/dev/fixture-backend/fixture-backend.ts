@@ -6,7 +6,9 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { from } from 'rxjs';
+import { Sector } from '../../types/polygons';
 import { Bounds } from '../../types/wrap';
+import { syntheticPolygons } from './synthetic-polygons';
 import { SyntheticWeather } from './synthetic-weather';
 
 const ARTIFICIAL_LATENCY_MS = 150;
@@ -26,6 +28,16 @@ export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
 
 async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEvent<unknown>> {
   await new Promise((resolve) => setTimeout(resolve, ARTIFICIAL_LATENCY_MS));
+  if (request.url === '/api/polygons') {
+    const sector = (request.params.get('sector') ?? '') as Sector;
+    const time = Number(request.params.get('time'));
+    const hours = Math.round((time - RUN_TIME_UNIX_SECONDS) / 3600 / STEP_HOURS) * STEP_HOURS;
+    const wrap = syntheticPolygons(sector, hours, RUN_TIME_UNIX_SECONDS);
+    if (!wrap) {
+      throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'No map' });
+    }
+    return new HttpResponse({ status: 200, body: wrap });
+  }
   if (request.url !== '/api/grids') {
     throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Not Found' });
   }

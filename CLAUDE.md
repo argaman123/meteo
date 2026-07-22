@@ -139,8 +139,9 @@ src/app/
   layers/             # THE CATALOG + the layers domain service
     layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
     registry.ts       #   the keyed layers record + shortcut bundles
-    base/             #   the definition machinery (Layer<D> + LookEntry, ModelLayer, Shortcut)
-    model/            #   one file per model layer (temperature, wind, geopotential, …); future kinds get sibling folders
+    base/             #   the shared definition machinery (Layer<D> + LookEntry, Shortcut)
+    model/            #   ModelLayer machinery + one file per model layer (temperature, wind, …); future kinds get sibling folders
+    polygons/         #   PolygonsLayer (+ EVENT_APPEARANCES record + SECTORS) + one file per forecast-event kind
   objects/            # runtime data classes built from DAOs (e.g. Grid)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
@@ -295,8 +296,9 @@ and mutates in place as the layer's session memory of its checkbox states (kind 
 צבעים/אנימציה/קונטורים).
 The layer card: foldable groups (explicit chevron, never auto-unfold), checkbox per look, and
 **generic controls** (2026-07-15): looks/layers expose `controls: Control[]` — typed descriptors
-rendered by one template switch — `options(initial, choices, label?)` (a persisted setting-signal
-with metadata attached; one `cycleOptions` serves particle speed ×0.5/×1/×2 AND temperature's
+rendered by one template switch — `options(initial, choices, label?, list?)` (a persisted setting-signal
+with metadata attached; `list` renders a popup list instead of click-cycling — the polygons
+גזרה picker uses it; one `cycleOptions` serves particle speed ×0.5/×1/×2 AND temperature's
 מודל picker, which refetches via the signal read inside `fetch`), `percent(initial)` (colormap
 opacity popover; image memoized per grid so drags cost a uniform), and `{ type: 'color' }`
 (contour identity squares). Caution: control metadata attaches via `Object.assign` onto the signal
@@ -307,7 +309,8 @@ contours every 20 m) joined on the contours look. **Shortcuts (`layers/base/shor
 `shortcuts` record) are package-deal bundles and the primary UX (vision.md):** a קיצורים section
 tops the menu; pressing מזג אוויר applies exact per-layer look sets (`{ layer, looks: LookKind[] }`);
 pressed state derives (all member layers active) so turning a member off releases the pill while
-the rest stay; settings tweaks don't break the package; startup applies the weather shortcut.
+the rest stay; settings tweaks don't break the package; startup showed the weather shortcut until
+2026-07-16 — it now shows the polygons layer (see below).
 The look⇒layer seam resolved itself: shortcuts activate layers, the invariant stands. Watch:
 `LayersService` is growing — propose a split when it next grows (lead, 2026-07-14).
 
@@ -345,6 +348,74 @@ call-site changes). `NaN` → `—`. Conversions stay a hand-rolled factor table
 met-degrees "from" direction — vector-aware by construction); a cursor-following readout chip lives
 in `pages/home/hover-readout/` (hides off-map and over panels). `dev/perf-hud/` ships with the app
 (§8): Ctrl+Alt+P or `?hud=1`, FPS + JS heap, rAF loop cancelled on toggle-off and destroy.
+
+**Polygons layer (2026-07-16 v1, 2026-07-19 event-kind split; "polygons" is the feature's name —
+warnings is a different, future feature):** first non-model layer kind. `PolygonsLayer extends
+Layer<PolygonMap>` lives beside its event kinds in `layers/polygons/polygons-layer.ts` (suffix
+only because the bare `Polygons` name belongs to the look class, which matches its LookKind like
+Colormap/Contours; moved out of base/ 2026-07-20 — machinery-of-one, a base extraction waits for a
+second polygon-map kind, and each kind's machinery now sits in its own folder — ModelLayer moved
+into `model/` the same day). It imports `EVENT_KINDS`/`SECTORS` directly; the registry constructs
+a bare `new PolygonsLayer()`. **The real event model (lead, 2026-07-19) — one file per kind in
+`layers/polygons/`**, each implementing `EventKind<E>` (`style(event): AreaStyle` +
+`hoverText(event)`; styles are **functions of the event's values**): **cloud** (one event; base
+determines level — <7,000 ft נמוכה dark-gray #535353/opacity 0.5–0.95 by `eights` (the wire's
+spelling), <20,000 ft בינונית blue #2748a5/0.3–0.8, else גבוהה #206ea3/vertical lines/0.3–0.8) which
+**recursively nests precip** (`precip.ts`: outline sampled continuously from the old app's 5-stop
+pink→maroon ramp by severity=(level−1)/3, width 3→8 px, navy #001d59 text outline w8 — overrides
+the default thin-white separation outline every polygon gets) which **nests CB** (`cb.ts`: cbType
+scattered/cb/cloudy → fill #ff0000/#c30000/#800000 at the cloud's alpha, border = its fill color
+at width 4→8 by severity 0–1, black text outline); **haze** (surface orange #ff9800 0.5–0.95,
+high yellow #ffe33f 0.1–0.5) and **fog** (#535353, grid pattern) — both carry `minVis`/`maxVis`
+matched against the shared `VISIBILITY_BANDS` table (`layers/polygons/visibility.ts`; worse band →
+more opaque; bands are invented stand-ins). **Label placement (2026-07-20, simplified per lead — simple behavior over cleverness):** each
+chip homes on its polygon's **center of mass** (polylabel's pole of inaccessibility when that
+falls outside a concave ring); a **zoom-aware** relaxation then spreads only **text-vs-text**
+clashes in true pixel sizes (+6px padding) — **zoom flows like time/bbox**: `Inputs` gained
+`zoom()` (backed by `MapService.settledZoom`, set on moveend), the polygons layer stashes its
+`Inputs` in `fetch` and its provider writes `zoom` into `PolygonsInput`, so looks stay pure
+functions of their input (`deckLayer(id, input)`, no engine context param) and the provider's
+signal read relays out precisely on settled zoom changes — and chips **never leave their
+polygon**: after each pass, any anchor
+that crossed its ring is bisected back along the line to its interior home (far-out zoom accepts
+residual overlap rather than escaping the polygon). Palette/ranges extracted from
+photos of the old app's `polygon-styles.ts` (2026-07-19; its NEW preset — an OLD preset also
+exists there, and TURBULENCE #800080 + EDITING types await future support). Every polygon shows a **minimal text chip as an event-colored pill** (canvas sprite: background =
+the polygon's fill color, no border, luminance-picked text — the chip *is* the polygon's
+identity; placement per the label-placement paragraph below — never hidden):
+clouds show eights/8, base-top in thousands of ft with a prime (3'-5' = 3000–5000 ft), precip
+probability %; haze/fog show their visibility band (e.g. 5-10 km). Paint order is code-controlled
+(`PolygonsLayer.order` field, no UI): by height (ground-most on top; high haze slots at 20,000 ft)
+or by event type (clouds < haze < fog); height is the default.
+The layer file also holds the `EVENT_APPEARANCES` record (each kind implements
+`EventAppearance<E>` — the old app's own vocabulary) + `SECTORS` (sector squares bound to the
+`Sector` enum — center/north so far, hard-coded for now, later possibly a separate backend
+request; the fixture imports the same record and shifts its authored scene into the requested
+sector's square). The
+layer's **sector is a persisted גזרה options control** (popup list; the fetch and provider read
+the signal, so switching refetches and moves the frame — same mechanism as temperature's מודל). Wire contract `PolygonsWrap` (`types/polygons.ts`): `{ startTime, endTime, sector,
+polygons: [{ coordinates: [lat,lon][], forecastEvents }] }` — top-level union cloud/haze/fog,
+precip/CB nested inside cloud.
+`PolygonMap` (`objects/`) converts `[lat,lon]`→`[lon,lat]` on receive and clips rings to the
+sector square — **Turf.js adopted here** (`@turf/bbox-clip`, `@turf/boolean-point-in-polygon`,
+`@turf/helpers`; the look also uses `@turf/buffer`, `@turf/center-of-mass`, and Mapbox's
+`polylabel` — label layout runs per settled zoom, so per-call GeoJSON allocation is fine there,
+unlike hot loops). The `Polygons` look renders fills and outlines as **separate layers** (so
+outlines draw above the hatch) + an
+**inner rim band** per polygon (`@turf/buffer` −2 km inset stroked in the fill color,
+drawn **above all fills/hatch/frame** so every rim stays readable under stacks — lead 2026-07-20)
++ the sector frame + **pattern
+hatching computed geometrically** (`PolygonPattern` solid/horizontal/vertical/grid; evenly spaced
+lines clipped to each polygon at 0.12° spacing → one `PathLayer`; deck's FillStyleExtension was
+tried and reverted — a hidden-pane repaint stall framed it, it's likely innocent, but geometric
+hatching is extension-free, integrated-GPU-cheap, and looks like a classic synoptic chart). A
+polygon with several events **draws once per event** — stacked patterns tell them apart; hover
+lists one line per event (readout spans: `dir="auto"` + `whitespace-pre-line`). `timeWindow` = 0
+back / 96 forward / 3h. Fixture: `/api/polygons` synthesized per (sector, 3h frame) — four kinds,
+overlapping areas, a multi-event storm, one polygon poking outside the square to prove clipping.
+**Startup shows the polygons layer instead of the weather shortcut (lead, 2026-07-16 — he uses it
+constantly).** Deferred (plan.md): sector picker, on-map per-type text, icon patterns, stale-map
+linger when scrubbed outside coverage.
 
 **Contours look (2026-07-08, lead-verified):** `utils/contours.ts` traces labeled isolines from a
 `Grid`: NaN-aware 3×3 blur ×2 (kills staircases from value quantization — real backend data rounds

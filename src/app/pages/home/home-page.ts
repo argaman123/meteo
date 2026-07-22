@@ -6,7 +6,7 @@ import { LayersService } from '../../layers/layers-service';
 import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { TimeBar } from './time-bar/time-bar';
-import { shortcuts } from '../../layers/registry';
+import { layers } from '../../layers/registry';
 
 @Component({
   selector: 'app-home-page',
@@ -30,6 +30,6 @@ export class HomePage implements AfterViewInit, OnDestroy {
 
   private async start(): Promise<void> {
     await this.map.init(this.container().nativeElement);
-    this.layers.showShortcut(shortcuts.weather);
+    this.layers.showLayer(layers.polygons);
   }
 }

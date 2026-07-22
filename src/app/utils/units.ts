@@ -4,6 +4,7 @@ export enum Unit {
   Knots = 'knots',
   MetDegrees = 'met-degrees',
   Meters = 'meters',
+  Kilometers = 'kilometers',
 }
 
 export enum Quantity {
@@ -11,6 +12,7 @@ export enum Quantity {
   WindSpeed = 'wind-speed',
   Direction = 'direction',
   GeopotentialHeight = 'geopotential-height',
+  Visibility = 'visibility',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -18,6 +20,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.WindSpeed]: Unit.Knots,
   [Quantity.Direction]: Unit.MetDegrees,
   [Quantity.GeopotentialHeight]: Unit.Meters,
+  [Quantity.Visibility]: Unit.Kilometers,
 };
 
 const knotsPerMeterPerSecond = 1.943844;
@@ -32,7 +35,8 @@ export function convert(value: number, quantity: Quantity, from: Unit): number {
 
 export function format(value: number, quantity: Quantity, from: Unit): string {
   if (Number.isNaN(value)) return '—';
-  const rounded = Math.round(convert(value, quantity, from));
+  const converted = convert(value, quantity, from);
+  const rounded = Math.round(converted);
   switch (displayUnit[quantity]) {
     case Unit.Celsius:
       return `${rounded}°C`;
@@ -44,5 +48,7 @@ export function format(value: number, quantity: Quantity, from: Unit): string {
       return `${(rounded + 360) % 360}°`;
     case Unit.Meters:
       return `${rounded} m`;
+    case Unit.Kilometers:
+      return `${Number(converted.toFixed(1))}km`;
   }
 }

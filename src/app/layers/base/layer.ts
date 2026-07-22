@@ -7,6 +7,7 @@ import { Control } from '../../utils/controls';
 export interface Inputs {
   bbox(): Bounds | null;
   time(): number;
+  zoom(): number;
 }
 
 export interface LookEntry {
@@ -19,7 +20,7 @@ export abstract class Layer<D> {
   abstract readonly name: string;
   abstract readonly looks: LookEntry[];
   readonly controls: Control[] = [];
-  readonly timeWindow: TimeWindow = { backHours: 24, forwardHours: 96, stepHours: 3 };
+  abstract readonly timeWindow: TimeWindow;
 
   abstract hover(data: D, lon: number, lat: number): string;
 

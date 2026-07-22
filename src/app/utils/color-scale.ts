@@ -11,6 +11,11 @@ export type PaletteStyle = 'smooth' | 'stepped';
 
 export type ColorScale = (value: number) => RGBColor;
 
+export function rgba(color: string, alpha = 255): [number, number, number, number] {
+  const parsed = rgb(color);
+  return [parsed.r, parsed.g, parsed.b, alpha];
+}
+
 export function colorScale(
   palette: ColorStop[],
   style: PaletteStyle,

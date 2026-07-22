@@ -6,7 +6,7 @@ import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
 import { Control, options } from '../../utils/controls';
-import { ModelLayer } from '../base/model-layer';
+import { ModelLayer } from './model-layer';
 
 const PALETTE: ColorStop[] = [
   { value: -30, color: '#312e81' },
