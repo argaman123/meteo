@@ -12,7 +12,7 @@
 |---|---|---|---|
 | Coordinates readout: own button + own hover style | Chrome | Low | Lead 2026-07-23: maybe retire the Coordinates layer in favor of a dedicated toggle button, with a distinct coordinates style in the hover chip (not a layer-line lookalike); the layer shape is accepted for now |
 | Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
-| More shortcuts (bundles) | Layer system | Med | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles |
+| More shortcuts (bundles) | Layer system | Low | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles (lead lowered 2026-07-23) |
 | Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-cadence time sync (stacking landed 2026-07-14) |
 | Radar layer | Looks | Med | Same raster machinery as satellite; own palette/cadence; same gate as satellite |
 | Imagery loops (playback for imagery layers) | Time | Med | Radar/satellite watched as animated loops; model layers stay jumps-only; same gate as satellite |
@@ -21,19 +21,18 @@
 | Borders & labels above weather | Engine | Med | Colormaps paint over basemap borders/labels. First attempt (2026-07-14) slotted deck layers via beforeId 'boundaries_country' — wedged map loading + looked bad, reverted; next candidate: a dedicated borders overlay (own LookKind rank above all) |
 | Boot draw-effect cost | Engine | Low | First deck-layer construction blocks ~450ms (contour tracing + colormap raster + label sprites in one sync run); split/defer if boot feel ever matters (measured 2026-07-14) |
 | Units module: switchable conventions | Units/Geo | Low | Deprioritized by lead 2026-07-16. kt↔m/s, °C↔°F, NM/km/ft/kilofeet, hPa/inHg; settings UI; every rendered value flows through (§4.3); conversion hazard — temp Vitest checks |
-| Level selector (surface / pressure / kilofeet) | Layer system | Med | Vertical dimension enters `Layer.request`; aviation kilofeet |
+| Level selector (surface / pressure / kilofeet) | Layer system | Low | Vertical dimension enters `Layer.request`; aviation kilofeet (lead lowered 2026-07-23) |
 | Model auto-switch by zoom | Layer system | Med | Regional model on zoom-in; model identity stays an internal layer parameter |
 | Wind barbs/arrows look | Looks | Low | Classic aviation glyphs on a grid (lead lowered 2026-07-22) |
 | Station/point observations look | Looks | Med | Icons + numeric values at obs points, METAR-style |
-| Click → detail panel shell | Interaction | Med | User picks the view, never all at once; raw-values readout as the first view |
+| Click → detail panel shell | Interaction | Low | User picks the view, never all at once; raw-values readout as the first view (lead lowered 2026-07-23) |
 | Meteogram | Interaction | Med | Time series of parameters at a clicked point |
 | Draw & measure tools | Interaction | Med | Distance/area; Turf.js |
 | AOIs: predefined + user-drawn + frame-AOI | Interaction | Med | Fly-to for clean screenshots; predefined per group via config |
 | Zulu/Local dual time display | Units/Geo | Med | Requests stay unix; display-side only |
-| Live-follow + polling for latest data | Time | Med | New cycles appear without reload; groundwork for warnings polling |
 | Settings panel | Chrome | Med | Units, time display, quality knobs surfaced in UI |
 | Warnings sidebar | Warnings | Med | Current + near-future per AOI, green/yellow/red status |
-| Globe/3D return + 2D toggle | Engine | Med | Gated on verifying first-party particles trustworthy (the center-circle hazard died with the vendor renderer — verify, then re-enable) |
+| Globe/3D return + 2D toggle | Engine | Low | **Blocked upstream (spike 2026-07-23):** maplibre 5.24's native globe works (basemap, camera, zero JS errors), but deck's interleaved MapboxOverlay renders our looks broken on it — BitmapLayer (colormap, particles) invisible, SolidPolygonLayer fills smeared into vertical streaks and displaced, IconLayer chips washed out, PathLayer contours dotted; WebGL error flood. Same on deck 9.3.3, 9.3.7, and 9.4.0-alpha.1, and same when layers are built fresh under globe — not a projection-switch caching issue. Retest on future deck majors; fallback path if it stays dead: feed colormap/particle canvases to maplibre-native raster image sources (they do reproject on globe) and keep deck for vector looks. Old gate (verify first-party particles, center-circle hazard) still applies after the interop unblocks |
 | Skew-T sounding | Interaction | Low | Vertical profile chart at a point/time |
 | Cross-section | Interaction | Low | Vertical slice along a drawn line |
 | Search & locate | Interaction | Low | Needs an offline place index — source TBD with the lead; also owns typed-coordinate parsing (Geo module extension, deferred 2026-07-23) |

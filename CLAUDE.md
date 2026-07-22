@@ -67,7 +67,7 @@ Three non-negotiables, in priority order:
 | Framework | **Angular 22** (standalone, **zoneless**, signals-first) | |
 | Components | **spartan/ui** (`@spartan-ng/brain` primitives + Helm components copied into the repo) on CDK + Tailwind | Lead 2026-07-06, replaces the PrimeNG plan — see rule below |
 | State | **Signals in one injectable `@Service` per domain** (signals + the methods that change them, co-located) | No NgRx; no separate stores layer |
-| Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL removed 2026-06; globe/3D temporarily removed — returns after first-party particles are verified) | Always behind the engine adapter |
+| Map engine | **MapLibre GL JS + deck.gl** with **first-party weather-layer renderers** (WeatherLayers GL removed 2026-06; globe/3D deferred — deck's globe interop broken as of 9.3/9.4α, see plan.md) | Always behind the engine adapter |
 | i18n | **No translation framework.** Each element authored in one language. **Bidi/RTL is mandatory** | Self-hosted Hebrew+Latin font |
 | Styling/theme | **Design tokens** (CSS variables) → Tailwind + spartan's CSS-variable theme | Presets = declarative config |
 | Testing | **Light/manual** + strict TypeScript + ESLint/Prettier; **no committed unit tests for now** — temporary Vitest checks verify pure units/geo/time logic during development, then are deleted | Lead 2026-06-10; wrong conversions remain a flagged hazard — revisit when Units/Geo modules land |
@@ -262,8 +262,9 @@ no predefined steps — those proved too rigid). The lead picks the next task by
 priorities are never inferred silently. Each task: questions first, built small, verified
 interactively with the lead, committed on his approval.
 
-**The product today:** 2D map (globe/3D returns only when first-party particles are verified
-trustworthy), self-hosted basemaps, dev fixture backend, and the layer/look data pipeline —
+**The product today:** 2D map (globe/3D deferred — the 2026-07-23 spike found deck's interleaved
+overlay renders our looks broken on maplibre's globe; details on the plan.md row), self-hosted
+basemaps, dev fixture backend, and the layer/look data pipeline —
 layer kinds subclass the generic `Layer<D>` (name, looks, timeWindow, `hover(data)`, `fetch()`;
 2026-07-15 split): `ModelLayer` (D = `Grid[]`) carries `parameters`/`models` and fetches grids per
 parameter (bbox-windowed); future kinds (satellite/radar/observations) implement their own
