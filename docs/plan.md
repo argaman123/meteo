@@ -10,6 +10,8 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
+| Basemap selector → top-bar icon button | Chrome | High | Lead 2026-07-22: right after legends. Replace the floating basemap card with a single theme-selector icon button in the header bar, opening a popup with the options |
+| Layer-bar visual separation | Chrome | High | Lead 2026-07-22: right after legends. With controls + look rows the layers all look scrambled — make it obvious which rows belong to which layer |
 | Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
 | More shortcuts (bundles) | Layer system | Med | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles |
 | Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-cadence time sync (stacking landed 2026-07-14) |
@@ -22,9 +24,8 @@
 | Units module: switchable conventions | Units/Geo | Low | Deprioritized by lead 2026-07-16. kt↔m/s, °C↔°F, NM/km/ft/kilofeet, hPa/inHg; settings UI; every rendered value flows through (§4.3); conversion hazard — temp Vitest checks |
 | Geo module: Lat/Lon + DMS + MGRS | Units/Geo | Med | Coordinate formatting/input in one place (§4.4); cursor coordinate readout |
 | Level selector (surface / pressure / kilofeet) | Layer system | Med | Vertical dimension enters `Layer.request`; aviation kilofeet |
-| Legends (color scale of active layers) | Layer system | Med | |
 | Model auto-switch by zoom | Layer system | Med | Regional model on zoom-in; model identity stays an internal layer parameter |
-| Wind barbs/arrows look | Looks | Med | Classic aviation glyphs on a grid |
+| Wind barbs/arrows look | Looks | Low | Classic aviation glyphs on a grid (lead lowered 2026-07-22) |
 | Station/point observations look | Looks | Med | Icons + numeric values at obs points, METAR-style |
 | Click → detail panel shell | Interaction | Med | User picks the view, never all at once; raw-values readout as the first view |
 | Meteogram | Interaction | Med | Time series of parameters at a clicked point |

@@ -7,7 +7,8 @@ import { polygon } from '@turf/helpers';
 import polylabel from 'polylabel';
 import { Bounds } from '../../types/wrap';
 import { rgba } from '../../utils/color-scale';
-import { Look, LookKind } from '../base/look';
+import { Legend, Look, LookKind } from '../base/look';
+import { Provider } from '../../objects/provider';
 
 export enum PolygonPattern {
   Solid = 'solid',
@@ -57,7 +58,13 @@ interface LabelIcon {
 
 export class Polygons extends Look<PolygonsView> {
   readonly kind = LookKind.Polygons;
+  override readonly legend: Legend;
   private labelIcons = new Map<string, LabelIcon>();
+
+  constructor(provider: Provider<PolygonsView>, legend: Legend) {
+    super(provider);
+    this.legend = legend;
+  }
 
   deckLayer(id: string, view: PolygonsView): DeckLayer[] {
     const [west, south, east, north] = view.frame;

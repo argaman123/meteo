@@ -1,5 +1,6 @@
 import { httpResource } from '@angular/common/http';
 import { Injector, Signal } from '@angular/core';
+import { LegendType, SwatchesLegend } from '../../engine/base/look';
 import { PolygonStyle, Polygons, PolygonsView } from '../../engine/looks/polygons';
 import { PolygonMap } from '../../objects/polygon-map';
 import { Provider } from '../../objects/provider';
@@ -27,6 +28,18 @@ export const SECTORS: Record<Sector, Bounds> = {
   [Sector.North]: [33, 31.5, 37.5, 35.5],
 };
 
+const LEGEND: SwatchesLegend = {
+  type: LegendType.Swatches,
+  stops: [
+    { color: '#535353', label: 'עננות נמוכה' },
+    { color: '#2748a5', label: 'עננות בינונית' },
+    { color: '#206ea3', label: 'עננות גבוהה' },
+    { color: '#535353', label: 'ערפל' },
+    { color: '#ff9800', label: 'אובך' },
+    { color: '#c30000', label: 'CB' },
+  ],
+};
+
 export class PolygonsLayer extends Layer<PolygonMap> {
   readonly name = 'עננות ותופעות';
   override readonly timeWindow = { backHours: 0, forwardHours: 96, stepHours: 3 };
@@ -38,7 +51,7 @@ export class PolygonsLayer extends Layer<PolygonMap> {
   private on!: Inputs;
   readonly looks = [
     {
-      look: new Polygons(new Provider((map: PolygonMap) => this.createView(map))),
+      look: new Polygons(new Provider((map: PolygonMap) => this.createView(map)), LEGEND),
       name: 'פוליגונים',
       checked: true,
     },

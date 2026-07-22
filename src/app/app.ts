@@ -6,6 +6,5 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   host: { class: 'block h-full' },
   templateUrl: './app.html',
-  styleUrl: './app.css',
 })
 export class App {}

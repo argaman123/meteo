@@ -5,15 +5,15 @@ import { MapService } from '../../engine/map-service';
 import { LayersService } from '../../layers/layers-service';
 import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
+import { LegendBar } from './legend-bar/legend-bar';
 import { TimeBar } from './time-bar/time-bar';
 import { layers } from '../../layers/registry';
 
 @Component({
   selector: 'app-home-page',
-  imports: [HlmButton, PerfHud, HoverReadout, LayerBar, TimeBar],
+  imports: [HlmButton, PerfHud, HoverReadout, LayerBar, LegendBar, TimeBar],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
-  styleUrl: './home-page.css',
 })
 export class HomePage implements AfterViewInit, OnDestroy {
   protected map = inject(MapService);

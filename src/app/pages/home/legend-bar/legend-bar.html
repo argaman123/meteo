@@ -1,0 +1,35 @@
+@if (layerLegends().length) {
+  <div class="flex w-36 flex-col gap-1 rounded-xl border bg-card/75 backdrop-blur-md p-1.5 shadow-lg">
+    @for (card of layerLegends(); track card.legend) {
+      <button hlmBtn size="sm" variant="ghost" class="justify-between gap-2"
+              [attr.aria-expanded]="openLegend() === card.legend" (click)="toggleLegend(card.legend)">
+        {{ card.title }}
+        <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="openLegend() === card.legend"/>
+      </button>
+      @if (openLegend() === card.legend) {
+        @switch (card.legend.type) {
+          @case (LegendType.Gradient) {
+            <div class="flex justify-center gap-2 py-1">
+              <div class="my-2 w-4 rounded-full" [style.background]="gradientBackground(card.legend)"></div>
+              <div dir="ltr" class="flex h-56 flex-col-reverse justify-between text-end text-xs tabular-nums">
+                @for (stop of card.legend.stops; track $index) {
+                  <span>{{ stop.label }}</span>
+                }
+              </div>
+            </div>
+          }
+          @case (LegendType.Swatches) {
+            <div class="flex flex-col gap-1 py-1 ps-2">
+              @for (stop of card.legend.stops; track $index) {
+                <div class="flex items-center gap-1.5 text-xs">
+                  <span class="size-3 shrink-0 rounded-[4px]" [style.background]="stop.color"></span>
+                  {{ stop.label }}
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+    }
+  </div>
+}

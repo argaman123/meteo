@@ -129,7 +129,7 @@ src/app/
   app.config.ts       # app wiring (providers)
   app.routes.ts       # URL → page map ('/' = the home page)
   pages/              # one subfolder per page of the site
-    home/             # the front page: the map view (layer-bar, time-bar)
+    home/             # the front page: the map view (layer-bar, time-bar, legend-bar, hover-readout)
   services/           # domain services with no natural feature folder (TimeService)
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
@@ -168,9 +168,11 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
 
 - **Components:** standalone, `OnPush` (default in v22), signals for state, `input()`/`output()`
   functions, native control flow (`@if`/`@for`/`@switch`).
-- **Every component lives in its own folder with three separate files** (`.ts` + `.html` + `.css`)
-  — no inline templates/styles, even for tiny components (lead-locked; overrides the official
-  "prefer inline for small components" guidance).
+- **Every component lives in its own folder with separate `.ts` + `.html` files** — no inline
+  templates/styles, even for tiny components (lead-locked; overrides the official "prefer inline
+  for small components" guidance). A `.css` file exists **only when the component has real styles**
+  (lead, 2026-07-22 — empty css files dropped); a bare `:host { display: block }` is expressed as
+  `host: { class: 'block' }` in the decorator instead.
 - **Interfaces colocate with the area that owns them** (e.g. layer interfaces in `layers/`);
   backend contracts go in `types/`. No global interface dump.
 - **`dev/` is quarantined:** product code (`engine/`, `layers/`, `utils/`, `settings/`, the frame)
@@ -443,3 +445,20 @@ deck geometry is aliased — flagged: extra GPU cost on integrated GPUs, quality
 `MapService.init` awaits `document.fonts.ready` (font atlases/canvas sprites must never bake a
 fallback font). A pressure/isobar layer was built then descoped to keep focus on the look —
 re-adding it is one file + a registry entry (plan.md filler row).
+
+**Legends (2026-07-22):** `Look.legend` (`engine/base/look.ts`, default null) — typed like the
+Control vocabulary: `Legend = GradientLegend | SwatchesLegend`, discriminated by a `LegendType`
+enum so future legend kinds can carry extra fields or custom UI; both current kinds are
+`stops: { color, label }[]`, rendered by a template switch. `Colormap` builds it from
+its palette plus a new `label: (value) => string` constructor param (temperature °C identity, wind
+m/s→kt — every tick flows through the Units module) and it renders as a continuous vertical strip:
+low value at the bottom, stops **evenly spaced** (windy's model, not value-proportional — keeps
+dense low-end palettes readable). `Polygons` receives a hand-authored discrete list (lead-picked
+representative colors: low/mid/high clouds, fog, haze, CB) rendered as swatch rows.
+`pages/home/legend-bar/` is one frosted accordion card at the bottom-end corner: a title row per
+active look carrying a legend (titled by the layer name), one body open at a time: a `linkedSignal`
+**auto-opens the last card in the list** — activating a layer brings its legend up (lead
+2026-07-22); title clicks switch manually and clicking the open title folds all, until the card
+list next changes. Colormap exclusivity means at most one gradient row. Flagged: fog and low cloud share #535353 in the swatch list (the map tells them
+apart by fog's grid hatch), and gradient ticks repeat the unit suffix (verbatim `units.format`
+output).

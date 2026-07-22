@@ -9,8 +9,8 @@ import { formatLocalTime, snapToStep } from '../../../utils/time';
   selector: 'app-time-bar',
   imports: [Dir, HlmButton, HlmSlider],
   templateUrl: './time-bar.html',
-  styleUrl: './time-bar.css',
   host: {
+    class: 'block',
     '(window:keydown.arrowright)': 'onArrow($event, 1)',
     '(window:keydown.arrowleft)': 'onArrow($event, -1)',
     '(window:pointerup)': 'onPointerUp()',

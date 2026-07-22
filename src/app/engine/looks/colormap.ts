@@ -5,12 +5,13 @@ import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ColorScale, ColorStop, colorScale, PaletteStyle } from '../../utils/color-scale';
 import { MercatorBand } from '../../utils/geo';
-import { Look, LookKind } from '../base/look';
+import { GradientLegend, LegendType, Look, LookKind } from '../base/look';
 
 export class Colormap extends Look<Grid> {
   readonly kind = LookKind.Colormap;
   readonly opacity: PercentControl;
   override readonly controls: Control[];
+  override readonly legend: GradientLegend;
   private readonly scale: ColorScale;
   private last?: { grid: Grid; image: ImageData } = undefined;
 
@@ -18,12 +19,17 @@ export class Colormap extends Look<Grid> {
     provider: Provider<Grid>,
     palette: ColorStop[],
     paletteStyle: PaletteStyle,
+    label: (value: number) => string,
     opacity = 0.6,
   ) {
     super(provider);
     this.scale = colorScale(palette, paletteStyle);
     this.opacity = percent(opacity);
     this.controls = [this.opacity];
+    this.legend = {
+      type: LegendType.Gradient,
+      stops: palette.map((stop) => ({ color: stop.color, label: label(stop.value) })),
+    };
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer {

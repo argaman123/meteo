@@ -3,7 +3,6 @@ import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
 @Component({
   selector: 'app-perf-hud',
   templateUrl: './perf-hud.html',
-  styleUrl: './perf-hud.css',
   host: { '(window:keydown)': 'onKey($event)' },
 })
 export class PerfHud {

@@ -31,7 +31,10 @@ export class Wind extends ModelLayer {
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => Grid.combine(grids, Math.hypot)),
-        SPEED_PALETTE, 'smooth', 0.55,),
+        SPEED_PALETTE, 'smooth',
+        (value) => format(value, Quantity.WindSpeed, Unit.MetersPerSecond),
+        0.55,
+      ),
       name: 'צבעים',
       checked: false,
     },

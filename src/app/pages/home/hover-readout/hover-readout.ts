@@ -5,7 +5,6 @@ import { LayersService } from '../../../layers/layers-service';
 @Component({
   selector: 'app-hover-readout',
   templateUrl: './hover-readout.html',
-  styleUrl: './hover-readout.css',
   host: { '(window:mousemove)': 'onMove($event)' },
 })
 export class HoverReadout {

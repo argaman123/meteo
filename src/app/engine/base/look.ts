@@ -12,9 +12,32 @@ export enum LookKind {
   Text,
 }
 
+export enum LegendType {
+  Gradient,
+  Swatches,
+}
+
+export interface LegendStop {
+  color: string;
+  label: string;
+}
+
+export interface GradientLegend {
+  type: LegendType.Gradient;
+  stops: LegendStop[];
+}
+
+export interface SwatchesLegend {
+  type: LegendType.Swatches;
+  stops: LegendStop[];
+}
+
+export type Legend = GradientLegend | SwatchesLegend;
+
 export abstract class Look<I> {
   abstract readonly kind: LookKind;
   readonly controls: Control[] = [];
+  readonly legend: Legend | null = null;
   constructor(readonly provider: Provider<I>) {}
   abstract deckLayer(id: string, input: I): DeckLayer | DeckLayer[];
 }

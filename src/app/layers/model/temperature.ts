@@ -28,7 +28,11 @@ export class Temperature extends ModelLayer {
   override readonly controls: Control[] = [this.model];
   readonly looks = [
     {
-      look: new Colormap(new Provider((grids: Grid[]) => grids[0]), PALETTE, 'smooth'),
+      look: new Colormap(
+        new Provider((grids: Grid[]) => grids[0]),
+        PALETTE, 'smooth',
+        (value) => format(value, Quantity.Temperature, Unit.Celsius),
+      ),
       name: 'צבעים',
       checked: true,
     },

@@ -2,17 +2,17 @@
   <h2 class="px-2 py-1 text-xs font-medium text-muted-foreground">קיצורים</h2>
   @for (shortcut of shortcuts; track shortcut) {
     <button hlmBtn size="sm" class="justify-start"
-            [variant]="service.isShortcutActive(shortcut) ? 'default' : 'ghost'"
-            [attr.aria-pressed]="service.isShortcutActive(shortcut)"
-            (click)="service.toggleShortcut(shortcut)">
+            [variant]="layersService.isShortcutActive(shortcut) ? 'default' : 'ghost'"
+            [attr.aria-pressed]="layersService.isShortcutActive(shortcut)"
+            (click)="layersService.toggleShortcut(shortcut)">
       {{ shortcut.name }}
     </button>
   }
   <h2 class="mt-1 border-t px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">שכבות</h2>
   @for (layer of layers; track layer) {
     <div class="flex gap-1">
-      <button hlmBtn size="sm" class="grow justify-start" [variant]="service.isLayerActive(layer) ? 'default' : 'ghost'"
-              [attr.aria-pressed]="service.isLayerActive(layer)" (click)="service.toggleLayer(layer)">
+      <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'ghost'"
+              [attr.aria-pressed]="layersService.isLayerActive(layer)" (click)="layersService.toggleLayer(layer)">
         {{ layer.name }}
       </button>
       <button hlmBtn size="sm" variant="ghost" class="w-9 px-0" [attr.aria-expanded]="isGroupOpen(layer)"
@@ -20,13 +20,13 @@
         <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="isGroupOpen(layer)"/>
       </button>
     </div>
-    @if (isGroupOpen(layer) || service.isLayerActive(layer)) {
+    @if (isGroupOpen(layer) || layersService.isLayerActive(layer)) {
       @for (control of layer.controls; track control) {
         @if (control.type === ControlType.Options) {
           @switch (control.presentation) {
             @case (OptionsPresentation.Table) {
               <div class="flex flex-wrap gap-1 py-1 ps-1.5"
-                   [class.opacity-50]="!service.isLayerActive(layer)">
+                   [class.opacity-50]="!layersService.isLayerActive(layer)">
                 @for (choice of control.choices; track choice.value) {
                   <button hlmBtn size="sm" class="h-6 grow px-2 text-xs"
                           [variant]="choice.value === control() ? 'default' : 'ghost'"
@@ -39,7 +39,7 @@
             }
             @default {
               <div class="flex items-center gap-2 py-1 ps-1.5 text-sm"
-                   [class.opacity-50]="!service.isLayerActive(layer)">
+                   [class.opacity-50]="!layersService.isLayerActive(layer)">
                 <span class="grow">{{ control.label }}</span>
                 @if (control.presentation === OptionsPresentation.Select) {
                   <button hlmBtn variant="ghost" size="sm" class="h-5 w-9 px-0 text-xs tabular-nums"
@@ -70,11 +70,11 @@
       }
     }
     @for (entry of layer.looks; track entry.look) {
-      @if (isGroupOpen(layer) || service.isLookActive(entry)) {
-        <div class="flex items-center gap-2 py-1 ps-1.5 text-sm" [class.opacity-50]="!service.isLayerActive(layer)">
+      @if (isGroupOpen(layer) || layersService.isLookActive(entry)) {
+        <div class="flex items-center gap-2 py-1 ps-1.5 text-sm" [class.opacity-50]="!layersService.isLayerActive(layer)">
           <label class="flex grow items-center gap-2">
-            <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="service.isLookActive(entry)"
-              [disabled]="!service.isLayerActive(layer)" (checkedChange)="service.toggleLook(entry)"/>
+            <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="layersService.isLookActive(entry)"
+                          [disabled]="!layersService.isLayerActive(layer)" (checkedChange)="layersService.toggleLook(entry)"/>
             {{ entry.name }}
           </label>
           @for (control of entry.look.controls; track control) {

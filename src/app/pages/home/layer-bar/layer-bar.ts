@@ -40,14 +40,14 @@ import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from
     DecimalPipe,
   ],
   viewProviders: [provideIcons({ lucideChevronDown })],
+  host: { class: 'block' },
   templateUrl: './layer-bar.html',
-  styleUrl: './layer-bar.css',
 })
 export class LayerBar {
   protected readonly ControlType = ControlType;
   protected readonly OptionsPresentation = OptionsPresentation;
 
-  protected readonly service = inject(LayersService);
+  protected readonly layersService = inject(LayersService);
   protected readonly layers = Object.values(layers);
   protected readonly shortcuts = Object.values(shortcuts);
   protected readonly openGroups = signal(new Set<Layer<unknown>>());
