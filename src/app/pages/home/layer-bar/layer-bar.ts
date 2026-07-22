@@ -64,6 +64,12 @@ export class LayerBar {
     });
   }
 
+  protected hasChildRows(layer: Layer<unknown>): boolean {
+    if (this.isGroupOpen(layer)) return true;
+    if (!this.layersService.isLayerActive(layer)) return false;
+    return layer.controls.length > 0 || layer.looks.some((entry) => this.layersService.isLookActive(entry));
+  }
+
   protected cycleOptions(control: OptionsControl<unknown>): void {
     const index = control.choices.findIndex((choice) => choice.value === control());
     control.set(control.choices[(index + 1) % control.choices.length].value);
