@@ -7,11 +7,17 @@ export enum ControlType {
   Color = 'color',
 }
 
+export enum OptionsPresentation {
+  Toggle = 'toggle',
+  Select = 'select',
+  Table = 'table',
+}
+
 export type OptionsControl<T> = WritableSignal<T> & {
   type: ControlType.Options;
   choices: { value: T; label: string }[];
   label?: string;
-  list: boolean;
+  presentation: OptionsPresentation;
 };
 export type PercentControl = WritableSignal<number> & { type: ControlType.Percent };
 export interface ColorControl {
@@ -24,13 +30,13 @@ export function options<T>(
   initial: T,
   choices: { value: T; label: string }[],
   label?: string,
-  list = false,
+  presentation = OptionsPresentation.Toggle,
 ): OptionsControl<T> {
   return Object.assign(setting(initial), {
     type: ControlType.Options as const,
     choices,
     label,
-    list,
+    presentation,
   });
 }
 

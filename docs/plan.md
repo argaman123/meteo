@@ -10,7 +10,6 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
-| Controls v2 | Layer system | Low | Batched control changes (lead 2026-07-21): (1) always-visible controls declared at the layer level — first attempt as a per-control `always` flag was built and removed; (2) replace `OptionsControl.list: boolean` with a presentation enum (Select = popup list, Toggle = click-cycle); (3) add a Table presentation — all choice buttons shown inline, wrapping to multiple lines when space runs out, no title |
 | Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
 | More shortcuts (bundles) | Layer system | Med | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles |
 | Satellite imagery look (image projection) | Looks | Med | Project backend PNG imagery onto the map; fixture backend needs a synthetic imagery source. **Gated (lead 2026-07-08):** needs multi-cadence time sync (stacking landed 2026-07-14) |

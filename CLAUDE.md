@@ -296,10 +296,13 @@ and mutates in place as the layer's session memory of its checkbox states (kind 
 צבעים/אנימציה/קונטורים).
 The layer card: foldable groups (explicit chevron, never auto-unfold), checkbox per look, and
 **generic controls** (2026-07-15): looks/layers expose `controls: Control[]` — typed descriptors
-rendered by one template switch — `options(initial, choices, label?, list?)` (a persisted setting-signal
-with metadata attached; `list` renders a popup list instead of click-cycling — the polygons
-גזרה picker uses it; one `cycleOptions` serves particle speed ×0.5/×1/×2 AND temperature's
-מודל picker, which refetches via the signal read inside `fetch`), `percent(initial)` (colormap
+rendered by one template switch — `options(initial, choices, label?, presentation?)` (a persisted setting-signal with metadata
+attached; `OptionsPresentation` = Toggle click-cycle / Select popup list / Table — a titleless
+row of all choice buttons that wraps when space runs out; one `cycleOptions` serves particle
+speed ×0.5/×1/×2, temperature's מודל is a Select, the polygons גזרה is a Table; layer controls
+render **above** the look rows, and layers may set `controlsAlwaysVisible = true` to keep them
+shown while active even with the group folded — polygons and ModelLayer do, since their pickers
+aren't togglable), `percent(initial)` (colormap
 opacity popover; image memoized per grid so drags cost a uniform), and `{ type: 'color' }`
 (contour identity squares). Caution: control metadata attaches via `Object.assign` onto the signal
 function — `name` is read-only on functions, hence the `label` field. Hover readout: one labeled line per active layer.
@@ -392,8 +395,9 @@ The layer file also holds the `EVENT_APPEARANCES` record (each kind implements
 `Sector` enum — center/north so far, hard-coded for now, later possibly a separate backend
 request; the fixture imports the same record and shifts its authored scene into the requested
 sector's square). The
-layer's **sector is a persisted גזרה options control** (popup list; the fetch and provider read
-the signal, so switching refetches and moves the frame — same mechanism as temperature's מודל). Wire contract `PolygonsWrap` (`types/polygons.ts`): `{ startTime, endTime, sector,
+layer's **sector is a persisted options control** (Table presentation, always visible while the
+layer is active; the fetch and provider read the signal, so switching refetches and moves the
+frame — same mechanism as temperature's מודל). Wire contract `PolygonsWrap` (`types/polygons.ts`): `{ startTime, endTime, sector,
 polygons: [{ coordinates: [lat,lon][], forecastEvents }] }` — top-level union cloud/haze/fog,
 precip/CB nested inside cloud.
 `PolygonMap` (`objects/`) converts `[lat,lon]`→`[lon,lat]` on receive and clips rings to the

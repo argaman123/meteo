@@ -5,7 +5,7 @@ import { PolygonMap } from '../../objects/polygon-map';
 import { Provider } from '../../objects/provider';
 import { ForecastEvent, PolygonsWrap, Sector } from '../../types/polygons';
 import { Bounds } from '../../types/wrap';
-import { Control, options } from '../../utils/controls';
+import { Control, options, OptionsPresentation } from '../../utils/controls';
 import { Inputs, Layer } from '../base/layer';
 import { Cloud } from './cloud';
 import { Fog } from './fog';
@@ -28,18 +28,18 @@ export const SECTORS: Record<Sector, Bounds> = {
 };
 
 export class PolygonsLayer extends Layer<PolygonMap> {
-  readonly name = 'פוליגונים';
+  readonly name = 'עננות ותופעות';
   override readonly timeWindow = { backHours: 0, forwardHours: 96, stepHours: 3 };
   readonly sector = options<Sector>(Sector.Center, [
     { value: Sector.Center, label: 'מרכז' },
     { value: Sector.North, label: 'צפון' },
-  ], 'גזרה', true);
+  ], 'גזרה', OptionsPresentation.Table);
   override readonly controls: Control[] = [this.sector];
   private on!: Inputs;
   readonly looks = [
     {
       look: new Polygons(new Provider((map: PolygonMap) => this.createView(map))),
-      name: 'אזורים',
+      name: 'פוליגונים',
       checked: true,
     },
   ];

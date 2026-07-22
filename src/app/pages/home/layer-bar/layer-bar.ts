@@ -20,7 +20,7 @@ import { HlmSlider } from '@spartan-ng/helm/slider';
 import { Layer } from '../../../layers/base/layer';
 import { LayersService } from '../../../layers/layers-service';
 import { layers, shortcuts } from '../../../layers/registry';
-import { ControlType, OptionsControl, PercentControl } from '../../../utils/controls';
+import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from '../../../utils/controls';
 
 @Component({
   selector: 'app-layer-bar',
@@ -45,6 +45,7 @@ import { ControlType, OptionsControl, PercentControl } from '../../../utils/cont
 })
 export class LayerBar {
   protected readonly ControlType = ControlType;
+  protected readonly OptionsPresentation = OptionsPresentation;
 
   protected readonly service = inject(LayersService);
   protected readonly layers = Object.values(layers);
