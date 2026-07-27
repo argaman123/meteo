@@ -1,64 +1,164 @@
 import { Dir } from '@angular/cdk/bidi';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { NgIcon, provideIcons } from '@ng-icons/core';
+import {
+  lucideChevronLeft,
+  lucideChevronRight,
+  lucideChevronsLeft,
+  lucideChevronsRight,
+} from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
-import { HlmSlider } from '@spartan-ng/helm/slider';
 import { TimeService } from '../../../services/time-service';
-import { formatLocalTime, snapToStep } from '../../../utils/time';
+import { clampToRange, formatLocalTime, snapToStep, timelineTicks } from '../../../utils/time';
+
+// TODO: UNVERIFIED CODE BELOW
+interface TimelineView {
+  start: number;
+  end: number;
+}
 
 @Component({
   selector: 'app-time-bar',
-  imports: [Dir, HlmButton, HlmSlider],
+  imports: [Dir, HlmButton, NgIcon],
+  viewProviders: [
+    provideIcons({
+      lucideChevronLeft,
+      lucideChevronRight,
+      lucideChevronsLeft,
+      lucideChevronsRight,
+    }),
+  ],
   templateUrl: './time-bar.html',
   host: {
     class: 'block',
     '(window:keydown.arrowright)': 'onArrow($event, 1)',
     '(window:keydown.arrowleft)': 'onArrow($event, -1)',
-    '(window:pointerup)': 'onPointerUp()',
-    '(window:pointercancel)': 'onPointerUp()',
   },
 })
 export class TimeBar {
   protected time = inject(TimeService);
-  protected scrubValue = signal<number | null>(null);
-  private pointerHeld = false;
+  private view = signal(this.paddedWindow());
+  private scrubTime = signal<number | null>(null);
+  private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimelineView } | null =
+    null;
 
-  protected stepSeconds = computed(() => this.time.stepHours() * 3600);
-  protected sliderValue = computed(() => [this.scrubValue() ?? this.time.currentTime()]);
-  protected currentLabel = computed(() => {
-    const scrub = this.scrubValue();
-    const shown =
-      scrub === null ? this.time.currentTime() : snapToStep(scrub, this.time.stepHours());
-    return formatLocalTime(shown);
+  protected shownTime = computed(() => this.scrubTime() ?? this.time.currentTime());
+  protected timeLabel = computed(() =>
+    formatLocalTime(snapToStep(this.shownTime(), this.time.stepHours())),
+  );
+  protected isLive = computed(() => this.time.live() && this.scrubTime() === null);
+
+  protected ticks = computed(() => {
+    const { start, end } = this.view();
+    return timelineTicks(start, end).map((tick) => ({
+      ...tick,
+      position: this.positionOf(tick.time),
+    }));
   });
-  protected backLabel = computed(() => this.windowHours(this.time.window().start));
-  protected forwardLabel = computed(() => this.windowHours(this.time.window().end));
+
+  protected pastBand = computed(() => this.bandBetween(this.time.window().start, this.time.now()));
+  protected futureBand = computed(() => this.bandBetween(this.time.now(), this.time.window().end));
+
+  protected handlePosition = computed(() => this.positionOf(this.shownTime()));
+  protected nowPosition = computed(() => this.positionOf(this.time.now()));
+  protected isHandleInView = computed(
+    () => this.handlePosition() >= 0 && this.handlePosition() <= 100,
+  );
+  protected labelPosition = computed(() => clampToRange(this.handlePosition(), 7, 93));
+
+  private keepHandleInView = effect(() => {
+    const current = this.time.currentTime();
+    untracked(() => {
+      const { start, end } = this.view();
+      if (current >= start && current <= end) return;
+      const span = (end - start) / 2;
+      this.view.set({ start: current - span, end: current + span });
+    });
+  });
 
   protected onArrow(event: Event, direction: 1 | -1): void {
-    if (event.target instanceof Element && event.target.closest('hlm-slider')) return;
     event.preventDefault();
     if (direction === 1) this.time.stepForward();
     else this.time.stepBack();
   }
 
-  protected onScrub(values: number[]): void {
-    if (this.pointerHeld) this.scrubValue.set(values[0]);
-    else this.time.jumpTo(values[0]);
+  protected onWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const { start, end } = this.view();
+    const span = end - start;
+    if (event.shiftKey) {
+      const shift = span * 0.15 * Math.sign(event.deltaY);
+      this.view.set({ start: start + shift, end: end + shift });
+      return;
+    }
+    const fraction = this.fractionAt(event);
+    const anchor = start + fraction * span;
+    const zoomed = clampToRange(span * Math.exp(event.deltaY * 0.0015), 3 * 3600, 20 * 365 * 24 * 3600);
+    this.view.set({ start: anchor - fraction * zoomed, end: anchor + (1 - fraction) * zoomed });
   }
 
-  protected onPointerDown(): void {
-    this.pointerHeld = true;
+  protected onPointerDown(event: PointerEvent): void {
+    const track = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    const handleX = track.left + (this.handlePosition() / 100) * track.width;
+    const grabbedHandle = Math.abs(event.clientX - handleX) <= 10;
+    this.drag = {
+      mode: grabbedHandle ? 'scrub' : 'pending',
+      startX: event.clientX,
+      view: this.view(),
+    };
+    if (grabbedHandle) this.scrubTime.set(this.timeAt(event));
   }
 
-  protected onPointerUp(): void {
-    this.pointerHeld = false;
-    const scrub = this.scrubValue();
-    if (scrub === null) return;
-    this.scrubValue.set(null);
-    this.time.jumpTo(scrub);
+  protected onPointerMove(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag) return;
+    if (drag.mode === 'pending' && Math.abs(event.clientX - drag.startX) > 4) drag.mode = 'pan';
+    if (drag.mode === 'scrub') {
+      this.scrubTime.set(this.timeAt(event));
+      return;
+    }
+    if (drag.mode === 'pan') {
+      const track = (event.currentTarget as HTMLElement).getBoundingClientRect();
+      const shift = ((drag.startX - event.clientX) / track.width) * (drag.view.end - drag.view.start);
+      this.view.set({ start: drag.view.start + shift, end: drag.view.end + shift });
+    }
   }
 
-  private windowHours(unixSeconds: number): string {
-    const hours = Math.round((unixSeconds - Date.now() / 1000) / 3600);
-    return hours > 0 ? `+${hours}` : String(hours);
+  protected onPointerUp(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag) return;
+    this.drag = null;
+    if (drag.mode === 'pan') return;
+    const target = drag.mode === 'scrub' ? this.scrubTime() : this.timeAt(event);
+    this.scrubTime.set(null);
+    if (target !== null) this.time.jumpTo(target);
+  }
+
+  private bandBetween(from: number, to: number): { left: number; width: number } {
+    const left = this.positionOf(from);
+    return { left, width: this.positionOf(to) - left };
+  }
+
+  private positionOf(unixSeconds: number): number {
+    const { start, end } = this.view();
+    return ((unixSeconds - start) / (end - start)) * 100;
+  }
+
+  private timeAt(event: PointerEvent): number {
+    const { start, end } = this.view();
+    const { start: earliest, end: latest } = this.time.window();
+    return clampToRange(start + this.fractionAt(event) * (end - start), earliest, latest);
+  }
+
+  private fractionAt(event: PointerEvent | WheelEvent): number {
+    const track = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    return clampToRange((event.clientX - track.left) / track.width, 0, 1);
+  }
+
+  private paddedWindow(): TimelineView {
+    const { start, end } = this.time.window();
+    const padding = (end - start) * 0.1;
+    return { start: start - padding, end: end + padding };
   }
 }
