@@ -107,6 +107,9 @@ export class MapService {
       if ('url' in source && source.url?.startsWith('pmtiles:///')) {
         source.url = `pmtiles://${location.origin}/${source.url.slice('pmtiles:///'.length)}`;
       }
+      if (source.type === 'geojson' && typeof source.data === 'string' && source.data.startsWith('/')) {
+        source.data = location.origin + source.data;
+      }
     }
     return style;
   }

@@ -10,6 +10,16 @@
       "type": "raster",
       "url": "pmtiles:///basemaps/terrain.pmtiles",
       "tileSize": 256
+    },
+    "israel": {
+      "type": "geojson",
+      "data": "/basemaps/israel.geojson"
+    },
+    "protomaps_coarse": {
+      "type": "vector",
+      "attribution": "<a href=\"https://github.com/protomaps/basemaps\">Protomaps</a> © <a href=\"https://openstreetmap.org\">OpenStreetMap</a>",
+      "url": "pmtiles:///basemaps/planet.pmtiles",
+      "maxzoom": 5
     }
   },
   "layers": [
@@ -30,42 +40,6 @@
       "source-layer": "water",
       "paint": {
         "fill-color": "#c3d5da"
-      }
-    },
-    {
-      "id": "boundaries_country",
-      "type": "line",
-      "source": "protomaps",
-      "source-layer": "boundaries",
-      "filter": [
-        "<=",
-        "kind_detail",
-        2
-      ],
-      "paint": {
-        "line-color": "#adadad",
-        "line-width": 0.7,
-        "line-dasharray": [
-          "step",
-          [
-            "zoom"
-          ],
-          [
-            "literal",
-            [
-              2,
-              0
-            ]
-          ],
-          4,
-          [
-            "literal",
-            [
-              2,
-              1
-            ]
-          ]
-        ]
       }
     },
     {
@@ -3384,6 +3358,53 @@
         "text-color": "#27303f",
         "text-halo-color": "rgba(255,255,255,0.95)",
         "text-halo-width": 2
+      }
+    },
+    {
+      "id": "coastline",
+      "type": "line",
+      "source": "protomaps_coarse",
+      "source-layer": "water",
+      "filter": [
+        "==",
+        "kind",
+        "ocean"
+      ],
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
+      }
+    },
+    {
+      "id": "israel_outline",
+      "type": "line",
+      "source": "israel",
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
+      }
+    },
+    {
+      "id": "boundaries_country",
+      "type": "line",
+      "source": "protomaps_coarse",
+      "source-layer": "boundaries",
+      "filter": [
+        "all",
+        [
+          "<=",
+          "kind_detail",
+          2
+        ],
+        [
+          "!=",
+          "disputed",
+          true
+        ]
+      ],
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
       }
     }
   ],

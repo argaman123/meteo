@@ -517,6 +517,26 @@ chip line, the menu row, and the picker all fall out of existing machinery; valu
 `min-w-9` so long labels don't overflow. Startup shows it alongside the polygons layer (lead
 2026-07-23). Typed-coordinate parsing waits for its first consumer (search/fly-to).
 
+**Borders above weather (2026-07-28, lead-verified):** the basemap's country borders, a new
+`coastline` layer (ocean-kind water outlines), and an `israel_outline` geojson layer draw **above**
+colormap/image looks in **bold black** (width 2): `LookKind.Borders` is the seam — `Overlay.apply`
+clones looks ranked below Borders with `beforeId: 'coastline'` (deck 9 layer-groups; the enum
+insert shifted numeric values only — settings keys use enum names). The three style JSONs carry the
+black block at the top of the stack; districts (`boundaries`) stay untouched mid-stack, labels stay
+below weather (lead: only borders above). Borders + coastline render from a **`protomaps_coarse`
+source clone with `maxzoom: 5`** — one frozen geometry at every zoom (kills the Suez-canal pop-in
+and all per-zoom line changes; lead: no inconsistencies, low resolution is fine).
+`boundaries_country` filters `disputed: true`; **`public/basemaps/israel.geojson`** (loaded via a
+geojson-source URL rewrite in `loadBasemapStyle`) supplies the political envelope instead:
+Gaza–Israel, Israel–Lebanon, trimmed Lebanon–Syria (z7 tile extractions), and the **Golan +
+2024-25 control-zone arc pixel-traced from the lead's reference image**
+(`docs/israel-control-zone-reference.png` → blue-mask contour trace → RDP → georeferenced by
+auto-calibrating on the Kinneret's pixel bbox) — WB/Golan/the July-2026 IDF-held zone read as
+inside Israel, inner seams (Green Line, 1974 lines) undrawn; the WB valley + Yarmouk stay
+tile-drawn (z5-normal), vendored duplicates removed after they braided. Flags: black borders
+near-invisible on the dark basemap when no colormap is shown (per-style color is a one-line
+change); z5-tile↔vendored junctions can sit 1-2 px apart at sector zooms.
+
 **Legends (2026-07-22):** `Look.legend` (`engine/base/look.ts`, default null) — typed like the
 Control vocabulary: `Legend = GradientLegend | SwatchesLegend`, discriminated by a `LegendType`
 enum so future legend kinds can carry extra fields or custom UI; both current kinds are

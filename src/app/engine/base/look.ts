@@ -5,6 +5,7 @@ import { Control } from '../../utils/controls';
 export enum LookKind {
   Image,
   Colormap,
+  Borders,
   Contours,
   Particles,
   Polygons,

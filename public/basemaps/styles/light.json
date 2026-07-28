@@ -5,6 +5,16 @@
       "type": "vector",
       "attribution": "<a href=\"https://github.com/protomaps/basemaps\">Protomaps</a> © <a href=\"https://openstreetmap.org\">OpenStreetMap</a>",
       "url": "pmtiles:///basemaps/planet.pmtiles"
+    },
+    "israel": {
+      "type": "geojson",
+      "data": "/basemaps/israel.geojson"
+    },
+    "protomaps_coarse": {
+      "type": "vector",
+      "attribution": "<a href=\"https://github.com/protomaps/basemaps\">Protomaps</a> © <a href=\"https://openstreetmap.org\">OpenStreetMap</a>",
+      "url": "pmtiles:///basemaps/planet.pmtiles",
+      "maxzoom": 5
     }
   },
   "layers": [
@@ -1692,42 +1702,6 @@
           0.15,
           18,
           9
-        ]
-      }
-    },
-    {
-      "id": "boundaries_country",
-      "type": "line",
-      "source": "protomaps",
-      "source-layer": "boundaries",
-      "filter": [
-        "<=",
-        "kind_detail",
-        2
-      ],
-      "paint": {
-        "line-color": "#adadad",
-        "line-width": 0.7,
-        "line-dasharray": [
-          "step",
-          [
-            "zoom"
-          ],
-          [
-            "literal",
-            [
-              2,
-              0
-            ]
-          ],
-          4,
-          [
-            "literal",
-            [
-              2,
-              1
-            ]
-          ]
         ]
       }
     },
@@ -12416,6 +12390,53 @@
         "text-color": "#a3a3a3",
         "text-halo-color": "#e2dfda",
         "text-halo-width": 1
+      }
+    },
+    {
+      "id": "coastline",
+      "type": "line",
+      "source": "protomaps_coarse",
+      "source-layer": "water",
+      "filter": [
+        "==",
+        "kind",
+        "ocean"
+      ],
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
+      }
+    },
+    {
+      "id": "israel_outline",
+      "type": "line",
+      "source": "israel",
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
+      }
+    },
+    {
+      "id": "boundaries_country",
+      "type": "line",
+      "source": "protomaps_coarse",
+      "source-layer": "boundaries",
+      "filter": [
+        "all",
+        [
+          "<=",
+          "kind_detail",
+          2
+        ],
+        [
+          "!=",
+          "disputed",
+          true
+        ]
+      ],
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
       }
     }
   ],

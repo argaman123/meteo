@@ -2,7 +2,7 @@ import { Service } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import type { Layer as DeckLayer } from '@deck.gl/core';
-import { Look } from './base/look';
+import { Look, LookKind } from './base/look';
 
 @Service()
 export class Overlay {
@@ -44,7 +44,15 @@ export class Overlay {
   private apply(): void {
     const ordered = [...this.layers.entries()]
       .sort(([a], [b]) => a.kind - b.kind)
-      .flatMap(([, layer]) => layer);
+      .flatMap(([look, layer]) =>
+        look.kind < LookKind.Borders ? this.slotUnderBorders([layer].flat()) : layer,
+      );
     this.overlay?.setProps({ layers: ordered });
+  }
+
+  private slotUnderBorders(layers: DeckLayer[]): DeckLayer[] {
+    return layers.map((layer) =>
+      (layer as DeckLayer<{ beforeId?: string }>).clone({ beforeId: 'coastline' }),
+    );
   }
 }
