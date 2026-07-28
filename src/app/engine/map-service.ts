@@ -32,8 +32,10 @@ export class MapService {
     this.map = new maplibregl.Map({
       container,
       style,
-      center: [35, 31],
-      zoom: 4,
+      bounds: [
+        [34.2, 28.7],
+        [35.9, 34.1],
+      ],
       minZoom: Math.max(0, Math.log2(container.clientWidth / 512)),
       attributionControl: false,
       canvasContextAttributes: { antialias: true },
