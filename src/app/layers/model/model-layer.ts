@@ -1,14 +1,16 @@
 import { HttpResourceRequest, httpResource } from '@angular/common/http';
-import { Injector, Signal, computed, signal } from '@angular/core';
+import { Injector, Signal, computed } from '@angular/core';
 import { Grid } from '../../objects/grid';
 import { Parameter } from '../../types/parameter';
-import { Wrap } from '../../types/wrap';
+import { Bounds, Wrap } from '../../types/wrap';
+import { containsBounds } from '../../utils/geo';
 import { Inputs, Layer } from '../base/layer';
+
+const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
 
 export abstract class ModelLayer extends Layer<Grid[]> {
   abstract readonly parameters: Parameter[];
   override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 3 }
-  readonly model = signal('wide');
 
   fetch(on: Inputs, injector: Injector): Signal<Grid[] | undefined> {
     const grids = this.parameters.map(
@@ -32,7 +34,7 @@ export abstract class ModelLayer extends Layer<Grid[]> {
       url: '/api/grids',
       params: {
         parameter,
-        model: this.model(),
+        model: containsBounds(LOCAL_COVERAGE, bbox) ? 'local' : 'wide',
         time: String(on.time()),
         bbox: bbox.join(','),
       },

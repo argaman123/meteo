@@ -266,9 +266,13 @@ interactively with the lead, committed on his approval.
 overlay renders our looks broken on maplibre's globe; details on the plan.md row), self-hosted
 basemaps, dev fixture backend, and the layer/look data pipeline —
 layer kinds subclass the generic `Layer<D>` (name, looks, timeWindow, `hover(data)`, `fetch()`;
-2026-07-15 split): `ModelLayer` (D = `Grid[]`) carries `parameters`/`models` and fetches grids per
-parameter (bbox-windowed); future kinds (satellite/radar/observations) implement their own
-`fetch`/data. A `Provider<I>` shapes each layer's data into each look's input — the
+2026-07-15 split): `ModelLayer` (D = `Grid[]`) carries `parameters` and fetches grids per
+parameter (bbox-windowed); the **model resolves from the view bbox** — local when the bbox fits
+inside `LOCAL_COVERAGE` (`containsBounds`, `utils/geo.ts`), wide otherwise (lead 2026-07-27: auto
+only, temperature's manual מודל picker removed; a zoom threshold was tried first and rejected the
+same day — zoom is blind to coverage, whereas a bbox that fits the local box *is* the zoomed-in
+signal; coverage is fixture values for now, real bounds from the lead later); future kinds
+(satellite/radar/observations) implement their own `fetch`/data. A `Provider<I>` shapes each layer's data into each look's input — the
 data side is untyped in the class; each definition annotates its lambda (`(grids: Grid[]) => …`),
 so looks and providers stay source-blind; `Look<I>.deckLayer()` produces the rendered layer; keyed
 registry + `LayersService`. Layers: temperature colormap; wind = speed colormap + canvas-trail
@@ -354,9 +358,8 @@ draws no stub), checkbox per look, and
 rendered by one template switch — `options(initial, choices, label?, presentation?)` (a persisted setting-signal with metadata
 attached; `OptionsPresentation` = Toggle click-cycle / Select popup list / Table — a titleless
 row of all choice buttons that wraps when space runs out; one `cycleOptions` serves particle
-speed ×0.5/×1/×2, temperature's מודל is a Select, the polygons גזרה is a Table; layer controls
-render **above** the look rows, and layers may set `controlsAlwaysVisible = true` to keep them
-shown while active even with the group folded — polygons and ModelLayer do, since their pickers
+speed ×0.5/×1/×2, the coordinates פורמט is a Select, the polygons גזרה is a Table; layer controls
+render **above** the look rows and stay visible while the layer is active, since pickers
 aren't togglable), `percent(initial)` (colormap
 opacity popover; image memoized per grid so drags cost a uniform), and `{ type: 'color' }`
 (contour identity squares). Caution: control metadata attaches via `Object.assign` onto the signal
@@ -455,7 +458,7 @@ request; the fixture imports the same record and shifts its authored scene into 
 sector's square). The
 layer's **sector is a persisted options control** (Table presentation, always visible while the
 layer is active; the fetch and provider read the signal, so switching refetches and moves the
-frame — same mechanism as temperature's מודל). Wire contract `PolygonsWrap` (`types/polygons.ts`): `{ startTime, endTime, sector,
+frame). Wire contract `PolygonsWrap` (`types/polygons.ts`): `{ startTime, endTime, sector,
 polygons: [{ coordinates: [lat,lon][], forecastEvents }] }` — top-level union cloud/haze/fog,
 precip/CB nested inside cloud.
 `PolygonMap` (`objects/`) converts `[lat,lon]`→`[lon,lat]` on receive and clips rings to the

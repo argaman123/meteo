@@ -28,6 +28,11 @@ export function contains(bounds: Bounds, lon: number, lat: number): boolean {
   return lon >= west && lon <= east && lat >= south && lat <= north;
 }
 
+export function containsBounds(outer: Bounds, inner: Bounds): boolean {
+  const [west, south, east, north] = inner;
+  return contains(outer, west, south) && contains(outer, east, north);
+}
+
 function mercatorY(lat: number): number {
   return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
 }

@@ -5,7 +5,6 @@ import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
-import { Control, options, OptionsPresentation } from '../../utils/controls';
 import { ModelLayer } from './model-layer';
 
 const PALETTE: ColorStop[] = [
@@ -21,11 +20,6 @@ const PALETTE: ColorStop[] = [
 export class Temperature extends ModelLayer {
   readonly name = 'טמפרטורה';
   readonly parameters = [Parameter.Temperature];
-  override readonly model = options('wide', [
-    { value: 'wide', label: 'רחב' },
-    { value: 'local', label: 'מקומי' },
-  ], 'מודל', OptionsPresentation.Select);
-  override readonly controls: Control[] = [this.model];
   readonly looks = [
     {
       look: new Colormap(
