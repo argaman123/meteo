@@ -1,64 +1,65 @@
-<div class="flex items-center gap-2 border-t bg-card/75 pt-1 backdrop-blur-md">
-  <div dir="ltr" class="grid shrink-0 grid-cols-4 gap-x-1 gap-y-0.5 px-2">
-    <button hlmBtn variant="ghost" size="sm" class="h-4 px-1.5 text-[10px]" aria-label="אחורה 3 שעות"
+<div class="flex items-center gap-2 border-t bg-card/75 pt-1.5 backdrop-blur-md">
+  <div dir="ltr" class="grid shrink-0 grid-cols-4 gap-x-1 gap-y-1 px-2">
+    <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="אחורה 3 שעות"
             (click)="time.jumpBy(-3)">
       <ng-icon name="lucideChevronsLeft"/>3h
     </button>
-    <button hlmBtn variant="ghost" size="sm" class="h-4 px-1" aria-label="מפה קודמת"
+    <button hlmBtn variant="ghost" size="sm" class="h-6 px-1" aria-label="מפה קודמת"
             (click)="time.stepBack()">
       <ng-icon name="lucideChevronLeft"/>
     </button>
-    <button hlmBtn variant="ghost" size="sm" class="h-4 px-1" aria-label="מפה הבאה"
+    <button hlmBtn variant="ghost" size="sm" class="h-6 px-1" aria-label="מפה הבאה"
             (click)="time.stepForward()">
       <ng-icon name="lucideChevronRight"/>
     </button>
-    <button hlmBtn variant="ghost" size="sm" class="h-4 px-1.5 text-[10px]" aria-label="קדימה 3 שעות"
+    <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="קדימה 3 שעות"
             (click)="time.jumpBy(3)">
       3h<ng-icon name="lucideChevronsRight"/>
     </button>
-    <button hlmBtn variant="ghost" size="sm" class="col-span-2 h-4 px-1.5 text-[10px]" aria-label="אחורה 24 שעות"
+    <button hlmBtn variant="ghost" size="sm" class="col-span-2 h-6 px-1.5 text-xs" aria-label="אחורה 24 שעות"
             (click)="time.jumpBy(-24)">
       <ng-icon name="lucideChevronsLeft"/>24h
     </button>
-    <button hlmBtn variant="ghost" size="sm" class="col-span-2 h-4 px-1.5 text-[10px]" aria-label="קדימה 24 שעות"
+    <button hlmBtn variant="ghost" size="sm" class="col-span-2 h-6 px-1.5 text-xs" aria-label="קדימה 24 שעות"
             (click)="time.jumpBy(24)">
       24h<ng-icon name="lucideChevronsRight"/>
     </button>
   </div>
   <div class="relative flex-1">
-    <div dir="ltr" class="relative h-9 cursor-grab overflow-hidden select-none active:cursor-grabbing"
+    <div dir="ltr" class="relative h-12 cursor-grab overflow-hidden select-none active:cursor-grabbing"
          (wheel)="onWheel($event)" (pointerdown)="onPointerDown($event)"
          (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)"
          (pointercancel)="onPointerUp($event)">
-      <div class="absolute top-4 bottom-0 bg-orange-500/35" [style.left.%]="pastBand().left"
+      <div class="absolute top-5 bottom-0 bg-orange-500/35" [style.left.%]="pastBand().left"
            [style.width.%]="pastBand().width"></div>
-      <div class="absolute top-4 bottom-0 bg-sky-500/35" [style.left.%]="futureBand().left"
+      <div class="absolute top-5 bottom-0 bg-sky-500/35" [style.left.%]="futureBand().left"
            [style.width.%]="futureBand().width"></div>
-      <div class="absolute inset-x-0 top-4 border-t"></div>
+      <div class="absolute inset-x-0 top-5 border-t"></div>
       @for (tick of ticks(); track tick.time) {
         <div class="absolute top-px flex -translate-x-1/2 flex-col items-center gap-0.5"
              [style.left.%]="tick.position">
-          <span class="text-[11px] leading-[13px] whitespace-nowrap tabular-nums"
+          <span class="text-xs leading-4 whitespace-nowrap tabular-nums"
                 [class]="tick.major ? 'font-bold text-foreground' : 'font-medium text-muted-foreground'">
             {{ tick.label }}
           </span>
-          <span class="w-px" [class]="tick.major ? 'h-4 bg-foreground/60' : 'h-2 bg-border'"></span>
+          <span class="w-px" [class]="tick.major ? 'h-5 bg-foreground/60' : 'h-3 bg-border'"></span>
         </div>
       }
       <div class="absolute inset-y-0 w-px bg-emerald-400/70" [style.left.%]="nowPosition()"></div>
       <div class="absolute inset-y-0 w-0.5 -translate-x-1/2 cursor-ew-resize bg-primary"
            [style.left.%]="handlePosition()">
-        <span class="absolute top-4 left-1/2 size-3 -translate-1/2 rounded-full border-2 border-background bg-primary"></span>
+        <span class="absolute top-5 left-1/2 size-4 -translate-1/2 rounded-full border-2 border-background bg-primary"></span>
       </div>
     </div>
     @if (isHandleInView()) {
-      <div class="absolute -top-10 -translate-x-1/2" [style.left.%]="labelPosition()">
+      <div class="absolute -top-11 -translate-x-1/2" [style.left.%]="labelPosition()">
         <button hlmBtn size="sm" dir="rtl" aria-label="חזרה לעכשיו"
-                class="h-7 text-sm font-medium tabular-nums shadow-lg"
+                class="h-8 text-sm font-medium tabular-nums shadow-lg"
                 [class.animate-pulse]="layers.isLoading()"
                 [variant]="isLive() ? 'default' : 'secondary'" (click)="time.jumpToNow()">
           {{ timeLabel() }}
         </button>
+        <span class="absolute top-full left-1/2 h-3 w-0.5 -translate-x-1/2 bg-primary"></span>
       </div>
     }
   </div>
