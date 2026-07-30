@@ -18,7 +18,7 @@ export class HoverReadout {
     const result: { name: string; value: string }[] = [];
     for (const [layer, dataSignal] of this.layerService.activeLayers()) {
       const data = dataSignal();
-      if (data !== undefined) {
+      if (data !== undefined && data !== null) {
         result.push({ name: layer.name, value: layer.hover(data, cursor[0], cursor[1]) });
       }
     }

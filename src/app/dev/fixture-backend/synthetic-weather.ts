@@ -86,7 +86,7 @@ export class SyntheticWeather {
       start_y: north,
       wrap_info: {
         base_time: runTimeUnixSeconds,
-        forecast_time: hours,
+        forecast_time: runTimeUnixSeconds + hours * 3600,
         model: modelName,
         param: parameter,
         pressure: parameter === 'hgt' ? '1000' : null,

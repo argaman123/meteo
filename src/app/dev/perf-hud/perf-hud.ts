@@ -1,4 +1,8 @@
-import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { LayersService } from '../../layers/layers-service';
+import { formatLocalTime } from '../../utils/time';
+
+const hourFormat = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
 
 @Component({
   selector: 'app-perf-hud',
@@ -6,10 +10,32 @@ import { Component, DestroyRef, effect, inject, signal } from '@angular/core';
   host: { '(window:keydown)': 'onKey($event)' },
 })
 export class PerfHud {
-  protected visible = signal(new URLSearchParams(location.search).get('hud') === '1');
+  private layersService = inject(LayersService);
+
+  protected visible = signal(true);
   protected fps = signal(0);
   protected heapMb = signal<number | null>(null);
   private frameHandle = 0;
+
+  protected layerTimes = computed(() => {
+    const lines: { name: string; time: string; relevant: boolean }[] = [];
+    for (const [layer, dataSignal] of this.layersService.activeLayers()) {
+      if (!layer.timeWindow) continue;
+      const data = dataSignal();
+      const relevant = data !== null;
+      const range = data === undefined || data === null ? null : layer.relevanceOf(data);
+      lines.push({
+        name: layer.name,
+        time: !relevant
+          ? '—'
+          : range === null || range === true
+            ? '…'
+            : `${formatLocalTime(range.start)} – ${hourFormat.format(range.end * 1000)}`,
+        relevant,
+      });
+    }
+    return lines;
+  });
 
   constructor() {
     effect(() => {

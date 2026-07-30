@@ -5,7 +5,11 @@ import { Bounds } from '../types/wrap';
 import { ForecastEvent, ForecastPolygon, PolygonsWrap } from '../types/polygons';
 
 export class PolygonMap {
-  private constructor(readonly areas: ForecastPolygon[]) {}
+  private constructor(
+    readonly areas: ForecastPolygon[],
+    readonly startTime: number,
+    readonly endTime: number,
+  ) {}
 
   static fromWrap(wrap: PolygonsWrap, bounds: Bounds): PolygonMap {
     const areas: ForecastPolygon[] = [];
@@ -15,7 +19,7 @@ export class PolygonMap {
         areas.push({ coordinates: clipped, forecastEvents: shape.forecastEvents });
       }
     }
-    return new PolygonMap(areas);
+    return new PolygonMap(areas, wrap.startTime, wrap.endTime);
   }
 
   eventsAt(lon: number, lat: number): ForecastEvent[] {

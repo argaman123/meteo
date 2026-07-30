@@ -19,6 +19,11 @@ const FORWARD_HOURS = 96;
 const RUN_TIME_UNIX_SECONDS =
   Math.floor(Date.now() / 1000 / (STEP_HOURS * 3600)) * (STEP_HOURS * 3600);
 
+const POLYGON_HOURS: Record<Sector, number[]> = {
+  [Sector.Center]: Array.from({ length: 33 }, (_, index) => index * 3),
+  [Sector.North]: [0, 3, 12, 21, 45],
+};
+
 let weatherPromise: Promise<SyntheticWeather> | null = null;
 
 export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
@@ -28,11 +33,25 @@ export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
 
 async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEvent<unknown>> {
   await new Promise((resolve) => setTimeout(resolve, ARTIFICIAL_LATENCY_MS));
+  if (request.url === '/api/hours') {
+    return new HttpResponse({ status: 200, body: hoursBetween(request, -BACK_HOURS, FORWARD_HOURS) });
+  }
+  if (request.url === '/api/polygons/hours') {
+    const sector = (request.params.get('sector') ?? '') as Sector;
+    const start = Number(request.params.get('start'));
+    const end = Number(request.params.get('end'));
+    const times = (POLYGON_HOURS[sector] ?? [])
+      .map((hours) => RUN_TIME_UNIX_SECONDS + hours * 3600)
+      .filter((time) => time >= start && time <= end);
+    return new HttpResponse({ status: 200, body: times });
+  }
   if (request.url === '/api/polygons') {
     const sector = (request.params.get('sector') ?? '') as Sector;
     const time = Number(request.params.get('time'));
-    const hours = Math.round((time - RUN_TIME_UNIX_SECONDS) / 3600 / STEP_HOURS) * STEP_HOURS;
-    const wrap = syntheticPolygons(sector, hours, RUN_TIME_UNIX_SECONDS);
+    const hours = (time - RUN_TIME_UNIX_SECONDS) / 3600;
+    const wrap = (POLYGON_HOURS[sector] ?? []).includes(hours)
+      ? syntheticPolygons(sector, hours, RUN_TIME_UNIX_SECONDS)
+      : null;
     if (!wrap) {
       throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'No map' });
     }
@@ -53,8 +72,19 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
   return new HttpResponse({ status: 200, body: wrap });
 }
 
+function hoursBetween(request: HttpRequest<unknown>, firstHours: number, lastHours: number): number[] {
+  const start = Number(request.params.get('start'));
+  const end = Number(request.params.get('end'));
+  const times: number[] = [];
+  for (let hours = firstHours; hours <= lastHours; hours += STEP_HOURS) {
+    const time = RUN_TIME_UNIX_SECONDS + hours * 3600;
+    if (time >= start && time <= end) times.push(time);
+  }
+  return times;
+}
+
 function frameHours(unixSeconds: number): number {
-  const hours = Math.round((unixSeconds - RUN_TIME_UNIX_SECONDS) / 3600 / STEP_HOURS) * STEP_HOURS;
+  const hours = (unixSeconds - RUN_TIME_UNIX_SECONDS) / 3600;
   return Math.min(FORWARD_HOURS, Math.max(-BACK_HOURS, hours));
 }
 

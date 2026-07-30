@@ -1,11 +1,19 @@
 @if (visible()) {
   <div
-    dir="ltr"
     class="pointer-events-none fixed bottom-24 start-3 z-50 rounded-md border bg-card/75 px-2 py-1 text-xs tabular-nums backdrop-blur-md"
   >
-    {{ fps() }} fps
-    @if (heapMb() !== null) {
-      · {{ heapMb() }} MB
+    <div dir="ltr" class="text-end">
+      {{ fps() }} fps
+      @if (heapMb() !== null) {
+        · {{ heapMb() }} MB
+      }
+    </div>
+    @if (layerTimes().length) {
+      <div class="mt-1 flex flex-col gap-0.5 border-t pt-1">
+        @for (line of layerTimes(); track line.name) {
+          <div [class.opacity-50]="!line.relevant">{{ line.name }} · {{ line.time }}</div>
+        }
+      </div>
     }
   </div>
 }

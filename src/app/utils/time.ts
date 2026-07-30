@@ -25,6 +25,18 @@ export function formatLocalTime(unixSeconds: number): string {
   return localTimeFormat.format(new Date(unixSeconds * 1000));
 }
 
+export function findNearestTime(
+  times: number[],
+  target: number,
+  relevanceHours: number,
+): number | null {
+  const relevant = times.filter((time) => Math.abs(time - target) <= relevanceHours * 3600);
+  if (!relevant.length) return null;
+  return relevant.reduce((nearest, time) =>
+    Math.abs(time - target) < Math.abs(nearest - target) ? time : nearest,
+  );
+}
+
 // TODO: UNVERIFIED CODE BELOW
 export interface TimelineTick {
   time: number;

@@ -8,8 +8,9 @@ import {
   lucideChevronsRight,
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { LayersService } from '../../../layers/layers-service';
 import { TimeService } from '../../../services/time-service';
-import { clampToRange, formatLocalTime, snapToStep, timelineTicks } from '../../../utils/time';
+import { clampToRange, formatLocalTime, timelineTicks } from '../../../utils/time';
 
 // TODO: UNVERIFIED CODE BELOW
 interface TimelineView {
@@ -37,15 +38,14 @@ interface TimelineView {
 })
 export class TimeBar {
   protected time = inject(TimeService);
+  protected layers = inject(LayersService);
   private view = signal(this.paddedWindow());
   private scrubTime = signal<number | null>(null);
   private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimelineView } | null =
     null;
 
   protected shownTime = computed(() => this.scrubTime() ?? this.time.currentTime());
-  protected timeLabel = computed(() =>
-    formatLocalTime(snapToStep(this.shownTime(), this.time.stepHours())),
-  );
+  protected timeLabel = computed(() => formatLocalTime(this.time.snapJump(this.shownTime())));
   protected isLive = computed(() => this.time.live() && this.scrubTime() === null);
 
   protected ticks = computed(() => {

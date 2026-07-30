@@ -55,6 +55,7 @@
       <div class="absolute -top-10 -translate-x-1/2" [style.left.%]="labelPosition()">
         <button hlmBtn size="sm" dir="rtl" aria-label="חזרה לעכשיו"
                 class="h-7 text-sm font-medium tabular-nums shadow-lg"
+                [class.animate-pulse]="layers.isLoading()"
                 [variant]="isLive() ? 'default' : 'secondary'" (click)="time.jumpToNow()">
           {{ timeLabel() }}
         </button>

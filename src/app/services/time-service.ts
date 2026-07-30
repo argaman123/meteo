@@ -1,10 +1,14 @@
-import { DestroyRef, Service, computed, inject, signal } from '@angular/core';
-import { clampToRange, snapToStep } from '../utils/time';
+import { DestroyRef, Service, computed, inject, linkedSignal, signal } from '@angular/core';
 
 export interface TimeWindow {
   backHours: number;
   forwardHours: number;
-  stepHours: number;
+  stepHours?: number;
+}
+
+export interface TimeRange {
+  start: number;
+  end: number;
 }
 
 // TODO: UNVERIFIED CODE BELOW
@@ -13,32 +17,53 @@ export class TimeService {
   readonly now = signal(Math.floor(Date.now() / 1000));
   readonly live = signal(true);
   readonly windows = signal<TimeWindow[]>([]);
+  readonly forcedTimes = signal<number[]>([]);
 
-  readonly stepHours = computed(() => {
-    const steps = this.windows().map((window) => window.stepHours);
-    return steps.length ? Math.min(...steps) : 3;
+  readonly window = computed(
+    () => {
+      const windows = this.windows();
+      const backHours = windows.length ? Math.max(...windows.map((w) => w.backHours)) : 24;
+      const forwardHours = windows.length ? Math.max(...windows.map((w) => w.forwardHours)) : 96;
+      const anchor = Math.round(this.now() / 300) * 300;
+      return {
+        start: anchor - backHours * 3600,
+        end: anchor + forwardHours * 3600,
+      };
+    },
+    { equal: (a, b) => a.start === b.start && a.end === b.end },
+  );
+
+  private timeStops = computed(() => {
+    const { start, end } = this.window();
+    const forced = this.forcedTimes();
+    if (forced.length) return [...forced].sort((a, b) => a - b);
+    const points = new Set<number>();
+    const steps = this.windows()
+      .map((window) => window.stepHours)
+      .filter((stepHours) => stepHours !== undefined);
+    for (const stepHours of steps.length ? steps : [3]) {
+      const stepSeconds = stepHours * 3600;
+      for (let time = Math.ceil(start / stepSeconds) * stepSeconds; time <= end; time += stepSeconds) {
+        points.add(time);
+      }
+    }
+    return [...points].sort((a, b) => a - b);
   });
 
-  readonly window = computed(() => {
-    const windows = this.windows();
-    const backHours = windows.length ? Math.max(...windows.map((w) => w.backHours)) : 24;
-    const forwardHours = windows.length ? Math.max(...windows.map((w) => w.forwardHours)) : 96;
-    return {
-      start: this.now() - backHours * 3600,
-      end: this.now() + forwardHours * 3600,
-    };
+  readonly currentTime = linkedSignal<{ live: boolean; now: number; timeStops: number[] }, number>({
+    source: () => ({ live: this.live(), now: this.now(), timeStops: this.timeStops() }),
+    computation: (source, previous) =>
+      source.live || previous === undefined ? this.snapJump(source.now) : previous.value,
   });
-
-  readonly currentTime = signal(snapToStep(Math.floor(Date.now() / 1000), 3));
 
   constructor() {
-    const handle = setInterval(() => this.followClock(), 60000);
+    const handle = setInterval(() => this.now.set(Math.floor(Date.now() / 1000)), 60000);
     inject(DestroyRef).onDestroy(() => clearInterval(handle));
   }
 
   jumpTo(unixSeconds: number): void {
     this.live.set(false);
-    this.currentTime.set(this.snapInsideWindow(unixSeconds));
+    this.currentTime.set(this.snapJump(unixSeconds));
   }
 
   jumpBy(hours: number): void {
@@ -46,29 +71,26 @@ export class TimeService {
   }
 
   stepForward(): void {
-    this.jumpBy(this.stepHours());
+    const next = this.timeStops().find((point) => point > this.currentTime());
+    if (next !== undefined) this.jumpTo(next);
   }
 
   stepBack(): void {
-    this.jumpBy(-this.stepHours());
+    const previous = this.timeStops()
+      .filter((point) => point < this.currentTime())
+      .at(-1);
+    if (previous !== undefined) this.jumpTo(previous);
   }
 
   jumpToNow(): void {
-    this.currentTime.set(this.snapInsideWindow(this.now()));
     this.live.set(true);
   }
 
-  private followClock(): void {
-    this.now.set(Math.floor(Date.now() / 1000));
-    if (this.live()) this.currentTime.set(this.snapInsideWindow(this.now()));
-  }
-
-  private snapInsideWindow(unixSeconds: number): number {
-    const { start, end } = this.window();
-    const stepSeconds = this.stepHours() * 3600;
-    const snapped = snapToStep(clampToRange(unixSeconds, start, end), this.stepHours());
-    const earliest = Math.ceil(start / stepSeconds) * stepSeconds;
-    const latest = Math.floor(end / stepSeconds) * stepSeconds;
-    return clampToRange(snapped, earliest, latest);
+  snapJump(unixSeconds: number): number {
+    const points = this.timeStops();
+    if (!points.length) return unixSeconds;
+    return points.reduce((nearest, point) =>
+      Math.abs(point - unixSeconds) < Math.abs(nearest - unixSeconds) ? point : nearest,
+    );
   }
 }

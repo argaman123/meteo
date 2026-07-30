@@ -1,4 +1,13 @@
-import { Injector, Service, Signal, effect, inject, signal } from '@angular/core';
+import {
+  EnvironmentInjector,
+  Service,
+  Signal,
+  computed,
+  createEnvironmentInjector,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
@@ -8,17 +17,23 @@ import { Shortcut } from './base/shortcut';
 
 @Service()
 export class LayersService {
-  private injector = inject(Injector);
+  private injector = inject(EnvironmentInjector);
   private overlay = inject(Overlay);
   private map = inject(MapService);
   private time = inject(TimeService);
+  private layerInjectors = new Map<Layer<unknown>, EnvironmentInjector>();
 
   readonly activeLayers = signal(new Map<Layer<unknown>, Signal<unknown>>());
   readonly activeLooks = signal(new Set<LookEntry>());
 
+  readonly isLoading = computed(() =>
+    [...this.activeLayers().values()].some((data) => data() === undefined),
+  );
+
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
     time: () => this.time.currentTime(),
+    window: () => this.time.window(),
     zoom: () => this.map.settledZoom() ?? 0,
   };
 
@@ -26,10 +41,20 @@ export class LayersService {
     for (const [layer, dataSignal] of this.activeLayers()) {
       const data = dataSignal();
       if (data === undefined) continue;
+      if (data === null) {
+        for (const entry of layer.looks) this.overlay.remove(entry.look);
+        continue;
+      }
       for (const entry of layer.looks) {
         if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, data);
       }
     }
+  });
+
+  private syncTime = effect(() => {
+    const layers = [...this.activeLayers().keys()];
+    this.time.windows.set(layers.map((layer) => layer.timeWindow).filter((window) => window !== null));
+    this.time.forcedTimes.set([...new Set(layers.flatMap((layer) => layer.forcedTimes?.() ?? []))]);
   });
 
   isLayerActive(layer: Layer<unknown>): boolean {
@@ -76,13 +101,15 @@ export class LayersService {
   }
 
   showLayer(layer: Layer<unknown>): void {
+    const layerInjector = createEnvironmentInjector([], this.injector);
+    this.layerInjectors.set(layer, layerInjector);
+    const data = layer.fetch(this.inputs, layerInjector);
     this.activeLayers.update((current) =>
-      new Map(current).set(layer, layer.fetch(this.inputs, this.injector)),
+      new Map(current).set(layer, this.keepIfRelevant(layer, data)),
     );
     for (const entry of layer.looks) {
       if (entry.checked) this.showLook(entry);
     }
-    this.syncTimeWindows();
   }
 
   hideLayer(layer: Layer<unknown>): void {
@@ -92,7 +119,8 @@ export class LayersService {
       next.delete(layer);
       return next;
     });
-    this.syncTimeWindows();
+    this.layerInjectors.get(layer)?.destroy();
+    this.layerInjectors.delete(layer);
   }
 
   private showLook(entry: LookEntry): void {
@@ -119,9 +147,15 @@ export class LayersService {
     });
   }
 
-  private syncTimeWindows(): void {
-    this.time.windows.set(
-      [...this.activeLayers().keys()].map((layer) => layer.timeWindow).filter((window) => window !== null),
-    );
+  private keepIfRelevant(layer: Layer<unknown>, data: Signal<unknown>): Signal<unknown> {
+    return computed(() => {
+      const value = data();
+      if (value === undefined || value === null) return value;
+      const range = layer.relevanceOf(value);
+      if (range === true) return value;
+      const time = this.time.currentTime();
+      return time < range.start || time > range.end ? null : value;
+    });
   }
+
 }

@@ -339,10 +339,10 @@ The past/future bands run `top-4 → bottom-0` — **below the text line only**,
 stays on the card background like the old site's bar.
 **Live mode**: `TimeService.live` starts on and re-arms on that click,
 a 60s interval advances `now` (and `currentTime` while live), any scrub/step drops it (lead:
-"until you scrub away"). Step controls are ±map / ±3h / ±24h, where a *map* step is the finest
-active cadence (`stepHours`); a play button waits for the animation/imagery-loops feature.
-`jumpTo` snaps **then** clamps inward to the window (`snapInsideWindow`) — the old order let the
-far edge snap past coverage and 404. **Multi-layer stacking landed
+"until you scrub away"). Step controls are ±map / ±3h / ±24h, where a *map* step walks
+`TimeService.timeStops` (multi-cadence v3 below); a play button waits for the
+animation/imagery-loops feature. `jumpTo` snaps via `snapJump` onto the window-bounded stops, so
+edge snaps can never leave coverage. **Multi-layer stacking landed
 2026-07-14 (complete, 5 steps):** layers stack; `Look` carries a `kind` and the `Overlay`
 stable-sorts by the `LookKind` rank order (image < colormap < contours < particles < polygons <
 icons < text — lead reordered contours below particles 2026-07-14); colormap-kind looks are mutually exclusive across layers; state vocabulary is
@@ -374,6 +374,42 @@ the rest stay; settings tweaks don't break the package; startup showed the weath
 2026-07-16 — it now shows the polygons layer (see below).
 The look⇒layer seam resolved itself: shortcuts activate layers, the invariant stands. Watch:
 `LayersService` is growing — propose a split when it next grows (lead, 2026-07-14).
+
+**Multi-cadence time v3 (2026-07-30, lead-verified after a full line-by-line review):** per-layer
+time strategies on one contract. `Layer.fetch` returns `Signal<D | null | undefined>` — platform
+vocabulary only (`undefined` = loading, the map keeps the last drawn frame + the time readout
+pulses; `null` = deliberately nothing, looks removed, hover/HUD skip; the review deleted the
+bespoke OUT_OF_RANGE symbol/`Fetched` alias/`loadedValue` helper in favor of null + Angular's own
+`hasValue()`/`value()` idiom — null is therefore reserved, a layer's data type may not be
+nullable, which is why `Coordinates extends Layer<true>`). `Layer.relevanceOf(data): TimeRange |
+true` states the data's own validity (models: `forecastTime` ±1.5h; polygons: wire
+startTime–endTime; `true` = timeless) and `LayersService.keepIfRelevant` gates every data signal
+against `currentTime` in one place. **Models** (lead + backend lead): one request per parameter
+carrying just `time` — the backend interpolates any requested hour between its 3h frames, so
+`stepHours: 1` (hourly jumps, frame times stable across runs); a request error means "nothing
+there" → null. `wrap_info.forecast_time` is an **absolute unix time**. **Polygons**: two-phase —
+`/api/polygons/hours?sector&start&end` over the merged window (`Inputs.window()` replaced
+`now()`; re-asks when the 5-min-quantized window shifts, a layer widens it, or the sector flips —
+no interval machinery), then `findNearestTime(times, cursor, 3)` picks `mapTime` and the data
+request carries the **map's real time**; an empty past yields null with zero requests (the
+standing 404 noise is dead). Its list is published as `Layer.forcedTimes` → deduped into
+`TimeService.forcedTimes`. **Jumps**: `timeStops` = the forced times **override** (a layer that
+cares about real maps forces the timeline — stops are exactly its times, lead 2026-07-30: never a
+union, no in-between grid stops) else the declared step grids over the window (`TimeWindow =
+{ backHours, forwardHours, stepHours? }` — cadence optional, list-layers omit it) else a 3h
+default; step/snap/live all pick from that one sorted list. `currentTime` is a `linkedSignal`:
+follows `snapJump(now)` while `live`, holds the manual pick otherwise (boot self-corrects once
+layers register). The `window` computed carries a value-`equal` — without it, object-identity
+churn silently re-triggered `httpResource` loads (an invisible infinite hours-refetch loop:
+resources reload on request-identity change and guarded reads log nothing). **Lifecycle**: each
+shown layer gets a `layerInjector` (`createEnvironmentInjector`), destroyed on hide — its
+resources tear down with it (hidden layers used to keep fetching forever). Convention (lead):
+effects are declared at the top of a service next to the state they watch. Perf HUD is on by
+default (Ctrl+Alt+P toggles) and shows each timed layer's validity range, dimmed when hidden.
+Fixture: `/api/hours` + `/api/polygons/hours` (center = full 3h; north = sparse [0,3,12,21,45]h
+to exercise real-map jumps), grids computed at the exact requested time (fractional forecast
+hours). Satellite/radar arrive as new Layer kinds with their own fetch strategies (past-only
+"latest ~30 min" asks, multi-frame steps, always animated) on this same contract.
 
 **Fixture backend synthesizes on request (2026-07-06):** the 287 pre-generated grid JSONs and the
 generator tool are gone. `dev/fixture-backend/synthetic-weather.ts` computes any requested
