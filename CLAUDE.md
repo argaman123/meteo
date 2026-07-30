@@ -135,7 +135,7 @@ src/app/
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
     overlay.ts        #   Overlay: deck.gl layer host
-    base/             #   building blocks looks are made from (Look, AnimatedLayer, GeoCanvas)
+    base/             #   building blocks looks are made from (Look, AnimatedLayer)
     looks/            #   one file per render style (colormap, wind-particles; later contours…)
   layers/             # THE CATALOG + the layers domain service
     layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
@@ -278,16 +278,28 @@ so looks and providers stay source-blind; `Look<I>.deckLayer()` produces the ren
 registry + `LayersService`. Layers: temperature colormap; wind = speed colormap + canvas-trail
 particle look.
 
-**Wind look baseline (2026-07-05, code + concept approved; visual open to later tuning):** the
-windy.com canvas technique — `TrailCanvas` (in `looks/wind-particles.ts`) simulates 2000 particles
-(distance-sampled crumb trails, speed-scaled trail length, drain-out deaths, prime-stride even
-spawning) and strokes them onto a `GeoCanvas`; rendered as a `BitmapLayer` (ping-pong canvases —
-deck caches textures by image reference). ~60 fps measured. Machinery in `engine/base/`:
-`Look` contract, `AnimatedLayer` (owns the rAF loop; subclasses implement `step(dt)` + `rebuild()`,
-invoked via deck's own props diff), `GeoCanvas`. `TrailCanvas` stays a separate class by design:
-deck discards layer instances constantly and migrates only `props`/`state` — the canvas object in
-`state` is what survives. Dev-server note: HMR leaves orphaned rAF loops (page slows over many
-hot-swaps) — a page refresh clears it; production teardown is correct via `finalizeState`.
+**Wind look v2 — GPU trails (2026-07-30, lead-verified: fullscreen 60 fps, look approved):** the
+2026-07-05 canvas technique dropped to ~30 fps on high-res displays (30k Canvas2D segment strokes +
+a ~10 MB full-bitmap GPU upload per frame); rebuilt as a **first-party GL pipeline** in
+`looks/wind-particles.ts`, ordered most-important-first (lead): `WindParticles` look →
+`WindParticleLayer` wiring → `ParticleSim` → shaders + `TrailRenderer` (the sealed GPU box —
+marked `// TODO: UNVERIFIED CODE BELOW` by the lead's convention). `ParticleSim` keeps the approved
+simulation verbatim (prime-stride even spawning, speed clamp, lifetimes; the crumb-trail
+bookkeeping is gone — a dying particle just respawns writing a degenerate segment so no teleport
+streak) and emits geo lon/lat segments; `TrailRenderer.paint(segments)` uploads **32 KB** of
+positions and runs two passes on a ping-pong framebuffer pair — fade the previous frame, then draw
+the newest segments as **instanced quads** (perpendicular-expanded in the vertex shader with
+smoothstep soft edges; WebGL native lines are 1 px only, `LINE_WIDTH` 1.75 was picked by eye as
+the midpoint) — and its constant `Texture` feeds the same `BitmapLayer` warp (mercator-banded y).
+Two hard-won shader rules: the fade decays **alpha only with rgb pinned white** (multiplying rgba
+grays old trails), and the decay is **floored at 8-bit resolution** (`floor(a·DECAY·255)/255`) —
+otherwise low alphas round back up and paint permanent residue on the map. Tuning knobs at the top
+of the file: `COUNT` 2000, `DECAY` 0.94, `LINE_WIDTH`; texture = bounds' screen footprint × dpr
+capped 4096. The GPU passes run from the rAF tick on the shared luma device (state-tracked
+alongside maplibre — if other layers ever glitch while wind animates, move the passes into deck's
+draw cycle). `GeoCanvas` died orphaned. `AnimatedLayer` (rAF loop, `step(dt)` + `rebuild()`)
+unchanged; HMR still leaks orphaned rAF loops — refresh clears; production teardown correct via
+`finalizeState` (which now also destroys the GPU resources).
 
 **Time scrubber (2026-07-06, lead-verified):** generic
 `TimeService` in `services/` (tools + window merging only — no layer knowledge; windows are pushed
@@ -434,8 +446,9 @@ frame is a bare page slot, lead 2026-07-22). The basemap picker is a top-bar ico
 (lucidePalette, end side) opening a spartan dropdown of the styles (lead 2026-07-22 — the floating
 top-end card is gone). Backdrop-blur is an always-on compositor cost over the animating
 map (flagged, accepted by the lead — small vs the per-frame canvas upload; can move behind a
-quality knob if fleet measurement ever demands). The old custom look is retired — do not imitate
-it in new chrome.
+quality knob if fleet measurement ever demands; the per-frame canvas upload it was once weighed
+against is gone since the GL particles, 2026-07-30). The old custom look is retired — do not
+imitate it in new chrome.
 
 **Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified; Units API reshaped
 2026-07-08; moved to `utils/units.ts` 2026-07-14):** the Units module is quantity-based, windy's settings screen as the model: callers
