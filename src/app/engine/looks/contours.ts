@@ -1,5 +1,4 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
-import { CollisionFilterExtension, CollisionFilterExtensionProps } from '@deck.gl/extensions';
 import { IconLayer, PathLayer } from '@deck.gl/layers';
 import { rgb } from 'd3-color';
 import { Grid } from '../../objects/grid';
@@ -12,7 +11,6 @@ interface ContourLabel {
   position: [number, number];
   text: string;
   angle: number;
-  priority: number;
 }
 
 interface LabelIcon {
@@ -33,8 +31,6 @@ export function levelsEvery(interval: number): LevelPicker {
     return levels;
   };
 }
-
-const MAX_COLLISION_PRIORITY = 999;
 
 export class Contours extends Look<Grid> {
   readonly kind = LookKind.Contours;
@@ -63,7 +59,6 @@ export class Contours extends Look<Grid> {
           position: path[anchor],
           text,
           angle: directionAt(path, anchor),
-          priority: Math.min(MAX_COLLISION_PRIORITY, path.length),
         });
       }
     }
@@ -84,17 +79,13 @@ export class Contours extends Look<Grid> {
         getWidth: 2,
         widthUnits: 'pixels',
       }),
-      new IconLayer<ContourLabel, CollisionFilterExtensionProps<ContourLabel>>({
+      new IconLayer<ContourLabel>({
         id: `${id}-labels`,
         data: labels,
         getPosition: (label) => label.position,
         getIcon: (label) => this.icon(label.text),
         getAngle: (label) => label.angle,
         getSize: 16,
-        extensions: [new CollisionFilterExtension()],
-        collisionGroup: 'contour-labels',
-        getCollisionPriority: (label: ContourLabel) => label.priority,
-        collisionTestProps: { sizeScale: 2 },
       }),
     ];
   }
