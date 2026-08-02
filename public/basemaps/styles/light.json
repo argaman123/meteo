@@ -12438,6 +12438,71 @@
         "line-color": "#000000",
         "line-width": 2
       }
+    },
+    {
+      "id": "boundaries_disputed",
+      "type": "line",
+      "source": "protomaps_coarse",
+      "source-layer": "boundaries",
+      "filter": [
+        "all",
+        [
+          "<=",
+          [
+            "to-number",
+            [
+              "get",
+              "kind_detail"
+            ]
+          ],
+          2
+        ],
+        [
+          "==",
+          [
+            "get",
+            "disputed"
+          ],
+          true
+        ],
+        [
+          "!",
+          [
+            "within",
+            {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    33.8,
+                    29.2
+                  ],
+                  [
+                    36.9,
+                    29.2
+                  ],
+                  [
+                    36.9,
+                    33.7
+                  ],
+                  [
+                    33.8,
+                    33.7
+                  ],
+                  [
+                    33.8,
+                    29.2
+                  ]
+                ]
+              ]
+            }
+          ]
+        ]
+      ],
+      "paint": {
+        "line-color": "#000000",
+        "line-width": 2
+      }
     }
   ],
   "sprite": "/basemaps/sprites/v4/light",
