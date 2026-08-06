@@ -14,8 +14,11 @@ export abstract class ModelLayer extends Layer<Grid[]> {
   override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
 
   relevanceOf(grids: Grid[]): TimeRange {
-    const relevanceSeconds = 1.5 * 3600;
-    return { start: grids[0].info.forecastTime - relevanceSeconds, end: grids[0].info.forecastTime + relevanceSeconds };
+    const relevanceMs = 1.5 * 3_600_000;
+    return {
+      start: grids[0].info.forecastTime - relevanceMs,
+      end: grids[0].info.forecastTime + relevanceMs,
+    };
   }
 
   fetch(on: Inputs, injector: Injector): Signal<Grid[] | null | undefined> {

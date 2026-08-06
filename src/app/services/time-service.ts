@@ -14,7 +14,7 @@ export interface TimeRange {
 // TODO: UNVERIFIED CODE BELOW
 @Service()
 export class TimeService {
-  readonly now = signal(Math.floor(Date.now() / 1000));
+  readonly now = signal(Date.now());
   readonly live = signal(true);
   readonly windows = signal<TimeWindow[]>([]);
   readonly forcedTimes = signal<number[]>([]);
@@ -24,10 +24,10 @@ export class TimeService {
       const windows = this.windows();
       const backHours = windows.length ? Math.max(...windows.map((w) => w.backHours)) : 24;
       const forwardHours = windows.length ? Math.max(...windows.map((w) => w.forwardHours)) : 96;
-      const anchor = Math.round(this.now() / 300) * 300;
+      const anchor = Math.round(this.now() / 300_000) * 300_000;
       return {
-        start: anchor - backHours * 3600,
-        end: anchor + forwardHours * 3600,
+        start: anchor - backHours * 3_600_000,
+        end: anchor + forwardHours * 3_600_000,
       };
     },
     { equal: (a, b) => a.start === b.start && a.end === b.end },
@@ -42,8 +42,8 @@ export class TimeService {
       .map((window) => window.stepHours)
       .filter((stepHours) => stepHours !== undefined);
     for (const stepHours of steps.length ? steps : [3]) {
-      const stepSeconds = stepHours * 3600;
-      for (let time = Math.ceil(start / stepSeconds) * stepSeconds; time <= end; time += stepSeconds) {
+      const stepMs = stepHours * 3_600_000;
+      for (let time = Math.ceil(start / stepMs) * stepMs; time <= end; time += stepMs) {
         points.add(time);
       }
     }
@@ -57,17 +57,17 @@ export class TimeService {
   });
 
   constructor() {
-    const handle = setInterval(() => this.now.set(Math.floor(Date.now() / 1000)), 60000);
+    const handle = setInterval(() => this.now.set(Date.now()), 60000);
     inject(DestroyRef).onDestroy(() => clearInterval(handle));
   }
 
-  jumpTo(unixSeconds: number): void {
+  jumpTo(unixTime: number): void {
     this.live.set(false);
-    this.currentTime.set(this.snapJump(unixSeconds));
+    this.currentTime.set(this.snapJump(unixTime));
   }
 
   jumpBy(hours: number): void {
-    this.jumpTo(this.currentTime() + hours * 3600);
+    this.jumpTo(this.currentTime() + hours * 3_600_000);
   }
 
   stepForward(): void {
@@ -86,11 +86,11 @@ export class TimeService {
     this.live.set(true);
   }
 
-  snapJump(unixSeconds: number): number {
+  snapJump(unixTime: number): number {
     const points = this.timeStops();
-    if (!points.length) return unixSeconds;
+    if (!points.length) return unixTime;
     return points.reduce((nearest, point) =>
-      Math.abs(point - unixSeconds) < Math.abs(nearest - unixSeconds) ? point : nearest,
+      Math.abs(point - unixTime) < Math.abs(nearest - unixTime) ? point : nearest,
     );
   }
 }

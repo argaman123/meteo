@@ -30,7 +30,7 @@ export class PerfHud {
           ? '—'
           : range === null || range === true
             ? '…'
-            : `${formatLocalTime(range.start)} – ${hourFormat.format(range.end * 1000)}`,
+            : `${formatLocalTime(range.start)} – ${hourFormat.format(range.end)}`,
         relevant,
       });
     }

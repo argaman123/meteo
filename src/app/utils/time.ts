@@ -12,17 +12,17 @@ const monthYearFormat = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 
 const yearFormat = new Intl.DateTimeFormat('he-IL', { year: 'numeric' });
 const WEEKDAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
-export function snapToStep(unixSeconds: number, stepHours: number): number {
-  const stepSeconds = stepHours * 3600;
-  return Math.round(unixSeconds / stepSeconds) * stepSeconds;
+export function snapToStep(unixTime: number, stepHours: number): number {
+  const stepMs = stepHours * 3_600_000;
+  return Math.round(unixTime / stepMs) * stepMs;
 }
 
 export function clampToRange(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export function formatLocalTime(unixSeconds: number): string {
-  return localTimeFormat.format(new Date(unixSeconds * 1000));
+export function formatLocalTime(unixTime: number): string {
+  return localTimeFormat.format(new Date(unixTime));
 }
 
 export function findNearestTime(
@@ -30,7 +30,7 @@ export function findNearestTime(
   target: number,
   relevanceHours: number,
 ): number | null {
-  const relevant = times.filter((time) => Math.abs(time - target) <= relevanceHours * 3600);
+  const relevant = times.filter((time) => Math.abs(time - target) <= relevanceHours * 3_600_000);
   if (!relevant.length) return null;
   return relevant.reduce((nearest, time) =>
     Math.abs(time - target) < Math.abs(nearest - target) ? time : nearest,
@@ -60,36 +60,28 @@ const TICK_LEVELS: { maxSpanDays: number; minorUnit: TimeUnit; minorStep: number
   { maxSpanDays: Infinity, minorUnit: 'year', minorStep: 1, majorUnit: 'year' },
 ];
 
-export function timelineTicks(startSeconds: number, endSeconds: number): TimelineTick[] {
-  const level = TICK_LEVELS.find(
-    (candidate) => (endSeconds - startSeconds) / 86400 <= candidate.maxSpanDays,
-  )!;
-  const majors = tickSequence(startSeconds, endSeconds, level.majorUnit, 1, level.majorUnit);
+export function timelineTicks(start: number, end: number): TimelineTick[] {
+  const level = TICK_LEVELS.find((candidate) => (end - start) / 86_400_000 <= candidate.maxSpanDays)!;
+  const majors = tickSequence(start, end, level.majorUnit, 1, level.majorUnit);
   const majorTimes = new Set(majors.map((date) => date.getTime()));
-  const crowdingSeconds = (endSeconds - startSeconds) * 0.05;
-  const minors = tickSequence(
-    startSeconds,
-    endSeconds,
-    level.minorUnit,
-    level.minorStep,
-    level.majorUnit,
-  ).filter(
+  const crowding = (end - start) * 0.05;
+  const minors = tickSequence(start, end, level.minorUnit, level.minorStep, level.majorUnit).filter(
     (date) =>
       !majorTimes.has(date.getTime()) &&
-      !majors.some((major) => Math.abs(major.getTime() - date.getTime()) / 1000 < crowdingSeconds),
+      !majors.some((major) => Math.abs(major.getTime() - date.getTime()) < crowding),
   );
   const promoted = majors.length === 0 && level.minorUnit === 'month' ? minors.shift() : undefined;
   return [
     ...minors.map((date) => ({
-      time: date.getTime() / 1000,
+      time: date.getTime(),
       label: formatUnit(date, level.minorUnit, false),
       major: false,
     })),
     ...(promoted
-      ? [{ time: promoted.getTime() / 1000, label: formatUnit(promoted, 'month', true), major: true }]
+      ? [{ time: promoted.getTime(), label: formatUnit(promoted, 'month', true), major: true }]
       : []),
     ...majors.map((date) => ({
-      time: date.getTime() / 1000,
+      time: date.getTime(),
       label: formatUnit(date, level.majorUnit, true),
       major: true,
     })),
@@ -97,16 +89,16 @@ export function timelineTicks(startSeconds: number, endSeconds: number): Timelin
 }
 
 function tickSequence(
-  startSeconds: number,
-  endSeconds: number,
+  start: number,
+  end: number,
   unit: TimeUnit,
   step: number,
   alignUnit: TimeUnit,
 ): Date[] {
-  const cursor = startOfUnit(new Date(startSeconds * 1000), alignUnit);
+  const cursor = startOfUnit(new Date(start), alignUnit);
   const dates: Date[] = [];
-  while (cursor.getTime() / 1000 <= endSeconds) {
-    if (cursor.getTime() / 1000 >= startSeconds) dates.push(new Date(cursor));
+  while (cursor.getTime() <= end) {
+    if (cursor.getTime() >= start) dates.push(new Date(cursor));
     if (unit === 'hour') cursor.setHours(cursor.getHours() + step);
     else if (unit === 'day') cursor.setDate(cursor.getDate() + step);
     else if (unit === 'month') cursor.setMonth(cursor.getMonth() + step);

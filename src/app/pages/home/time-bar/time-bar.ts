@@ -93,7 +93,7 @@ export class TimeBar {
     }
     const fraction = this.fractionAt(event);
     const anchor = start + fraction * span;
-    const zoomed = clampToRange(span * Math.exp(event.deltaY * 0.0015), 3 * 3600, 20 * 365 * 24 * 3600);
+    const zoomed = clampToRange(span * Math.exp(event.deltaY * 0.0015), 3 * 3_600_000, 20 * 365 * 24 * 3_600_000);
     this.view.set({ start: anchor - fraction * zoomed, end: anchor + (1 - fraction) * zoomed });
   }
 
@@ -140,9 +140,9 @@ export class TimeBar {
     return { left, width: this.positionOf(to) - left };
   }
 
-  private positionOf(unixSeconds: number): number {
+  private positionOf(unixTime: number): number {
     const { start, end } = this.view();
-    return ((unixSeconds - start) / (end - start)) * 100;
+    return ((unixTime - start) / (end - start)) * 100;
   }
 
   private timeAt(event: PointerEvent): number {

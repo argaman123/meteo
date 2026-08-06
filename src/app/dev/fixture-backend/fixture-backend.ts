@@ -17,8 +17,8 @@ const STEP_HOURS = 3;
 const BACK_HOURS = 24;
 const FORWARD_HOURS = 96;
 
-const RUN_TIME_UNIX_SECONDS =
-  Math.floor(Date.now() / 1000 / (STEP_HOURS * 3600)) * (STEP_HOURS * 3600);
+const RUN_TIME =
+  Math.floor(Date.now() / (STEP_HOURS * 3_600_000)) * (STEP_HOURS * 3_600_000);
 
 const POLYGON_HOURS: Record<Sector, number[]> = {
   [Sector.Center]: Array.from({ length: 33 }, (_, index) => index * 3),
@@ -67,16 +67,16 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
     const start = Number(request.params.get('start'));
     const end = Number(request.params.get('end'));
     const times = (POLYGON_HOURS[sector] ?? [])
-      .map((hours) => RUN_TIME_UNIX_SECONDS + hours * 3600)
+      .map((hours) => RUN_TIME + hours * 3_600_000)
       .filter((time) => time >= start && time <= end);
     return new HttpResponse({ status: 200, body: times });
   }
   if (request.url === '/api/polygons') {
     const sector = (request.params.get('sector') ?? '') as Sector;
     const time = Number(request.params.get('time'));
-    const hours = (time - RUN_TIME_UNIX_SECONDS) / 3600;
+    const hours = (time - RUN_TIME) / 3_600_000;
     const wrap = (POLYGON_HOURS[sector] ?? []).includes(hours)
-      ? syntheticPolygons(sector, hours, RUN_TIME_UNIX_SECONDS)
+      ? syntheticPolygons(sector, hours, RUN_TIME)
       : null;
     if (!wrap) {
       throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'No map' });
@@ -91,7 +91,7 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
   const time = Number(request.params.get('time'));
   const bounds = (request.params.get('bbox') ?? '').split(',').map(Number) as Bounds;
   const weather = await loadWeather();
-  const wrap = weather.wrap(model, parameter, bounds, frameHours(time), RUN_TIME_UNIX_SECONDS);
+  const wrap = weather.wrap(model, parameter, bounds, frameHours(time), RUN_TIME);
   if (!wrap) {
     throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Outside coverage' });
   }
@@ -103,14 +103,14 @@ function hoursBetween(request: HttpRequest<unknown>, firstHours: number, lastHou
   const end = Number(request.params.get('end'));
   const times: number[] = [];
   for (let hours = firstHours; hours <= lastHours; hours += STEP_HOURS) {
-    const time = RUN_TIME_UNIX_SECONDS + hours * 3600;
+    const time = RUN_TIME + hours * 3_600_000;
     if (time >= start && time <= end) times.push(time);
   }
   return times;
 }
 
-function frameHours(unixSeconds: number): number {
-  const hours = (unixSeconds - RUN_TIME_UNIX_SECONDS) / 3600;
+function frameHours(unixTime: number): number {
+  const hours = (unixTime - RUN_TIME) / 3_600_000;
   return Math.min(FORWARD_HOURS, Math.max(-BACK_HOURS, hours));
 }
 

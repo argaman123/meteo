@@ -26,8 +26,8 @@ export function syntheticPolygons(
     shape.coordinates.push(shape.coordinates[0]);
   }
   return {
-    startTime: runTime + (frameHours - 1) * 3600,
-    endTime: runTime + (frameHours + 2) * 3600,
+    startTime: runTime + (frameHours - 1) * 3_600_000,
+    endTime: runTime + (frameHours + 2) * 3_600_000,
     sector,
     polygons,
   };

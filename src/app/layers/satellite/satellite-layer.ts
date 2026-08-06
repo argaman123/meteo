@@ -75,7 +75,7 @@ export class SatelliteLayer extends Layer<SatellitePicture> {
   }
 
   relevanceOf(picture: SatellitePicture): TimeRange {
-    return { start: picture.time, end: picture.time + ASK_MINUTES * 60 };
+    return { start: picture.time, end: picture.time + ASK_MINUTES * 60_000 };
   }
 
   fetch(on: Inputs, injector: Injector): Signal<SatellitePicture | null | undefined> {
@@ -136,7 +136,7 @@ export class SatelliteLayer extends Layer<SatellitePicture> {
           satellite: current.satellite,
           channel: current.channel,
           sector: current.sector,
-          start: String(on.time() - ASK_MINUTES * 60),
+          start: String(on.time() - ASK_MINUTES * 60_000),
           end: String(on.time()),
         },
       };

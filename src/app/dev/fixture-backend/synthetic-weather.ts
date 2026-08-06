@@ -57,7 +57,7 @@ export class SyntheticWeather {
     parameter: string,
     bounds: Bounds,
     hours: number,
-    runTimeUnixSeconds: number,
+    runTime: number,
   ): Wrap | null {
     const model = MODELS.find((candidate) => candidate.name === modelName);
     if (!model) return null;
@@ -85,8 +85,8 @@ export class SyntheticWeather {
       start_x: west,
       start_y: north,
       wrap_info: {
-        base_time: runTimeUnixSeconds,
-        forecast_time: runTimeUnixSeconds + hours * 3600,
+        base_time: runTime,
+        forecast_time: runTime + hours * 3_600_000,
         model: modelName,
         param: parameter,
         pressure: parameter === 'hgt' ? '1000' : null,
