@@ -9,6 +9,7 @@ import { from } from 'rxjs';
 import { Sector } from '../../types/polygons';
 import { Bounds } from '../../types/wrap';
 import { syntheticPolygons } from './synthetic-polygons';
+import { SATELLITE_SECTORS, satelliteHours, syntheticSatelliteImage } from './synthetic-satellite';
 import { SyntheticWeather } from './synthetic-weather';
 
 const ARTIFICIAL_LATENCY_MS = 150;
@@ -33,6 +34,31 @@ export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
 
 async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEvent<unknown>> {
   await new Promise((resolve) => setTimeout(resolve, ARTIFICIAL_LATENCY_MS));
+  if (request.url === '/api/satellite/configuration') {
+    return new HttpResponse({
+      status: 200,
+      body: { satelliteId: 'sat-a', channel: 'ir', sector: 'near' },
+    });
+  }
+  if (request.url === '/api/satellite/bounds') {
+    const perSector = Object.fromEntries(
+      Object.entries(SATELLITE_SECTORS).map(([sector, { bounds }]) => [sector, bounds]),
+    );
+    return new HttpResponse({ status: 200, body: { 'sat-a': perSector, 'sat-b': perSector } });
+  }
+  if (request.url === '/api/satellite/hours') {
+    const sector = request.params.get('sector') ?? '';
+    const start = Number(request.params.get('start'));
+    const end = Number(request.params.get('end'));
+    return new HttpResponse({ status: 200, body: satelliteHours(sector, start, end) });
+  }
+  if (request.url === '/api/satellite/image') {
+    const sector = request.params.get('sector') ?? '';
+    const channel = request.params.get('channel') ?? '';
+    const time = Number(request.params.get('time'));
+    const blob = await syntheticSatelliteImage(sector, channel, time);
+    return new HttpResponse({ status: 200, body: blob });
+  }
   if (request.url === '/api/hours') {
     return new HttpResponse({ status: 200, body: hoursBetween(request, -BACK_HOURS, FORWARD_HOURS) });
   }

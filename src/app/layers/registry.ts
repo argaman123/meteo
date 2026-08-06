@@ -2,6 +2,7 @@ import { LookKind } from '../engine/base/look';
 import { registerLayers } from '../utils/settings';
 import { Coordinates } from './coordinates/coordinates';
 import { Geopotential } from './model/geopotential';
+import { SatelliteLayer } from './satellite/satellite-layer';
 import { Shortcut } from './base/shortcut';
 import { Temperature } from './model/temperature';
 import { Wind } from './model/wind';
@@ -11,6 +12,7 @@ export const layers = registerLayers({
   temperature: new Temperature(),
   wind: new Wind(),
   geopotential: new Geopotential(),
+  satellite: new SatelliteLayer(),
   polygons: new PolygonsLayer(),
   coordinates: new Coordinates(),
 });

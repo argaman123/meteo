@@ -15,7 +15,7 @@ import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { LegendBar } from './legend-bar/legend-bar';
 import { TimeBar } from './time-bar/time-bar';
-import {layers, shortcuts} from '../../layers/registry';
+import { layers } from '../../layers/registry';
 
 @Component({
   selector: 'app-home-page',
@@ -52,6 +52,6 @@ export class HomePage implements AfterViewInit, OnDestroy {
   private async start(): Promise<void> {
     await this.map.init(this.container().nativeElement);
     this.layers.showLayer(layers.coordinates);
-    this.layers.showShortcut(shortcuts.weather);
+    this.layers.showLayer(layers.satellite);
   }
 }

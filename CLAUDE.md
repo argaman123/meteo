@@ -586,6 +586,40 @@ tile-drawn (z5-normal), vendored duplicates removed after they braided. Flags: b
 near-invisible on the dark basemap when no colormap is shown (per-style color is a one-line
 change); z5-tile↔vendored junctions can sit 1-2 px apart at sector zooms.
 
+**Satellite layer v1 — static (2026-08-02; full record in [`docs/satellite.md`](docs/satellite.md)):**
+first imagery layer. `SatelliteLayer` (`layers/satellite/`) on the lead's wire contract:
+`getConfiguration` (default channel/sector + the satellite id to display — the user never picks a
+satellite) → bounds once for all satellites × sectors → hours in the last 30 min → one image per
+time. Channel (IR/צבעוני) and sector controls are Selects with an **אוטו** choice following the
+config default; the תמונה look carries `percent` opacity; startup shows the layer. Both channels
+histogram-equalized for display (geo3d `imageDataEqualization` port in `utils/image.ts`),
+**original pixels kept** — IR hover = `−80 + 127.4·gray/255 °C` (old app's calibration) through
+Units; fixture temps are nonsense by design (fake IR = grayscale visible light) — whether real
+wire IR needs an invert-on-receive is an open question for real data (docs/satellite.md). Time rule (lead-simplified 2026-08-02, "as simple as possible"): the ask
+is anchored to **the displayed time** — hours for the 30 min before it, `findNearestTime` picks
+the closest (the polygons idiom), **one image** fetched at it; back-only window (24/0/1h);
+relevance = picture.time +30 min; `keepIfRelevant` compares plain `currentTime`. **`Inputs` is THE
+layer seam** (lead): a layer never does `injector.get(TimeService)` — that door is for infra like
+`HttpClient`; missing platform state gets raised, not reached around. The single-picture params
+carry a JSON-stringify value-`equal` (identity churn refetches). Images are equirectangular →
+`BitmapLayer` `_imageCoordinateSystem: LNGLAT` (coastlines glue to the basemap; hover rows linear
+in latitude; real-backend projection TBD). Fixture = real EUMETSAT MTG GeoColor via anonymous
+EUMETView WMS, 5 same-hour frames (yesterday 09:00Z + i·10 min), one image grayscaled for IR;
+`latest` computed per request (never frozen at load). **The look is deliberately static** — the
+newest frame as one image: the animation was built four ways (own rAF loop → playingTime on
+Look → on Layer → engine-wide Animator → LoopPlayer + LoopLayer) and **stripped 2026-08-02 for a
+clean retry**; every ask, decision, rejection, and landmine (per-layer draw isolation or wind
+resets at 2 Hz; loop restarts on props change; deck lineage registration) is recorded in
+`docs/satellite.md` — read it before re-attempting. Chip image-time spec (inside the handle chip,
+`זמן תמונה · HH:mm`, hour only) is part of that retry. Contour labels' `CollisionFilterExtension`
+was found silently filtering ALL labels under the interleaved two-`beforeId`-group setup and
+removed (2026-08-02) — labels rely on the look's own flattest-stretch spacing; far-zoom cross-line
+overlap is the accepted trade, polygons-style relaxation is the answer if it ever bothers.
+`boundaries_disputed` style layer (committed): disputed country borders draw everywhere except
+inside an Israel-region `within` box (lon 33.8–36.9, lat 29.2–35.0 — must cover Lebanon–Syria or
+tile lines braid with the vendored envelope). Top bar is frosted and overlays the map
+(`bg-card/75 backdrop-blur-md`, layer card at `top-15`).
+
 **Legends (2026-07-22):** `Look.legend` (`engine/base/look.ts`, default null) — typed like the
 Control vocabulary: `Legend = GradientLegend | SwatchesLegend`, discriminated by a `LegendType`
 enum so future legend kinds can carry extra fields or custom UI; both current kinds are
