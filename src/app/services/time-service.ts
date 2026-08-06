@@ -1,4 +1,5 @@
 import { DestroyRef, Service, computed, inject, linkedSignal, signal } from '@angular/core';
+import { mergeTimes } from '../utils/time';
 
 export interface TimeWindow {
   backHours: number;
@@ -17,7 +18,7 @@ export class TimeService {
   readonly now = signal(Date.now());
   readonly live = signal(true);
   readonly windows = signal<TimeWindow[]>([]);
-  readonly forcedTimes = signal<number[]>([]);
+  private readonly forcedTimes = signal<number[]>([]);
 
   readonly window = computed(
     () => {
@@ -36,7 +37,7 @@ export class TimeService {
   private timeStops = computed(() => {
     const { start, end } = this.window();
     const forced = this.forcedTimes();
-    if (forced.length) return [...forced].sort((a, b) => a - b);
+    if (forced.length) return forced;
     const points = new Set<number>();
     const steps = this.windows()
       .map((window) => window.stepHours)
@@ -50,34 +51,40 @@ export class TimeService {
     return [...points].sort((a, b) => a - b);
   });
 
-  readonly currentTime = linkedSignal<{ live: boolean; now: number; timeStops: number[] }, number>({
-    source: () => ({ live: this.live(), now: this.now(), timeStops: this.timeStops() }),
+  readonly exactTime = linkedSignal<{ live: boolean; now: number }, number>({
+    source: () => ({ live: this.live(), now: this.now() }),
     computation: (source, previous) =>
-      source.live || previous === undefined ? this.snapJump(source.now) : previous.value,
+      source.live || previous === undefined ? source.now : previous.value,
   });
+
+  readonly displayTime = computed(() => this.snapJump(this.exactTime()));
 
   constructor() {
     const handle = setInterval(() => this.now.set(Date.now()), 60000);
     inject(DestroyRef).onDestroy(() => clearInterval(handle));
   }
 
+  setForcedTimes(...layerTimes: number[][]): void {
+    this.forcedTimes.set(mergeTimes(layerTimes));
+  }
+
   jumpTo(unixTime: number): void {
     this.live.set(false);
-    this.currentTime.set(this.snapJump(unixTime));
+    this.exactTime.set(this.snapJump(unixTime));
   }
 
   jumpBy(hours: number): void {
-    this.jumpTo(this.currentTime() + hours * 3_600_000);
+    this.jumpTo(this.displayTime() + hours * 3_600_000);
   }
 
   stepForward(): void {
-    const next = this.timeStops().find((point) => point > this.currentTime());
+    const next = this.timeStops().find((point) => point > this.displayTime());
     if (next !== undefined) this.jumpTo(next);
   }
 
   stepBack(): void {
     const previous = this.timeStops()
-      .filter((point) => point < this.currentTime())
+      .filter((point) => point < this.displayTime())
       .at(-1);
     if (previous !== undefined) this.jumpTo(previous);
   }

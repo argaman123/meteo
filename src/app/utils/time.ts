@@ -25,6 +25,14 @@ export function formatLocalTime(unixTime: number): string {
   return localTimeFormat.format(new Date(unixTime));
 }
 
+export function formatLocalHour(unixTime: number): string {
+  return hourFormat.format(new Date(unixTime));
+}
+
+export function mergeTimes(lists: number[][]): number[] {
+  return [...new Set(lists.flat())].sort((a, b) => a - b);
+}
+
 export function findNearestTime(
   times: number[],
   target: number,

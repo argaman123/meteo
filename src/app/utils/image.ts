@@ -1,3 +1,11 @@
+export function grayChannel(image: ImageData): Uint8ClampedArray {
+  const grays = new Uint8ClampedArray(image.width * image.height);
+  for (let i = 0; i < grays.length; i++) {
+    grays[i] = image.data[i * 4];
+  }
+  return grays;
+}
+
 export function equalize(image: ImageData): ImageData {
   const data = new Uint8ClampedArray(image.data);
   let length = data.length / 4;

@@ -9,8 +9,9 @@ import {
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { LayersService } from '../../../layers/layers-service';
+import { LoopPlayer } from '../../../services/loop-player';
 import { TimeService } from '../../../services/time-service';
-import { clampToRange, formatLocalTime, timelineTicks } from '../../../utils/time';
+import { clampToRange, formatLocalHour, formatLocalTime, timelineTicks } from '../../../utils/time';
 
 // TODO: UNVERIFIED CODE BELOW
 interface TimelineView {
@@ -39,14 +40,19 @@ interface TimelineView {
 export class TimeBar {
   protected time = inject(TimeService);
   protected layers = inject(LayersService);
+  private player = inject(LoopPlayer);
   private view = signal(this.paddedWindow());
   private scrubTime = signal<number | null>(null);
   private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimelineView } | null =
     null;
 
-  protected shownTime = computed(() => this.scrubTime() ?? this.time.currentTime());
+  protected shownTime = computed(() => this.scrubTime() ?? this.time.displayTime());
   protected timeLabel = computed(() => formatLocalTime(this.time.snapJump(this.shownTime())));
   protected isLive = computed(() => this.time.live() && this.scrubTime() === null);
+  protected playingLine = computed(() => {
+    const playing = this.player.playingTime();
+    return playing === null ? null : `זמן תמונה · ${formatLocalHour(playing)}`;
+  });
 
   protected ticks = computed(() => {
     const { start, end } = this.view();
@@ -67,7 +73,7 @@ export class TimeBar {
   protected labelPosition = computed(() => clampToRange(this.handlePosition(), 7, 93));
 
   private keepHandleInView = effect(() => {
-    const current = this.time.currentTime();
+    const current = this.time.displayTime();
     untracked(() => {
       const { start, end } = this.view();
       if (current >= start && current <= end) return;

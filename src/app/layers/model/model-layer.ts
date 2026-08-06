@@ -43,7 +43,7 @@ export abstract class ModelLayer extends Layer<Grid[]> {
       params: {
         parameter,
         model: containsBounds(LOCAL_COVERAGE, bbox) ? 'local' : 'wide',
-        time: String(on.time()),
+        time: String(on.displayTime()),
         bbox: bbox.join(','),
       },
     };

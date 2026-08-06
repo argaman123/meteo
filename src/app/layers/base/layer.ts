@@ -6,7 +6,8 @@ import { Control } from '../../utils/controls';
 
 export interface Inputs {
   bbox(): Bounds | null;
-  time(): number;
+  displayTime(): number;
+  exactTime(): number;
   window(): TimeRange;
   zoom(): number;
 }

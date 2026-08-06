@@ -590,6 +590,34 @@ tile-drawn (z5-normal), vendored duplicates removed after they braided. Flags: b
 near-invisible on the dark basemap when no colormap is shown (per-style color is a one-line
 change); z5-tile↔vendored junctions can sit 1-2 px apart at sector zooms.
 
+**Satellite loop v2 (2026-08-06, the animation retry landed; design + full history in
+[`docs/satellite.md`](docs/satellite.md)):** the lead-picked "service-side pick" design — the
+playhead never enters layer/look/Inputs code. `LoopPlayer` (`services/`) is the loop-only handler
+(500 ms discrete tick over the **merged** times of all active loop layers, 3-tick newest-hold,
+publishes `playingTime`); `LoopLayer<D>` (`layers/base/`) is the kind marker (`loopTimesOf(data)`
++ `atTime(data, playingTime)`); `LayersService` wires by instanceof — a `syncLoops` effect collects each active loop's raw times
+(the player merges: flatten/dedupe/sort is loop-domain logic, lead 2026-08-06), and `showLayer`
+wraps loop layers' gated data with
+`computed(() => atTime(data(), playingTime()))`, symmetric with `keepIfRelevant`. The chip grew
+its second line back: `זמן תמונה · HH:mm` from `playingTime` (wrapper `bottom-full mb-3`, grows
+upward). **One moment, two views** (lead renamed the tangled currentTime/targetTime pair
+2026-08-06): **`TimeService.exactTime`** is the source of truth (a linkedSignal: raw `now` while
+live, the held pick otherwise) and **`displayTime`** derives as `snapJump(exactTime)` — a linear
+chain, not two live-branches. Imagery asks + the relevance gate read exactTime (they can never
+diverge); model asks, jumps, and the chip read displayTime; `Inputs` = bbox / displayTime /
+exactTime / window / zoom. **Per-layer draw effects**: the global draw effect
+became one effect per activation in the `layerInjector` — playhead flips redraw only loop layers
+(wind would otherwise visibly reset twice a second). Satellite: `SatelliteLoop { frames, shown,
+bounds }`, all window frames fetched (`Promise.all`, explicit-field `equal` dedupe),
+`shown` re-picked by `atTime`, provider maps `loop.shown` → the untouched generic `Image` look;
+hover reads the SHOWN frame's `grays` (the newest-frame hover flag is dead). RAM rule (lead
+2026-08-06): frames keep only the display bitmap + a 1-byte-per-pixel gray channel, and only for
+IR (`grays?` absent on צבעוני — full RGBA originals cost ~144 MB on a wide loop). While live the loop freshens
+each minute (exactTime ticks); scrubbed it plays the 30 min before the selected time. Wind's
+`AnimatedLayer` untouched — loops and particle animation are deliberately separate kinds. Radar =
+extend `LoopLayer`, implement the two methods; sync across loops is automatic (one playhead over
+merged times).
+
 **Satellite layer v1 — static (2026-08-02; full record in [`docs/satellite.md`](docs/satellite.md)):**
 first imagery layer. `SatelliteLayer` (`layers/satellite/`) on the lead's wire contract:
 `getConfiguration` (default channel/sector + the satellite id to display — the user never picks a

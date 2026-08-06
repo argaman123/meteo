@@ -52,12 +52,15 @@
       </div>
     </div>
     @if (isHandleInView()) {
-      <div class="absolute -top-11 -translate-x-1/2" [style.left.%]="labelPosition()">
+      <div class="absolute bottom-full mb-3 -translate-x-1/2" [style.left.%]="labelPosition()">
         <button hlmBtn size="sm" dir="rtl" aria-label="חזרה לעכשיו"
-                class="h-8 text-sm font-medium tabular-nums shadow-lg"
+                class="h-auto min-h-8 flex-col gap-0 py-1 text-sm font-medium tabular-nums shadow-lg"
                 [class.animate-pulse]="layers.isLoading()"
                 [variant]="isLive() ? 'default' : 'secondary'" (click)="time.jumpToNow()">
-          {{ timeLabel() }}
+          <span>{{ timeLabel() }}</span>
+          @if (playingLine(); as line) {
+            <span class="text-xs leading-4 font-normal opacity-80">{{ line }}</span>
+          }
         </button>
         <span class="absolute top-full left-1/2 h-3 w-0.5 -translate-x-1/2 bg-primary"></span>
       </div>

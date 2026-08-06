@@ -35,7 +35,10 @@
   the stretch), endpoints pinned 0→0 / 255→255, floored CDF as the LUT. One deliberate deviation:
   the old app writes `lut[red]` to r=g=b (its imagery is grayscale); ours applies the LUT per
   channel so the color channel stays colored — identical output on grayscale input. The
-  **original pixel values are kept** for IR hover.
+  the original values survive only as `SatelliteFrame.grays` — a 1-byte-per-pixel gray channel,
+  kept **for IR frames only** (lead 2026-08-06: full RGBA `ImageData` per frame cost ~36 MB × 4
+  frames on the wide loop, and צבעוני never reads originals; hover's absence check IS the channel
+  check now).
 - **IR hover**: temperature from the ORIGINAL (pre-equalization) gray with the old app's
   calibration (lead, 2026-08-03): `−80 + (47.4 + 80) · gray / 255 °C` (gray 0 → −80 °C,
   255 → 47.4 °C), through the Units module. Colorful channel hovers `—`. An invert-on-receive
@@ -50,7 +53,24 @@
   wrong"). Hover row sampling is therefore **linear in latitude**, not MercatorBand. Open
   contract question for the backend lead: what projection will real images arrive in?
 
-## Time semantics (final for static v1 — lead simplified 2026-08-02)
+## Time semantics — v2 loop (landed 2026-08-06)
+
+- **One moment, two views** (lead, 2026-08-06 — replaced the tangled currentTime/targetTime pair,
+  "bad names… super weird and dependent"): **`TimeService.exactTime`** is the source of truth (a
+  linkedSignal: raw `now` while live, the held pick otherwise; jumps write `snapJump(t)` into it)
+  and **`displayTime`** derives as `snapJump(exactTime)` — a linear chain instead of two signals
+  branching on live. Imagery hours asks (last 30 min before `exactTime`) and `keepIfRelevant` read
+  exactTime, so ask and gate can never diverge (the old "satellites not working" bug is impossible
+  by construction); model asks, polygons nearest-map, jumps, and the chip read displayTime. While
+  live, exactTime ticks with the 60 s clock → the loop freshens every minute. A side effect of the
+  chain: displayTime re-snaps automatically when the stops change (e.g. a forced-times layer
+  activates while parked) — the old held pick could sit on a dead stop.
+- **All frames in the window are fetched** (`Promise.all` over the hours) and loop at 2 fps with
+  a 1.5 s newest-hold; frames params dedupe with an explicit-field `equal`
+  (`choice` ref + `times.join()`), the window-computed precedent.
+- Relevance = `frames[0] … last + 30 min`; back-only `timeWindow { 24, 0, 1h }` unchanged.
+
+## Time semantics (static v1 — superseded, kept for the record)
 
 - **As simple as possible**: the ask is anchored to **the displayed time** (`on.time()`), never
   the real clock. Hours are requested for the 30 minutes before it,
@@ -108,11 +128,32 @@
   `/api/satellite/image` (blob). Fixture liberty (flagged): sectors map to fixed bounds per
   satellite rather than rotating sat-b into the configuration.
 
-## Current code state — static v1 (2026-08-02; committed 2026-08-04)
+## Current code state — loop v2 (2026-08-06, the retry landed)
 
-> Lead verdict at commit: "decent for now — not entirely happy with satellite-layer but can't
-> find actual stuff to point out." Rethink the layer's shape next time the file is touched
-> (animation retry / radar), don't treat it as settled.
+The lead-approved retry design (fresh proposal, three options offered — he chose
+**service-side pick**): the playhead never enters layer/look/Inputs code.
+
+- **`LoopPlayer`** (`services/`): loop-only handler — 500 ms discrete `setInterval` tick over the
+  **merged** times of all active loop layers, 3-tick newest-hold, publishes `playingTime`
+  (`null` when no loops). The chip's single `זמן תמונה · HH:mm` line reads it (spec'd placement:
+  second smaller line inside the handle chip, wrapper `bottom-full mb-3` growing upward).
+- **`LoopLayer<D>`** (`layers/base/`): the kind marker — `abstract loopTimesOf(data): number[]` +
+  `abstract atTime(data, playingTime): D`. `LayersService` wires everything by `instanceof`:
+  `syncLoops` effect pushes merged times into the player (gated on active + look-shown + data
+  present), and `showLayer` wraps the gated data signal with `playLoop` →
+  `computed(() => layer.atTime(data(), playingTime()))` — symmetric with `keepIfRelevant`.
+- **Per-layer draw effects** (the isolation landmine, now structural): the global draw effect
+  became one `effect(() => drawLayer(...))` per activation, created in the `layerInjector` and
+  dying with it — playhead flips redraw only loop layers; wind/contours untouched at 2 Hz.
+- **Satellite**: `SatelliteLoop = { frames, shown, bounds }` — `fetch` publishes the
+  loop with `shown` = newest; `atTime` re-picks `shown` (nearest ≤ playhead); the provider maps
+  `loop.shown` → the generic `Image` look, which stayed byte-identical from static v1. Hover reads
+  `loop.shown` — the "hover samples newest not loop-current" flag is dead.
+- Radar's path: extend `LoopLayer`, implement `loopTimesOf` + `atTime`, done — sync is automatic.
+
+> Standing lead verdict from static v1 ("not entirely happy with satellite-layer but can't find
+> actual stuff to point out") — the fetch pipeline shape carried into v2; rethink when radar
+> touches it.
 
 `SatelliteLayer extends Layer<SatellitePicture>` in `layers/satellite/`
 (`SatellitePicture = { time, display, original, bounds, channel }` — one flat type); fetch
@@ -125,7 +166,7 @@ bounds }`. No animation machinery
 exists anywhere: no loop deck layer, no playhead service, no loop base class, no chip image-time
 line. `AnimatedLayer` (wind's rAF base) is untouched by this feature.
 
-## The animation retry — what was asked, built, and rejected
+## The animation retry — history (v1–v4 rejected; v5 above is the landed design)
 
 The lead wants satellite imagery **animated as a loop from day one** (~2 fps, hold the newest
 frame ~3× longer, always animating). It was built four ways and stripped; the retry starts fresh

@@ -6,21 +6,26 @@ import { Provider } from '../../objects/provider';
 import { TimeRange } from '../../services/time-service';
 import { SatelliteBoundsMap, SatelliteConfiguration } from '../../types/satellite';
 import { Bounds } from '../../types/wrap';
+import { sameArrays } from '../../utils/arrays';
 import { Control, OptionsPresentation, options } from '../../utils/controls';
 import { contains } from '../../utils/geo';
-import { equalize } from '../../utils/image';
-import { findNearestTime } from '../../utils/time';
+import { equalize, grayChannel } from '../../utils/image';
 import { Quantity, Unit, format } from '../../utils/units';
-import { Inputs, Layer } from '../base/layer';
+import { Inputs } from '../base/layer';
+import { LoopLayer } from '../base/loop-layer';
 
 const ASK_MINUTES = 30;
 
-export interface SatellitePicture {
+export interface SatelliteFrame {
   time: number;
   display: ImageBitmap;
-  original: ImageData;
+  grays?: Uint8ClampedArray;
+}
+
+export interface SatelliteLoop {
+  frames: SatelliteFrame[];
+  shown: SatelliteFrame;
   bounds: Bounds;
-  channel: string;
 }
 
 interface SatelliteChoice {
@@ -29,7 +34,7 @@ interface SatelliteChoice {
   sector: string;
 }
 
-export class SatelliteLayer extends Layer<SatellitePicture> {
+export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   readonly name = 'לוויין';
   override readonly timeWindow = { backHours: 24, forwardHours: 0, stepHours: 1 };
   readonly channel = options<string>('auto', [
@@ -47,9 +52,9 @@ export class SatelliteLayer extends Layer<SatellitePicture> {
     {
       look: new Image(
         new Provider(
-          (picture: SatellitePicture): ImageInput => ({
-            image: picture.display,
-            bounds: picture.bounds,
+          (loop: SatelliteLoop): ImageInput => ({
+            image: loop.shown.display,
+            bounds: loop.bounds,
           }),
         ),
       ),
@@ -58,37 +63,48 @@ export class SatelliteLayer extends Layer<SatellitePicture> {
     },
   ];
 
-  hover(picture: SatellitePicture, lon: number, lat: number): string {
-    if (picture.channel !== 'ir') return '—';
-    if (!contains(picture.bounds, lon, lat)) return '—';
-    const [west, south, east, north] = picture.bounds;
-    const column = Math.min(
-      picture.original.width - 1,
-      Math.floor(((lon - west) / (east - west)) * picture.original.width),
-    );
-    const row = Math.min(
-      picture.original.height - 1,
-      Math.floor(((north - lat) / (north - south)) * picture.original.height),
-    );
-    const gray = picture.original.data[(row * picture.original.width + column) * 4];
+  hover(loop: SatelliteLoop, lon: number, lat: number): string {
+    const grays = loop.shown.grays;
+    if (!grays) return '—';
+    if (!contains(loop.bounds, lon, lat)) return '—';
+    const [west, south, east, north] = loop.bounds;
+    const { width, height } = loop.shown.display;
+    const column = Math.min(width - 1, Math.floor(((lon - west) / (east - west)) * width));
+    const row = Math.min(height - 1, Math.floor(((north - lat) / (north - south)) * height));
+    const gray = grays[row * width + column];
     return format(-80 + ((47.4 + 80) * gray) / 255, Quantity.Temperature, Unit.Celsius);
   }
 
-  relevanceOf(picture: SatellitePicture): TimeRange {
-    return { start: picture.time, end: picture.time + ASK_MINUTES * 60_000 };
+  relevanceOf(loop: SatelliteLoop): TimeRange {
+    return {
+      start: loop.frames[0].time,
+      end: loop.frames[loop.frames.length - 1].time + ASK_MINUTES * 60_000,
+    };
   }
 
-  fetch(on: Inputs, injector: Injector): Signal<SatellitePicture | null | undefined> {
+  loopTimesOf(loop: SatelliteLoop): number[] {
+    return loop.frames.map((frame) => frame.time);
+  }
+
+  atTime(loop: SatelliteLoop, playingTime: number): SatelliteLoop {
+    const shown = loop.frames.reduce((nearest, frame) =>
+      Math.abs(frame.time - playingTime) < Math.abs(nearest.time - playingTime) ? frame : nearest,
+    );
+    return { ...loop, shown };
+  }
+
+  fetch(on: Inputs, injector: Injector): Signal<SatelliteLoop | null | undefined> {
     const choice = this.resolveChoice(injector);
     const bounds = this.resolveBounds(injector, choice);
     const hours = this.hoursResource(on, injector, choice);
-    const nearestTime = computed(() =>
-      hours.hasValue() ? findNearestTime(hours.value(), on.time(), ASK_MINUTES / 60) : undefined,
-    );
-    const picture = this.pictureResource(injector, choice, nearestTime, bounds);
+    const frames = this.framesResource(injector, choice, hours);
     return computed(() => {
-      if (bounds() === null || nearestTime() === null) return null;
-      return picture.hasValue() ? picture.value() : undefined;
+      const sectorBounds = bounds();
+      if (sectorBounds === null) return null;
+      if (sectorBounds === undefined || !frames.hasValue()) return undefined;
+      const loaded = frames.value();
+      if (loaded.length === 0) return null;
+      return { frames: loaded, shown: loaded[loaded.length - 1], bounds: sectorBounds };
     });
   }
 
@@ -136,40 +152,40 @@ export class SatelliteLayer extends Layer<SatellitePicture> {
           satellite: current.satellite,
           channel: current.channel,
           sector: current.sector,
-          start: String(on.time() - ASK_MINUTES * 60_000),
-          end: String(on.time()),
+          start: String(on.exactTime() - ASK_MINUTES * 60_000),
+          end: String(on.exactTime()),
         },
       };
     }, { injector });
   }
 
-  private pictureResource(
+  private framesResource(
     injector: Injector,
     choice: Signal<SatelliteChoice | undefined>,
-    nearestTime: Signal<number | null | undefined>,
-    bounds: Signal<Bounds | null | undefined>,
-  ): Resource<SatellitePicture | undefined> {
+    hours: Resource<number[] | undefined>,
+  ): Resource<SatelliteFrame[] | undefined> {
     const http = injector.get(HttpClient);
-    return resource({
-      params: () => {
+    const params = computed(
+      () => {
         const current = choice();
-        const time = nearestTime();
-        const sectorBounds = bounds();
-        return current != null && time != null && sectorBounds != null
-          ? { choice: current, time, bounds: sectorBounds }
-          : undefined;
+        const times = hours.hasValue() ? hours.value() : undefined;
+        return current != null && times != null ? { choice: current, times } : undefined;
       },
-      loader: ({ params }) => this.loadPicture(http, params.choice, params.time, params.bounds),
+      { equal: (a, b) => a?.choice === b?.choice && sameArrays(a?.times, b?.times) },
+    );
+    return resource({
+      params,
+      loader: ({ params }) =>
+        Promise.all(params.times.map((time) => this.loadFrame(http, params.choice, time))),
       injector,
     });
   }
 
-  private async loadPicture(
+  private async loadFrame(
     http: HttpClient,
     choice: SatelliteChoice,
     time: number,
-    bounds: Bounds,
-  ): Promise<SatellitePicture> {
+  ): Promise<SatelliteFrame> {
     const blob = await firstValueFrom(
       http.get('/api/satellite/image', {
         params: { ...choice, time: String(time) },
@@ -180,15 +196,12 @@ export class SatelliteLayer extends Layer<SatellitePicture> {
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
     const context = canvas.getContext('2d')!;
     context.drawImage(bitmap, 0, 0);
-    const original = context.getImageData(0, 0, bitmap.width, bitmap.height);
-    context.putImageData(equalize(original), 0, 0);
+    const received = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    context.putImageData(equalize(received), 0, 0);
     return {
       time,
       display: canvas.transferToImageBitmap(),
-      original,
-      bounds,
-      channel: choice.channel,
+      grays: choice.channel === 'ir' ? grayChannel(received) : undefined,
     };
   }
-
 }

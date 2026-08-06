@@ -11,8 +11,10 @@ import {
 import { LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
+import { LoopPlayer } from '../services/loop-player';
 import { TimeService } from '../services/time-service';
 import { Inputs, Layer, LookEntry } from './base/layer';
+import { LoopLayer } from './base/loop-layer';
 import { Shortcut } from './base/shortcut';
 
 @Service()
@@ -21,6 +23,7 @@ export class LayersService {
   private overlay = inject(Overlay);
   private map = inject(MapService);
   private time = inject(TimeService);
+  private player = inject(LoopPlayer);
   private layerInjectors = new Map<Layer<unknown>, EnvironmentInjector>();
 
   readonly activeLayers = signal(new Map<Layer<unknown>, Signal<unknown>>());
@@ -32,29 +35,28 @@ export class LayersService {
 
   private inputs: Inputs = {
     bbox: () => this.map.settledBbox(),
-    time: () => this.time.currentTime(),
+    displayTime: () => this.time.displayTime(),
+    exactTime: () => this.time.exactTime(),
     window: () => this.time.window(),
     zoom: () => this.map.settledZoom() ?? 0,
   };
 
-  private draw = effect(() => {
-    for (const [layer, dataSignal] of this.activeLayers()) {
-      const data = dataSignal();
-      if (data === undefined) continue;
-      if (data === null) {
-        for (const entry of layer.looks) this.overlay.remove(entry.look);
-        continue;
-      }
-      for (const entry of layer.looks) {
-        if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, data);
-      }
+  private syncLoops = effect(() => {
+    const loopTimes: number[][] = [];
+    for (const [layer, data] of this.activeLayers()) {
+      if (!(layer instanceof LoopLayer)) continue;
+      if (!layer.looks.some((entry) => this.activeLooks().has(entry))) continue;
+      const value = data();
+      if (value === undefined || value === null) continue;
+      loopTimes.push(layer.loopTimesOf(value));
     }
+    this.player.setTimes(...loopTimes);
   });
 
   private syncTime = effect(() => {
     const layers = [...this.activeLayers().keys()];
     this.time.windows.set(layers.map((layer) => layer.timeWindow).filter((window) => window !== null));
-    this.time.forcedTimes.set([...new Set(layers.flatMap((layer) => layer.forcedTimes?.() ?? []))]);
+    this.time.setForcedTimes(...layers.map((layer) => layer.forcedTimes?.() ?? []));
   });
 
   isLayerActive(layer: Layer<unknown>): boolean {
@@ -103,12 +105,24 @@ export class LayersService {
   showLayer(layer: Layer<unknown>): void {
     const layerInjector = createEnvironmentInjector([], this.injector);
     this.layerInjectors.set(layer, layerInjector);
-    const data = layer.fetch(this.inputs, layerInjector);
-    this.activeLayers.update((current) =>
-      new Map(current).set(layer, this.keepIfRelevant(layer, data)),
-    );
+    let data = this.keepIfRelevant(layer, layer.fetch(this.inputs, layerInjector));
+    if (layer instanceof LoopLayer) data = this.playLoop(layer, data);
+    this.activeLayers.update((current) => new Map(current).set(layer, data));
+    effect(() => this.drawLayer(layer, data), { injector: layerInjector });
     for (const entry of layer.looks) {
       if (entry.checked) this.showLook(entry);
+    }
+  }
+
+  private drawLayer(layer: Layer<unknown>, dataSignal: Signal<unknown>): void {
+    const data = dataSignal();
+    if (data === undefined) return;
+    if (data === null) {
+      for (const entry of layer.looks) this.overlay.remove(entry.look);
+      return;
+    }
+    for (const entry of layer.looks) {
+      if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, data);
     }
   }
 
@@ -153,8 +167,17 @@ export class LayersService {
       if (value === undefined || value === null) return value;
       const range = layer.relevanceOf(value);
       if (range === true) return value;
-      const time = this.time.currentTime();
+      const time = this.time.exactTime();
       return time < range.start || time > range.end ? null : value;
+    });
+  }
+
+  private playLoop(layer: LoopLayer<unknown>, data: Signal<unknown>): Signal<unknown> {
+    return computed(() => {
+      const value = data();
+      const playing = this.player.playingTime();
+      if (value === undefined || value === null || playing === null) return value;
+      return layer.atTime(value, playing);
     });
   }
 

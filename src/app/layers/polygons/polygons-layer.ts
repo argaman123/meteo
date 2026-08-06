@@ -97,7 +97,7 @@ export class PolygonsLayer extends Layer<PolygonMap> {
     this.forcedTimes = computed(() => (hours.hasValue() ? hours.value() : []));
     const mapTime = computed(() => {
       if (!hours.hasValue()) return undefined;
-      return findNearestTime(hours.value(), on.time(), 3);
+      return findNearestTime(hours.value(), on.displayTime(), 3);
     });
     const map = httpResource(() => this.mapRequest(mapTime()), {
       injector,
