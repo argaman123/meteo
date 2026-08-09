@@ -8,6 +8,7 @@ import {
 import { from } from 'rxjs';
 import { Sector } from '../../types/polygons';
 import { Bounds } from '../../types/wrap';
+import { hoursToMs, msToHours } from '../../utils/time';
 import { syntheticPolygons } from './synthetic-polygons';
 import { SATELLITE_SECTORS, satelliteHours, syntheticSatelliteImage } from './synthetic-satellite';
 import { SyntheticWeather } from './synthetic-weather';
@@ -18,7 +19,7 @@ const BACK_HOURS = 24;
 const FORWARD_HOURS = 96;
 
 const RUN_TIME =
-  Math.floor(Date.now() / (STEP_HOURS * 3_600_000)) * (STEP_HOURS * 3_600_000);
+  Math.floor(Date.now() / hoursToMs(STEP_HOURS)) * hoursToMs(STEP_HOURS);
 
 const POLYGON_HOURS: Record<Sector, number[]> = {
   [Sector.Center]: Array.from({ length: 33 }, (_, index) => index * 3),
@@ -67,14 +68,14 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
     const start = Number(request.params.get('start'));
     const end = Number(request.params.get('end'));
     const times = (POLYGON_HOURS[sector] ?? [])
-      .map((hours) => RUN_TIME + hours * 3_600_000)
+      .map((hours) => RUN_TIME + hoursToMs(hours))
       .filter((time) => time >= start && time <= end);
     return new HttpResponse({ status: 200, body: times });
   }
   if (request.url === '/api/polygons') {
     const sector = (request.params.get('sector') ?? '') as Sector;
     const time = Number(request.params.get('time'));
-    const hours = (time - RUN_TIME) / 3_600_000;
+    const hours = msToHours(time - RUN_TIME);
     const wrap = (POLYGON_HOURS[sector] ?? []).includes(hours)
       ? syntheticPolygons(sector, hours, RUN_TIME)
       : null;
@@ -103,14 +104,14 @@ function hoursBetween(request: HttpRequest<unknown>, firstHours: number, lastHou
   const end = Number(request.params.get('end'));
   const times: number[] = [];
   for (let hours = firstHours; hours <= lastHours; hours += STEP_HOURS) {
-    const time = RUN_TIME + hours * 3_600_000;
+    const time = RUN_TIME + hoursToMs(hours);
     if (time >= start && time <= end) times.push(time);
   }
   return times;
 }
 
 function frameHours(unixTime: number): number {
-  const hours = (unixTime - RUN_TIME) / 3_600_000;
+  const hours = msToHours(unixTime - RUN_TIME);
   return Math.min(FORWARD_HOURS, Math.max(-BACK_HOURS, hours));
 }
 

@@ -11,7 +11,14 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { LayersService } from '../../../layers/layers-service';
 import { LoopPlayer } from '../../../services/loop-player';
 import { TimeService } from '../../../services/time-service';
-import { clampToRange, formatLocalHour, formatLocalTime, timelineTicks } from '../../../utils/time';
+import {
+  clampToRange,
+  daysToMs,
+  formatLocalHour,
+  formatLocalTime,
+  hoursToMs,
+  timelineTicks,
+} from '../../../utils/time';
 
 // TODO: UNVERIFIED CODE BELOW
 interface TimelineView {
@@ -99,7 +106,7 @@ export class TimeBar {
     }
     const fraction = this.fractionAt(event);
     const anchor = start + fraction * span;
-    const zoomed = clampToRange(span * Math.exp(event.deltaY * 0.0015), 3 * 3_600_000, 20 * 365 * 24 * 3_600_000);
+    const zoomed = clampToRange(span * Math.exp(event.deltaY * 0.0015), hoursToMs(3), daysToMs(20 * 365));
     this.view.set({ start: anchor - fraction * zoomed, end: anchor + (1 - fraction) * zoomed });
   }
 

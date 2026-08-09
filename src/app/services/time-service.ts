@@ -1,5 +1,5 @@
 import { DestroyRef, Service, computed, inject, linkedSignal, signal } from '@angular/core';
-import { mergeTimes } from '../utils/time';
+import { hoursToMs, mergeTimes, minutesToMs } from '../utils/time';
 
 export interface TimeWindow {
   backHours: number;
@@ -25,10 +25,10 @@ export class TimeService {
       const windows = this.windows();
       const backHours = windows.length ? Math.max(...windows.map((w) => w.backHours)) : 24;
       const forwardHours = windows.length ? Math.max(...windows.map((w) => w.forwardHours)) : 96;
-      const anchor = Math.round(this.now() / 300_000) * 300_000;
+      const anchor = Math.round(this.now() / minutesToMs(5)) * minutesToMs(5);
       return {
-        start: anchor - backHours * 3_600_000,
-        end: anchor + forwardHours * 3_600_000,
+        start: anchor - hoursToMs(backHours),
+        end: anchor + hoursToMs(forwardHours),
       };
     },
     { equal: (a, b) => a.start === b.start && a.end === b.end },
@@ -43,7 +43,7 @@ export class TimeService {
       .map((window) => window.stepHours)
       .filter((stepHours) => stepHours !== undefined);
     for (const stepHours of steps.length ? steps : [3]) {
-      const stepMs = stepHours * 3_600_000;
+      const stepMs = hoursToMs(stepHours);
       for (let time = Math.ceil(start / stepMs) * stepMs; time <= end; time += stepMs) {
         points.add(time);
       }
@@ -60,7 +60,7 @@ export class TimeService {
   readonly displayTime = computed(() => this.snapJump(this.exactTime()));
 
   constructor() {
-    const handle = setInterval(() => this.now.set(Date.now()), 60000);
+    const handle = setInterval(() => this.now.set(Date.now()), minutesToMs(1));
     inject(DestroyRef).onDestroy(() => clearInterval(handle));
   }
 
@@ -74,7 +74,7 @@ export class TimeService {
   }
 
   jumpBy(hours: number): void {
-    this.jumpTo(this.displayTime() + hours * 3_600_000);
+    this.jumpTo(this.displayTime() + hoursToMs(hours));
   }
 
   stepForward(): void {

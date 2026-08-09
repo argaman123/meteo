@@ -1,6 +1,7 @@
 import { SECTORS } from '../../layers/polygons/polygons-layer';
 import { VISIBILITY_BANDS } from '../../layers/polygons/visibility';
 import { CloudEvent, PolygonsWrap, Sector } from '../../types/polygons';
+import { hoursToMs } from '../../utils/time';
 
 export function syntheticPolygons(
   sector: Sector,
@@ -26,8 +27,8 @@ export function syntheticPolygons(
     shape.coordinates.push(shape.coordinates[0]);
   }
   return {
-    startTime: runTime + (frameHours - 1) * 3_600_000,
-    endTime: runTime + (frameHours + 2) * 3_600_000,
+    startTime: runTime + hoursToMs(frameHours - 1),
+    endTime: runTime + hoursToMs(frameHours + 2),
     sector,
     polygons,
   };

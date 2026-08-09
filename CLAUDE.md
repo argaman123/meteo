@@ -183,9 +183,11 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
   exception: `environment.development.ts` registers the dev fixture-backend interceptor; prod
   builds swap the file out via `fileReplacements`, so no mock ships.)
 - **Unix times are ms, end to end** (lead, 2026-08-06): the backend sends unix ms and the whole
-  platform holds ms — `Date.now()` raw, `new Date(unixTime)` direct, hour math via `3_600_000`.
-  No seconds anywhere; identifiers say `Ms` (`stepMs`), never spelled out. Human-facing durations
-  stay hours/minutes fields (`TimeWindow.backHours`, `stepMinutes`) converted at use.
+  platform holds ms — `Date.now()` raw, `new Date(unixTime)` direct, duration math through the
+  unit helpers in `utils/time.ts` (`hoursToMs`/`minutesToMs`/`daysToMs` + `msToHours`/`msToDays`,
+  lead 2026-08-09 — TimeUnit-style, no naked `3_600_000`s). No seconds anywhere; identifiers say
+  `Ms` (`stepMs`), never spelled out. Human-facing durations stay hours/minutes fields
+  (`TimeWindow.backHours`, `stepMinutes`) converted at use.
 - **Naming:** descriptive, no abbreviations a junior wouldn't know. One concept = one name everywhere.
   Methods are verb+noun with the noun explicit (`showLayer`, `hideLook`, `toggleGroup` — never a bare
   `show()`/`activate()`); **state** uses the "active" adjective (`activeLayers`, `isLookActive`,

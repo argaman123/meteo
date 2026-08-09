@@ -10,6 +10,7 @@ import { sameArrays } from '../../utils/arrays';
 import { Control, OptionsPresentation, options } from '../../utils/controls';
 import { contains } from '../../utils/geo';
 import { equalize, grayChannel } from '../../utils/image';
+import { minutesToMs } from '../../utils/time';
 import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs } from '../base/layer';
 import { LoopLayer } from '../base/loop-layer';
@@ -77,8 +78,8 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
 
   relevanceOf(loop: SatelliteLoop): TimeRange {
     return {
-      start: loop.frames[0].time,
-      end: loop.frames[loop.frames.length - 1].time + ASK_MINUTES * 60_000,
+      start: loop.frames[0].time - minutesToMs(ASK_MINUTES),
+      end: loop.frames[loop.frames.length - 1].time + minutesToMs(ASK_MINUTES),
     };
   }
 
@@ -152,7 +153,7 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
           satellite: current.satellite,
           channel: current.channel,
           sector: current.sector,
-          start: String(on.exactTime() - ASK_MINUTES * 60_000),
+          start: String(on.exactTime() - minutesToMs(ASK_MINUTES)),
           end: String(on.exactTime()),
         },
       };

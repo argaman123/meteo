@@ -68,7 +68,9 @@
 - **All frames in the window are fetched** (`Promise.all` over the hours) and loop at 2 fps with
   a 1.5 s newest-hold; frames params dedupe with an explicit-field `equal`
   (`choice` ref + `times.join()`), the window-computed precedent.
-- Relevance = `frames[0] … last + 30 min`; back-only `timeWindow { 24, 0, 1h }` unchanged.
+- Relevance = `frames[0] − 30 min … last + 30 min` (lead 2026-08-09: a frame speaks for the half
+  hour around it, both directions — the HUD read misleading without the back pad); back-only
+  `timeWindow { 24, 0, 1h }` unchanged.
 
 ## Time semantics (static v1 — superseded, kept for the record)
 

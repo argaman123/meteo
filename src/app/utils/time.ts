@@ -12,8 +12,28 @@ const monthYearFormat = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 
 const yearFormat = new Intl.DateTimeFormat('he-IL', { year: 'numeric' });
 const WEEKDAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
+export function minutesToMs(minutes: number): number {
+  return minutes * 60_000;
+}
+
+export function hoursToMs(hours: number): number {
+  return hours * 3_600_000;
+}
+
+export function daysToMs(days: number): number {
+  return days * 86_400_000;
+}
+
+export function msToHours(ms: number): number {
+  return ms / 3_600_000;
+}
+
+export function msToDays(ms: number): number {
+  return ms / 86_400_000;
+}
+
 export function snapToStep(unixTime: number, stepHours: number): number {
-  const stepMs = stepHours * 3_600_000;
+  const stepMs = hoursToMs(stepHours);
   return Math.round(unixTime / stepMs) * stepMs;
 }
 
@@ -38,7 +58,7 @@ export function findNearestTime(
   target: number,
   relevanceHours: number,
 ): number | null {
-  const relevant = times.filter((time) => Math.abs(time - target) <= relevanceHours * 3_600_000);
+  const relevant = times.filter((time) => Math.abs(time - target) <= hoursToMs(relevanceHours));
   if (!relevant.length) return null;
   return relevant.reduce((nearest, time) =>
     Math.abs(time - target) < Math.abs(nearest - target) ? time : nearest,
@@ -69,7 +89,7 @@ const TICK_LEVELS: { maxSpanDays: number; minorUnit: TimeUnit; minorStep: number
 ];
 
 export function timelineTicks(start: number, end: number): TimelineTick[] {
-  const level = TICK_LEVELS.find((candidate) => (end - start) / 86_400_000 <= candidate.maxSpanDays)!;
+  const level = TICK_LEVELS.find((candidate) => msToDays(end - start) <= candidate.maxSpanDays)!;
   const majors = tickSequence(start, end, level.majorUnit, 1, level.majorUnit);
   const majorTimes = new Set(majors.map((date) => date.getTime()));
   const crowding = (end - start) * 0.05;

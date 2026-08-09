@@ -5,6 +5,7 @@ import { TimeRange } from '../../services/time-service';
 import { Parameter } from '../../types/parameter';
 import { Bounds, Wrap } from '../../types/wrap';
 import { containsBounds } from '../../utils/geo';
+import { hoursToMs } from '../../utils/time';
 import { Inputs, Layer } from '../base/layer';
 
 const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
@@ -14,7 +15,7 @@ export abstract class ModelLayer extends Layer<Grid[]> {
   override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
 
   relevanceOf(grids: Grid[]): TimeRange {
-    const relevanceMs = 1.5 * 3_600_000;
+    const relevanceMs = hoursToMs(1.5);
     return {
       start: grids[0].info.forecastTime - relevanceMs,
       end: grids[0].info.forecastTime + relevanceMs,

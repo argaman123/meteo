@@ -1,4 +1,5 @@
 import { Bounds, Wrap } from '../../types/wrap';
+import { hoursToMs } from '../../utils/time';
 
 interface Model {
   name: string;
@@ -86,7 +87,7 @@ export class SyntheticWeather {
       start_y: north,
       wrap_info: {
         base_time: runTime,
-        forecast_time: runTime + hours * 3_600_000,
+        forecast_time: runTime + hoursToMs(hours),
         model: modelName,
         param: parameter,
         pressure: parameter === 'hgt' ? '1000' : null,
