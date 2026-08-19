@@ -1,4 +1,4 @@
-<div class="flex items-center gap-2 border-t bg-card/75 pt-1.5 backdrop-blur-md">
+<div class="relative flex items-center gap-2 border-t bg-card/75 pt-1.5 backdrop-blur-md">
   <div dir="ltr" class="grid shrink-0 grid-cols-4 gap-x-1 gap-y-1 px-2">
     <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="אחורה 3 שעות"
             (click)="time.jumpBy(-3)">
@@ -25,6 +25,28 @@
       24h<ng-icon name="lucideChevronsRight"/>
     </button>
   </div>
+  @if (player.loopTime() !== null) {
+    <div dir="ltr"
+         class="absolute bottom-full end-2 mb-2 flex items-center gap-0.5 rounded-xl border bg-card/75 p-0.5 shadow-lg backdrop-blur-md">
+      <button hlmBtn variant="ghost" size="sm" class="h-6 w-6 px-0" aria-label="תמונה קודמת"
+              (click)="player.stepFrame(-1)">
+        <ng-icon name="lucideSkipBack"/>
+      </button>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 w-6 px-0"
+              [attr.aria-label]="player.playing() ? 'השהיה' : 'ניגון'"
+              (click)="player.playing() ? player.pause() : player.play()">
+        <ng-icon [name]="player.playing() ? 'lucidePause' : 'lucidePlay'"/>
+      </button>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 w-6 px-0" aria-label="תמונה הבאה"
+              (click)="player.stepFrame(1)">
+        <ng-icon name="lucideSkipForward"/>
+      </button>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 min-w-8 px-1 text-xs tabular-nums"
+              aria-label="מהירות" (click)="cycleSpeed()">
+        ×{{ player.speed() }}
+      </button>
+    </div>
+  }
   <div class="relative flex-1">
     <div dir="ltr" class="relative h-12 cursor-grab overflow-hidden select-none active:cursor-grabbing"
          (wheel)="onWheel($event)" (pointerdown)="onPointerDown($event)"

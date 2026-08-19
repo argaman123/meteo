@@ -6,6 +6,10 @@ import {
   lucideChevronRight,
   lucideChevronsLeft,
   lucideChevronsRight,
+  lucidePause,
+  lucidePlay,
+  lucideSkipBack,
+  lucideSkipForward,
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { LayersService } from '../../../layers/layers-service';
@@ -35,6 +39,10 @@ interface TimelineView {
       lucideChevronRight,
       lucideChevronsLeft,
       lucideChevronsRight,
+      lucidePause,
+      lucidePlay,
+      lucideSkipBack,
+      lucideSkipForward,
     }),
   ],
   templateUrl: './time-bar.html',
@@ -47,7 +55,7 @@ interface TimelineView {
 export class TimeBar {
   protected time = inject(TimeService);
   protected layers = inject(LayersService);
-  private player = inject(LoopPlayer);
+  protected player = inject(LoopPlayer);
   private view = signal(this.paddedWindow());
   private scrubTime = signal<number | null>(null);
   private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimelineView } | null =
@@ -171,7 +179,15 @@ export class TimeBar {
 
   private paddedWindow(): TimelineView {
     const { start, end } = this.time.window();
-    const padding = (end - start) * 0.1;
-    return { start: start - padding, end: end + padding };
+    const span = (end - start) * 1.2;
+    const center = this.time.now();
+    return { start: center - span / 2, end: center + span / 2 };
+  }
+
+  private readonly speeds = [0.5, 1, 2, 4];
+
+  protected cycleSpeed(): void {
+    const index = this.speeds.indexOf(this.player.speed());
+    this.player.speed.set(this.speeds[(index + 1) % this.speeds.length]);
   }
 }

@@ -5,6 +5,8 @@ import { findNearestTime, mergeTimes } from '../utils/time';
 export class LoopPlayer {
   private readonly frameMs = 400;
   private readonly restartDelayMs = 1500;
+  readonly playing = signal(true);
+  readonly speed = signal(1);
   readonly loopTime = signal<number | null>(null);
   readonly nearestFrameTime = computed(() => {
     const loopTime = this.loopTime();
@@ -16,22 +18,41 @@ export class LoopPlayer {
   private handle = 0;
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => this.pause());
+    inject(DestroyRef).onDestroy(() => this.halt());
   }
 
   setTimes(...loopTimes: number[][]): void {
     this.times = mergeTimes(loopTimes);
     this.layerDataStepMs = Math.max(0, ...loopTimes.map(smallestGap));
     if (this.times.length) {
-      this.play();
+      this.run();
     } else {
       this.loopTime.set(null);
-      this.pause();
+      this.playing.set(true);
+      this.halt();
     }
   }
 
-  private play(): void {
-    if (this.handle) return;
+  play(): void {
+    this.playing.set(true);
+    this.run();
+  }
+
+  pause(): void {
+    this.playing.set(false);
+    this.halt();
+  }
+
+  stepFrame(direction: 1 | -1): void {
+    this.pause();
+    const current = this.nearestFrameTime();
+    if (current === null || !this.times.length) return;
+    const index = this.times.indexOf(current);
+    this.loopTime.set(this.times[(index + direction + this.times.length) % this.times.length]);
+  }
+
+  private run(): void {
+    if (this.handle || !this.times.length || !this.playing()) return;
     let lastFrame = performance.now();
     const frame = (now: number) => {
       this.advance(now - lastFrame);
@@ -41,7 +62,7 @@ export class LoopPlayer {
     this.handle = requestAnimationFrame(frame);
   }
 
-  private pause(): void {
+  private halt(): void {
     cancelAnimationFrame(this.handle);
     this.handle = 0;
   }
@@ -59,8 +80,9 @@ export class LoopPlayer {
       this.loopTime.set(start);
       return;
     }
-    const next = loopTime + (elapsedMs * this.layerDataStepMs) / this.frameMs;
-    const holdUntil = end + (this.restartDelayMs / this.frameMs) * this.layerDataStepMs;
+    const speedFrameMs = this.frameMs / this.speed();
+    const next = loopTime + (elapsedMs * this.layerDataStepMs) / speedFrameMs;
+    const holdUntil = end + (this.restartDelayMs / speedFrameMs) * this.layerDataStepMs;
     this.loopTime.set(next > holdUntil ? start : next);
   }
 }

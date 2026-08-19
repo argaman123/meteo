@@ -622,7 +622,7 @@ playhead never enters layer/look/Inputs code. `LoopPlayer` (`services/`) is the 
 — **constant-velocity sweep since 2026-08-18 (lead: "the most sparse layer chooses the pace")**:
 an rAF loop (running only while loop layers are active — `setTimes` play/pauses it, the idle
 app schedules zero wake-ups) advances a continuous `loopTime` so one frame-interval of the sparsest active loop
-layer (max over layers of their list's smallest gap) takes `frameMs` (500 ms) of wall time; every
+layer (max over layers of their list's smallest gap) takes `frameMs` (400 ms, lead-tuned from 500) of wall time; every
 layer's `atTime` nearest-picks from the raw sweep, so each flips **evenly** at its proportional
 pace (sim-verified 150/250/500 ms exact — the old 500 ms-per-merged-stop tick gave every union
 stop equal wall time regardless of data span, so a satellite picture held 2 ticks or 4 depending
@@ -638,7 +638,17 @@ draw effects fire only on actual frame changes) was **built, verified, and rever
 contract obligation with a footgun (a lazy `true` freezes the loop, a lazy `false` is silent
 churn); the recipe stands here as the ready re-add if the perf HUD on a real mini-PC ever points
 at playhead churn: abstract `sameData` reference-comparing frames+shown per layer, passed as the
-computed's `equal` with null-guards. Newest-hold = `restartDelayMs` 1500ms (converted to data-time overshoot past the newest frame — the sweep coasts, consumers nearest-pick, no hold accumulator). Caveat: a multi-site layer merges its sites' times before the
+computed's `equal` with null-guards. Newest-hold = `restartDelayMs` 1500ms (converted to data-time overshoot past the newest frame — the sweep coasts, consumers nearest-pick, no hold accumulator). **Loop player controls (2026-08-19, lead: "very important")**: a floating frosted pill
+(card recipe, `dir=ltr`) above the time bar's end side, visible only while `loopTime` is non-null
+— ⏮ ⏸/▶ ⏭ (lucide) + a ×N **cycle chip** ×0.5/×1/×2/×4 (an in-strip block was tried first —
+lead: too cramped — and a popover speed slider — lead: cycle icon instead). `LoopPlayer.playing`
++ `speed` signals (speed scales frameMs; the hold stays 1500ms wall at any speed; session-only),
+public `play()`/`pause()`/`stepFrame(±1)` over private `run()`/`halt()`; `stepFrame` auto-pauses
+and walks the merged times list with wraparound; `setTimes` respects a user pause while loops
+live, but the pause **dies with the loop session** (empty setTimes resets playing — pausing then
+re-showing a loop layer plays, the lead's bug). Perf HUD moved `bottom-18`→`bottom-28` to clear
+the pill's band. The timeline view boots **centered on now** (lead's ask — `paddedWindow` centers
+the window's span on `time.now()`, handle at 50%). Caveat: a multi-site layer merges its sites' times before the
 player sees them (3&10-min sites → phantom 1-min union gaps understate its cadence) — harmless
 while a sparser layer is active; per-site lists are the fix if a radar-alone loop ever paces
 wrong. Lead floated a priority-list-of-kinds alternative to the sparsest rule (plan.md row); `LoopLayer<D>` (`layers/base/`) is the kind marker (`loopTimesOf(data)`
