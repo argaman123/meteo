@@ -17,6 +17,7 @@ import {
 } from '@spartan-ng/helm/popover';
 import { DecimalPipe } from '@angular/common';
 import { HlmSlider } from '@spartan-ng/helm/slider';
+import { HlmSwitch } from '@spartan-ng/helm/switch';
 import { Layer } from '../../../layers/base/layer';
 import { LayersService } from '../../../layers/layers-service';
 import { layers, shortcuts } from '../../../layers/registry';
@@ -33,6 +34,7 @@ import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from
     HlmDropdownMenuTrigger,
     HlmPopover,
     HlmPopoverContent,
+    HlmSwitch,
     HlmPopoverPortal,
     HlmPopoverTrigger,
     HlmSlider,

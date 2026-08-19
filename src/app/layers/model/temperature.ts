@@ -24,7 +24,7 @@ export class Temperature extends ModelLayer {
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => grids[0]),
-        PALETTE, 'smooth',
+        { stops: PALETTE, style: 'smooth' },
         (value) => format(value, Quantity.Temperature, Unit.Celsius),
       ),
       name: 'צבעים',

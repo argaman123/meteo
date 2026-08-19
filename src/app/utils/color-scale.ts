@@ -9,6 +9,11 @@ export interface ColorStop {
 
 export type PaletteStyle = 'smooth' | 'stepped';
 
+export interface Palette {
+  stops: ColorStop[];
+  style: PaletteStyle;
+}
+
 export type ColorScale = (value: number) => RGBColor;
 
 export function rgba(color: string, alpha = 255): [number, number, number, number] {

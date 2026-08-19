@@ -17,7 +17,8 @@
       "@spartan-ng/helm/slider": ["./src/spartan/slider/src/index.ts"],
       "@spartan-ng/helm/checkbox": ["./src/spartan/checkbox/src/index.ts"],
       "@spartan-ng/helm/popover": ["./src/spartan/popover/src/index.ts"],
-      "@spartan-ng/helm/dropdown-menu": ["./src/spartan/dropdown-menu/src/index.ts"]
+      "@spartan-ng/helm/dropdown-menu": ["./src/spartan/dropdown-menu/src/index.ts"],
+      "@spartan-ng/helm/switch": ["./src/spartan/switch/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

@@ -1,36 +1,75 @@
-import { DestroyRef, Service, effect, inject, signal } from '@angular/core';
-import { mergeTimes } from '../utils/time';
-
-const NEWEST_FRAME_TICKS = 3;
+import { DestroyRef, Service, computed, inject, signal } from '@angular/core';
+import { findNearestTime, mergeTimes } from '../utils/time';
 
 @Service()
 export class LoopPlayer {
-  readonly playingTime = signal<number | null>(null);
-  readonly frameMs = signal(500);
+  private readonly frameMs = 400;
+  private readonly restartDelayMs = 1500;
+  readonly loopTime = signal<number | null>(null);
+  readonly nearestFrameTime = computed(() => {
+    const loopTime = this.loopTime();
+    return loopTime === null ? null : findNearestTime(this.times, loopTime, 24);
+  });
   private times: number[] = [];
-  private tick = 0;
+  private layerDataStepMs = 0;
+
+  private handle = 0;
 
   constructor() {
-    let handle: ReturnType<typeof setInterval> | undefined = undefined;
-    effect(() => {
-      clearInterval(handle);
-      handle = setInterval(() => this.advance(), this.frameMs());
-    });
-    inject(DestroyRef).onDestroy(() => clearInterval(handle));
+    inject(DestroyRef).onDestroy(() => this.pause());
   }
 
   setTimes(...loopTimes: number[][]): void {
     this.times = mergeTimes(loopTimes);
-    if (!this.times.length) {
-      this.tick = 0;
-      this.playingTime.set(null);
+    this.layerDataStepMs = Math.max(0, ...loopTimes.map(smallestGap));
+    if (this.times.length) {
+      this.play();
+    } else {
+      this.loopTime.set(null);
+      this.pause();
     }
   }
 
-  private advance(): void {
-    if (!this.times.length) return;
-    const cycleTicks = this.times.length + NEWEST_FRAME_TICKS - 1;
-    this.tick = (this.tick + 1) % cycleTicks;
-    this.playingTime.set(this.times[Math.min(this.tick, this.times.length - 1)]);
+  private play(): void {
+    if (this.handle) return;
+    let lastFrame = performance.now();
+    const frame = (now: number) => {
+      this.advance(now - lastFrame);
+      lastFrame = now;
+      this.handle = requestAnimationFrame(frame);
+    };
+    this.handle = requestAnimationFrame(frame);
   }
+
+  private pause(): void {
+    cancelAnimationFrame(this.handle);
+    this.handle = 0;
+  }
+
+  private advance(elapsedMs: number): void {
+    if (!this.times.length) return;
+    const start = this.times[0];
+    const end = this.times[this.times.length - 1];
+    if (!this.layerDataStepMs) {
+      this.loopTime.set(end);
+      return;
+    }
+    const loopTime = this.loopTime();
+    if (loopTime === null || loopTime < start) {
+      this.loopTime.set(start);
+      return;
+    }
+    const next = loopTime + (elapsedMs * this.layerDataStepMs) / this.frameMs;
+    const holdUntil = end + (this.restartDelayMs / this.frameMs) * this.layerDataStepMs;
+    this.loopTime.set(next > holdUntil ? start : next);
+  }
+}
+
+function smallestGap(times: number[]): number {
+  let gap = 0;
+  for (let index = 1; index < times.length; index++) {
+    const step = times[index] - times[index - 1];
+    if (step > 0 && (!gap || step < gap)) gap = step;
+  }
+  return gap;
 }

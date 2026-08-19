@@ -5,6 +5,7 @@ export enum Unit {
   MetDegrees = 'met-degrees',
   Meters = 'meters',
   Kilometers = 'kilometers',
+  MillimetersPerHour = 'millimeters-per-hour',
 }
 
 export enum Quantity {
@@ -13,6 +14,7 @@ export enum Quantity {
   Direction = 'direction',
   GeopotentialHeight = 'geopotential-height',
   Visibility = 'visibility',
+  Rain = 'rain',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -21,6 +23,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.Direction]: Unit.MetDegrees,
   [Quantity.GeopotentialHeight]: Unit.Meters,
   [Quantity.Visibility]: Unit.Kilometers,
+  [Quantity.Rain]: Unit.MillimetersPerHour,
 };
 
 const knotsPerMeterPerSecond = 1.943844;
@@ -50,5 +53,7 @@ export function format(value: number, quantity: Quantity, from: Unit): string {
       return `${rounded} m`;
     case Unit.Kilometers:
       return `${Number(converted.toFixed(1))}km`;
+    case Unit.MillimetersPerHour:
+      return `${Number(converted.toFixed(1))} mm/h`;
   }
 }

@@ -97,36 +97,66 @@
                     </hlm-popover>
                   }
                   @case (ControlType.Options) {
-                    @switch (control.presentation) {
-                      @case (OptionsPresentation.Select) {
-                        <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
-                                [attr.aria-label]="control.label ?? 'אפשרויות'"
-                                [hlmDropdownMenuTrigger]="choicesMenu">
-                          {{ optionLabel(control) }}
-                        </button>
-                        <ng-template #choicesMenu>
-                          <hlm-dropdown-menu>
-                            @for (choice of control.choices; track choice.value) {
-                              <button hlmDropdownMenuRadio [checked]="choice.value === control()"
-                                      [keepOpen]="false" (triggered)="control.set(choice.value)">
-                                <hlm-dropdown-menu-radio-indicator/>
-                                {{ choice.label }}
-                              </button>
-                            }
-                          </hlm-dropdown-menu>
-                        </ng-template>
-                      }
-                      @case (OptionsPresentation.Toggle) {
-                        <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
-                                [attr.aria-label]="control.label ?? 'אפשרויות'" (click)="cycleOptions(control)">
-                          {{ optionLabel(control) }}
-                        </button>
-                      }
+                    @if (!control.label) {
+                      <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                              aria-label="אפשרויות" (click)="cycleOptions(control)">
+                        {{ optionLabel(control) }}
+                      </button>
+                    }
+                  }
+                  @case (ControlType.Toggle) {
+                    @if (!control.label) {
+                      <span class="flex w-9 justify-center">
+                        <hlm-switch size="sm" aria-label="אפשרות"
+                                    [checked]="control()" (checkedChange)="control.set($event)"/>
+                      </span>
                     }
                   }
                 }
               }
             </div>
+            @for (control of entry.look.controls; track control) {
+              @if (control.type === ControlType.Toggle && control.label) {
+                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm"
+                     [class.opacity-50]="!layersService.isLayerActive(layer)">
+                  <span class="w-4"></span>
+                  <span class="grow">{{ control.label }}</span>
+                  <span class="flex w-9 justify-center">
+                    <hlm-switch size="sm" [attr.aria-label]="control.label"
+                                [checked]="control()" (checkedChange)="control.set($event)"/>
+                  </span>
+                </div>
+              }
+              @if (control.type === ControlType.Options && control.label) {
+                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm"
+                     [class.opacity-50]="!layersService.isLayerActive(layer)">
+                  <span class="w-4"></span>
+                  <span class="grow">{{ control.label }}</span>
+                  @if (control.presentation === OptionsPresentation.Select) {
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                            [attr.aria-label]="control.label" [hlmDropdownMenuTrigger]="choicesMenu">
+                      {{ optionLabel(control) }}
+                    </button>
+                    <ng-template #choicesMenu>
+                      <hlm-dropdown-menu>
+                        @for (choice of control.choices; track choice.value) {
+                          <button hlmDropdownMenuRadio [checked]="choice.value === control()"
+                                  [keepOpen]="false" (triggered)="control.set(choice.value)">
+                            <hlm-dropdown-menu-radio-indicator/>
+                            {{ choice.label }}
+                          </button>
+                        }
+                      </hlm-dropdown-menu>
+                    </ng-template>
+                  } @else {
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                            [attr.aria-label]="control.label" (click)="cycleOptions(control)">
+                      {{ optionLabel(control) }}
+                    </button>
+                  }
+                </div>
+              }
+            }
           }
         }
       </div>

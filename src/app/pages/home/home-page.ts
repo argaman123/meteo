@@ -53,5 +53,6 @@ export class HomePage implements AfterViewInit, OnDestroy {
     await this.map.init(this.container().nativeElement);
     this.layers.showLayer(layers.coordinates);
     this.layers.showLayer(layers.satellite);
+    this.layers.showLayer(layers.radar);
   }
 }

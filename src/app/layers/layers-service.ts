@@ -175,7 +175,7 @@ export class LayersService {
   private playLoop(layer: LoopLayer<unknown>, data: Signal<unknown>): Signal<unknown> {
     return computed(() => {
       const value = data();
-      const playing = this.player.playingTime();
+      const playing = this.player.loopTime();
       if (value === undefined || value === null || playing === null) return value;
       return layer.atTime(value, playing);
     });

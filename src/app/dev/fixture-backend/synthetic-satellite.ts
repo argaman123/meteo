@@ -1,5 +1,5 @@
 import { Bounds } from '../../types/wrap';
-import { daysToMs, minutesToMs } from '../../utils/time';
+import { minutesToMs } from '../../utils/time';
 
 export const SATELLITE_SECTORS: Record<string, { bounds: Bounds; size: number; stepMinutes: number }> = {
   near: { bounds: [30, 27, 40, 36], size: 1024, stepMinutes: 5 },
@@ -7,7 +7,6 @@ export const SATELLITE_SECTORS: Record<string, { bounds: Bounds; size: number; s
 };
 
 const SOURCE_COUNT = 5;
-const SOURCE_HOUR_MS = new Date(Date.now() - daysToMs(1)).setUTCHours(9, 0, 0, 0);
 
 const sourcePromises = new Map<string, Promise<ImageBitmap>>();
 const framePromises = new Map<string, Promise<Blob>>();
@@ -32,9 +31,15 @@ export function syntheticSatelliteImage(sector: string, channel: string, time: n
   return frame;
 }
 
+export function sourceIndexAt(time: number, stepMinutes: number): number {
+  const slot = Math.floor(time / minutesToMs(stepMinutes));
+  const position = slot % (2 * SOURCE_COUNT - 2);
+  return position < SOURCE_COUNT ? position : 2 * SOURCE_COUNT - 2 - position;
+}
+
 async function renderFrame(sector: string, channel: string, time: number): Promise<Blob> {
   const { size, stepMinutes } = SATELLITE_SECTORS[sector] ?? SATELLITE_SECTORS['near'];
-  const source = await loadSource(sector, Math.floor(time / minutesToMs(stepMinutes)) % SOURCE_COUNT);
+  const source = await loadSource(sector, sourceIndexAt(time, stepMinutes));
   const canvas = new OffscreenCanvas(size, size);
   const context = canvas.getContext('2d')!;
   if (channel === 'ir') context.filter = 'grayscale(1)';
@@ -46,14 +51,7 @@ function loadSource(sector: string, index: number): Promise<ImageBitmap> {
   const key = `${sector}-${index}`;
   let source = sourcePromises.get(key);
   if (!source) {
-    const { bounds, size } = SATELLITE_SECTORS[sector] ?? SATELLITE_SECTORS['near'];
-    const [west, south, east, north] = bounds;
-    const capture = new Date(SOURCE_HOUR_MS + minutesToMs(10 * index)).toISOString();
-    const url =
-      'https://view.eumetsat.int/geoserver/wms?service=WMS&version=1.1.1&request=GetMap' +
-      '&layers=mtg_fd:rgb_geocolour&styles=&srs=EPSG:4326&format=image/jpeg' +
-      `&bbox=${west},${south},${east},${north}&width=${size}&height=${size}&time=${capture}`;
-    source = fetch(url)
+    source = fetch(`/fixtures/satellite/${sector}-${index}.jpg`)
       .then((response) => response.blob())
       .then((blob) => createImageBitmap(blob));
     sourcePromises.set(key, source);

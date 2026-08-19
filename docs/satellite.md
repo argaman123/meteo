@@ -99,6 +99,12 @@
 
 ## Fixture (dev/fixture-backend/synthetic-satellite.ts)
 
+- **Imagery is VENDORED since 2026-08-13** (lead: "load once pictures from a visible hours
+  preferably a cloudy day" — runtime WMS fetches broke the app during an EUMETView 502 outage):
+  `public/fixtures/satellite/{near,wide}-{0..4}.jpg` = 5 same-hour GeoColor frames per sector,
+  2026-08-07 09:00–09:40Z (cloudiest day in retention by jpeg-size probe — marine cloud streets),
+  fetched once by the paragraph below's recipe and committed. The fixture reads only these local
+  files. The original runtime source, kept for re-vendoring:
 - **Real imagery from EUMETSAT's open WMS** (EUMETView, anonymous):
   `https://view.eumetsat.int/geoserver/wms` … `layers=mtg_fd:rgb_geocolour`, `srs=EPSG:4326`,
   `bbox=west,south,east,north` (version 1.1.1), `time=<ISO>`. MTG GeoColor at 10-min native

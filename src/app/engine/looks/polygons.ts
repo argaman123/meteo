@@ -7,7 +7,7 @@ import { polygon } from '@turf/helpers';
 import polylabel from 'polylabel';
 import { Bounds } from '../../types/wrap';
 import { rgba } from '../../utils/color-scale';
-import { Legend, Look, LookKind } from '../base/look';
+import { LabelIcon, Legend, Look, LookKind } from '../base/look';
 import { Provider } from '../../objects/provider';
 
 export enum PolygonPattern {
@@ -48,14 +48,6 @@ interface PolygonLabel {
   icon: LabelIcon;
 }
 
-interface LabelIcon {
-  url: string;
-  width: number;
-  height: number;
-  anchorX: number;
-  anchorY: number;
-}
-
 export class Polygons extends Look<PolygonsView> {
   readonly kind = LookKind.Polygons;
   override readonly legend: Legend;
@@ -64,6 +56,10 @@ export class Polygons extends Look<PolygonsView> {
   constructor(provider: Provider<PolygonsView>, legend: Legend) {
     super(provider);
     this.legend = legend;
+  }
+
+  override release(): void {
+    this.labelIcons.clear();
   }
 
   deckLayer(id: string, view: PolygonsView): DeckLayer[] {

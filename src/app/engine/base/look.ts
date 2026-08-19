@@ -5,6 +5,7 @@ import { Control } from '../../utils/controls';
 export enum LookKind {
   Image,
   Colormap,
+  Radar,
   Borders,
   Contours,
   Particles,
@@ -41,4 +42,13 @@ export abstract class Look<I> {
   readonly legend: Legend | null = null;
   constructor(readonly provider: Provider<I>) {}
   abstract deckLayer(id: string, input: I): DeckLayer | DeckLayer[];
+  release(): void {}
+}
+
+export interface LabelIcon {
+  url: string;
+  width: number;
+  height: number;
+  anchorX: number;
+  anchorY: number;
 }

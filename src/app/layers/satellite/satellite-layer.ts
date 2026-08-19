@@ -13,9 +13,7 @@ import { equalize, grayChannel } from '../../utils/image';
 import { minutesToMs } from '../../utils/time';
 import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs } from '../base/layer';
-import { LoopLayer } from '../base/loop-layer';
-
-const ASK_MINUTES = 30;
+import { FrameLoader, LoopLayer } from '../base/loop-layer';
 
 export interface SatelliteFrame {
   time: number;
@@ -37,6 +35,7 @@ interface SatelliteChoice {
 
 export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   readonly name = 'לוויין';
+  private readonly askMinutes = 30;
   override readonly timeWindow = { backHours: 24, forwardHours: 0, stepHours: 1 };
   readonly channel = options<string>('auto', [
     { value: 'auto', label: 'אוטו' },
@@ -78,8 +77,8 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
 
   relevanceOf(loop: SatelliteLoop): TimeRange {
     return {
-      start: loop.frames[0].time - minutesToMs(ASK_MINUTES),
-      end: loop.frames[loop.frames.length - 1].time + minutesToMs(ASK_MINUTES),
+      start: loop.frames[0].time - minutesToMs(this.askMinutes),
+      end: loop.frames[loop.frames.length - 1].time + minutesToMs(this.askMinutes),
     };
   }
 
@@ -87,9 +86,9 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
     return loop.frames.map((frame) => frame.time);
   }
 
-  atTime(loop: SatelliteLoop, playingTime: number): SatelliteLoop {
+  atTime(loop: SatelliteLoop, loopTime: number): SatelliteLoop {
     const shown = loop.frames.reduce((nearest, frame) =>
-      Math.abs(frame.time - playingTime) < Math.abs(nearest.time - playingTime) ? frame : nearest,
+      Math.abs(frame.time - loopTime) < Math.abs(nearest.time - loopTime) ? frame : nearest,
     );
     return { ...loop, shown };
   }
@@ -102,9 +101,9 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
     return computed(() => {
       const sectorBounds = bounds();
       if (sectorBounds === null) return null;
-      if (sectorBounds === undefined || !frames.hasValue()) return undefined;
-      const loaded = frames.value();
-      if (loaded.length === 0) return null;
+      if (hours.hasValue() && hours.value().length === 0) return null;
+      const loaded = frames.hasValue() ? frames.value() : undefined;
+      if (sectorBounds === undefined || loaded === undefined || loaded.length === 0) return undefined;
       return { frames: loaded, shown: loaded[loaded.length - 1], bounds: sectorBounds };
     });
   }
@@ -153,7 +152,7 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
           satellite: current.satellite,
           channel: current.channel,
           sector: current.sector,
-          start: String(on.exactTime() - minutesToMs(ASK_MINUTES)),
+          start: String(on.exactTime() - minutesToMs(this.askMinutes)),
           end: String(on.exactTime()),
         },
       };
@@ -166,6 +165,7 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
     hours: Resource<number[] | undefined>,
   ): Resource<SatelliteFrame[] | undefined> {
     const http = injector.get(HttpClient);
+    const loader = new FrameLoader<SatelliteFrame>();
     const params = computed(
       () => {
         const current = choice();
@@ -176,22 +176,24 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
     );
     return resource({
       params,
-      loader: ({ params }) =>
-        Promise.all(params.times.map((time) => this.loadFrame(http, params.choice, time))),
+      stream: async ({ params }) =>
+        loader.stream(
+          params.times.map((time) => {
+            const request: Record<string, string> = { ...params.choice, time: String(time) };
+            return { params: request, load: () => this.loadFrame(http, request, time) };
+          }),
+        ),
       injector,
     });
   }
 
   private async loadFrame(
     http: HttpClient,
-    choice: SatelliteChoice,
+    request: Record<string, string>,
     time: number,
   ): Promise<SatelliteFrame> {
     const blob = await firstValueFrom(
-      http.get('/api/satellite/image', {
-        params: { ...choice, time: String(time) },
-        responseType: 'blob',
-      }),
+      http.get('/api/satellite/image', { params: request, responseType: 'blob' }),
     );
     const bitmap = await createImageBitmap(blob);
     const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
@@ -202,7 +204,7 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
     return {
       time,
       display: canvas.transferToImageBitmap(),
-      grays: choice.channel === 'ir' ? grayChannel(received) : undefined,
+      grays: request['channel'] === 'ir' ? grayChannel(received) : undefined,
     };
   }
 }

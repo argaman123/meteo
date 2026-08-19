@@ -17,6 +17,7 @@ export class Overlay {
   }
 
   detach(): void {
+    for (const look of this.layers.keys()) look.release();
     this.overlay = null;
     this.layers.clear();
     this.ids.clear();
@@ -29,7 +30,9 @@ export class Overlay {
   }
 
   remove(look: Look<unknown>): void {
-    if (this.layers.delete(look)) this.apply();
+    if (!this.layers.delete(look)) return;
+    look.release();
+    this.apply();
   }
 
   private idFor(look: Look<unknown>): string {

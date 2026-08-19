@@ -5,20 +5,12 @@ import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { ContourLine, contourLines } from '../../utils/contours';
 import { Control, color as colorControl } from '../../utils/controls';
-import { Look, LookKind } from '../base/look';
+import { LabelIcon, Look, LookKind } from '../base/look';
 
 interface ContourLabel {
   position: [number, number];
   text: string;
   angle: number;
-}
-
-interface LabelIcon {
-  url: string;
-  width: number;
-  height: number;
-  anchorX: number;
-  anchorY: number;
 }
 
 export type LevelPicker = (min: number, max: number) => number[];
@@ -34,7 +26,7 @@ export function levelsEvery(interval: number): LevelPicker {
 
 export class Contours extends Look<Grid> {
   readonly kind = LookKind.Contours;
-  private iconsCache = new Map<string, LabelIcon>();
+  private labelIcons = new Map<string, LabelIcon>();
 
   override readonly controls: Control[];
 
@@ -46,6 +38,10 @@ export class Contours extends Look<Grid> {
   ) {
     super(provider);
     this.controls = [colorControl(color)];
+  }
+
+  override release(): void {
+    this.labelIcons.clear();
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer[] {
@@ -91,7 +87,7 @@ export class Contours extends Look<Grid> {
   }
 
   private icon(text: string): LabelIcon {
-    const cached = this.iconsCache.get(text);
+    const cached = this.labelIcons.get(text);
     if (cached) return cached;
     const scale = 2;
     const height = 16 * scale;
@@ -123,7 +119,7 @@ export class Contours extends Look<Grid> {
       anchorX: width / 2,
       anchorY: height / 2,
     };
-    this.iconsCache.set(text, icon);
+    this.labelIcons.set(text, icon);
     return icon;
   }
 

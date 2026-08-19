@@ -57,7 +57,7 @@ export class TimeBar {
   protected timeLabel = computed(() => formatLocalTime(this.time.snapJump(this.shownTime())));
   protected isLive = computed(() => this.time.live() && this.scrubTime() === null);
   protected playingLine = computed(() => {
-    const playing = this.player.playingTime();
+    const playing = this.player.nearestFrameTime();
     return playing === null ? null : `זמן תמונה · ${formatLocalHour(playing)}`;
   });
 

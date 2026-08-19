@@ -192,7 +192,17 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
   Methods are verb+noun with the noun explicit (`showLayer`, `hideLook`, `toggleGroup` — never a bare
   `show()`/`activate()`); **state** uses the "active" adjective (`activeLayers`, `isLookActive`,
   `defaultActiveLayers`), **actions** use show/hide verbs (lead, 2026-07-13).
+- **Nothing holds data while hidden** (lead, 2026-08-13): looks are registry-lifetime singletons,
+  so any render cache on a look instance must clear in `Look.release()` — the Overlay calls it
+  whenever the look leaves the map (Colormap's image memo, Contours'/Polygons' icon caches).
+  Layer-side caches live in `fetch()` closures and die with the layer injector. A retained cache
+  on a singleton is the leak pattern juniors copy — don't create one without its release.
 - **Files stay small and focused.** If a file is doing two things, split it. (Old codebase pain.)
+- **Constants live with their user** (lead, 2026-08-18): a const used by one class becomes a
+  field of that class (`private readonly askMinutes = 30`), never a module const stranded above
+  the file's interfaces where nobody sees it; a const with several users sits directly beside the
+  class (or functions) using it. Known prior art left alone: wind-particles' lead-approved
+  tuning-knobs block at the top of that file (2026-07-30).
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
 - **spartan components are ours:** Helm components are copied into the repo — RTL/theme concerns
@@ -374,11 +384,25 @@ screenshot mockups 2026-07-22, gated by `hasChildRows` so an active layer with n
 draws no stub), checkbox per look, and
 **generic controls** (2026-07-15): looks/layers expose `controls: Control[]` — typed descriptors
 rendered by one template switch — `options(initial, choices, label?, presentation?)` (a persisted setting-signal with metadata
-attached; `OptionsPresentation` = Toggle click-cycle / Select popup list / Table — a titleless
+attached; `OptionsPresentation` = Cycle click-cycle (named Toggle until 2026-08-19) / Select popup list / Table — a titleless
 row of all choice buttons that wraps when space runs out; one `cycleOptions` serves particle
-speed ×0.5/×1/×2, the coordinates פורמט is a Select, the polygons גזרה is a Table; layer controls
+speed ×0.5/×1/×2, the coordinates פורמט is a Select, the polygons גזרה is a Table; **`toggle(initial,
+label?)`** (2026-08-19) is the boolean control, rendered as an `hlm-switch` — labeled toggles get
+the labeled-control row, unlabeled render inline; the copied switch needed two fixes (ours to fix,
+per the spartan rule): its fresh helm styles target the new brain's `data-checked` boolean attrs
+while our pinned brain 1.0.4 stamps `data-state=checked|unchecked` (selectors translated), and
+the thumb was rem-sized (`size-3` = 12.75px at our 17px root) inside a px-literal track so
+`calc(100%-2px)` overshot 1.5px (thumb now `size-[12px]`/`size-[16px]`, ON/OFF rest symmetric at
+1px, measured); the slide is `transition-[translate] duration-200 ease-in-out` (a "transition
+permanently wedged at currentTime 0" scare during verification turned out to be a stale headless
+Playwright browser freezing ALL css transitions — fresh instance animates, sim-sampled eased
+curve both directions); it self-heals a non-boolean stored value back to
+the initial (the radar עיגול key previously held 'shown'/'hidden' strings); layer controls
 render **above** the look rows and stay visible while the layer is active, since pickers
-aren't togglable), `percent(initial)` (colormap
+aren't togglable; look controls split by label (lead 2026-08-18): **unlabeled ones render inline
+at the end of their look's row** (opacity %, the particles' ×1 speed), **labeled ones get their
+own deeper-indented row under the look** (radar's עיגול) — same row anatomy as layer controls, so
+a labeled knob never crowds the checkbox line), `percent(initial)` (colormap
 opacity popover; image memoized per grid so drags cost a uniform), and `{ type: 'color' }`
 (contour identity squares). Caution: control metadata attaches via `Object.assign` onto the signal
 function — `name` is read-only on functions, hence the `label` field. Hover readout: one labeled line per active layer.
@@ -438,7 +462,7 @@ in `public/fixtures/` (`gfs-surface-wind.json`, `land.geojson`). Run time = app 
 
 **spartan/ui adopted, chrome rebuilt on it (2026-07-06):** initialized via `@spartan-ng/cli`
 (slate theme; dark is the default via `class="dark"` on `<html>`; CLI config in `components.json`).
-Helm components are copied into `src/spartan/` (button, checkbox, dropdown-menu, popover, slider,
+Helm components are copied into `src/spartan/` (button, checkbox, dropdown-menu, popover, slider, switch,
 utils so far; deliberately outside `app/` — it's the vendored look layer, rarely touched) and imported as `@spartan-ng/helm/*` through
 tsconfig paths; ESLint's selector-prefix rules are off for that folder (spartan keeps its `hlm*`
 selectors). Header, basemap switcher, layer bar, and time bar use `hlmBtn`/`hlm-slider`; selection
@@ -595,13 +619,34 @@ change); z5-tile↔vendored junctions can sit 1-2 px apart at sector zooms.
 **Satellite loop v2 (2026-08-06, the animation retry landed; design + full history in
 [`docs/satellite.md`](docs/satellite.md)):** the lead-picked "service-side pick" design — the
 playhead never enters layer/look/Inputs code. `LoopPlayer` (`services/`) is the loop-only handler
-(500 ms discrete tick over the **merged** times of all active loop layers, 3-tick newest-hold,
-publishes `playingTime`); `LoopLayer<D>` (`layers/base/`) is the kind marker (`loopTimesOf(data)`
-+ `atTime(data, playingTime)`); `LayersService` wires by instanceof — a `syncLoops` effect collects each active loop's raw times
+— **constant-velocity sweep since 2026-08-18 (lead: "the most sparse layer chooses the pace")**:
+an rAF loop (running only while loop layers are active — `setTimes` play/pauses it, the idle
+app schedules zero wake-ups) advances a continuous `loopTime` so one frame-interval of the sparsest active loop
+layer (max over layers of their list's smallest gap) takes `frameMs` (500 ms) of wall time; every
+layer's `atTime` nearest-picks from the raw sweep, so each flips **evenly** at its proportional
+pace (sim-verified 150/250/500 ms exact — the old 500 ms-per-merged-stop tick gave every union
+stop equal wall time regardless of data span, so a satellite picture held 2 ticks or 4 depending
+on how many radar stops fell inside it, the inconsistency the lead called out; a snapped-then-
+re-nearest variant was tried in sim and rejected — double quantization wobbled the pace layer
+283/550/483). `nearestFrameTime` derives as nearest merged time and is what the chip shows (real
+frame times only, lead-picked); layers read the raw sweep, which updates per rAF — loop-layer
+computeds re-run ~60/s: cheap shallow re-picks (frames/bitmaps shared by reference; the fresh
+identity per rAF is what drives redraws) absorbed by deck prop-diffing + the raster memos. A
+`LoopLayer.sameData(a, b)` equal on the playLoop computed (holds identity between real flips so
+draw effects fire only on actual frame changes) was **built, verified, and reverted 2026-08-19**
+— the win was unmeasurable (120 fps both ways, sub-ms/frame of CPU JS) against a permanent
+contract obligation with a footgun (a lazy `true` freezes the loop, a lazy `false` is silent
+churn); the recipe stands here as the ready re-add if the perf HUD on a real mini-PC ever points
+at playhead churn: abstract `sameData` reference-comparing frames+shown per layer, passed as the
+computed's `equal` with null-guards. Newest-hold = `restartDelayMs` 1500ms (converted to data-time overshoot past the newest frame — the sweep coasts, consumers nearest-pick, no hold accumulator). Caveat: a multi-site layer merges its sites' times before the
+player sees them (3&10-min sites → phantom 1-min union gaps understate its cadence) — harmless
+while a sparser layer is active; per-site lists are the fix if a radar-alone loop ever paces
+wrong. Lead floated a priority-list-of-kinds alternative to the sparsest rule (plan.md row); `LoopLayer<D>` (`layers/base/`) is the kind marker (`loopTimesOf(data)`
++ `atTime(data, loopTime)`); `LayersService` wires by instanceof — a `syncLoops` effect collects each active loop's raw times
 (the player merges: flatten/dedupe/sort is loop-domain logic, lead 2026-08-06), and `showLayer`
 wraps loop layers' gated data with
-`computed(() => atTime(data(), playingTime()))`, symmetric with `keepIfRelevant`. The chip grew
-its second line back: `זמן תמונה · HH:mm` from `playingTime` (wrapper `bottom-full mb-3`, grows
+`computed(() => atTime(data(), loopTime()))`, symmetric with `keepIfRelevant`. The chip grew
+its second line back: `זמן תמונה · HH:mm` from `loopTime` (wrapper `bottom-full mb-3`, grows
 upward). **One moment, two views** (lead renamed the tangled currentTime/targetTime pair
 2026-08-06): **`TimeService.exactTime`** is the source of truth (a linkedSignal: raw `now` while
 live, the held pick otherwise) and **`displayTime`** derives as `snapJump(exactTime)` — a linear
@@ -619,6 +664,101 @@ each minute (exactTime ticks); scrubbed it plays the 30 min before the selected 
 `AnimatedLayer` untouched — loops and particle animation are deliberately separate kinds. Radar =
 extend `LoopLayer`, implement the two methods; sync across loops is automatic (one playhead over
 merged times).
+
+**Radar layer v1 (2026-08-10, uncommitted):** second loop kind, proving the LoopLayer contract —
+`RadarLayer extends LoopLayer<RadarLoop[]>` (`layers/radar/`; `RadarLoop = { frames, shown }` is
+ONE radar's playing loop — symmetric with `SatelliteLoop`; the layer's data is plainly the list of
+them, `loopsOf(flatFrames)` regroups the shared FrameLoader's flat stream, lead-driven renaming
+2026-08-13 after `RadarFrames[]`-vs-`RadarFrame[]` proved unreadable). Wire (lead): `/api/radar/times?start&end`
+→ **a times list per available radar** (`RadarTimes[]`; the radars ARE the answer, no picker, no
+configuration/bounds asks — radar maps are **`Wrap`s of rain amounts** (mm/h), self-georeferenced,
+`Grid.fromWrap` reused). All radars display at once; `atTime` picks each radar's nearest frame to
+the shared playhead (sync automatic). **Colormap generalized instead of a bespoke look** (lead
+2026-08-12): `Colormap(provider, palette: Palette { stops, style }, label, options)` where
+`ColormapOptions = { opacity?, interpolation? ('bilinear'|'nearest'), filterValue? (predicate —
+values failing it render transparent, his call: a function, not a threshold; named hasValue until
+2026-08-18, "hasvalue is weird"), blur?
+(canvas-filter feather; named roundedEdges until 2026-08-18 — the lead asked for a name that says
+what it does — and hand-rolled as a ~60-line premultiplied box blur until the same day, replaced
+by ~8 lines of OffscreenCanvas ctx.filter='blur(2px)', Gaussian look verified equivalent),
+legend? (override) }` — defaults keep temperature/wind
+byte-identical. **`Radar` (`engine/looks/radar.ts`) is a thin Colormap subclass**: overrides
+`kind = LookKind.Radar` (between Colormap and Borders — above model colors, under black borders,
+exempt from colormap exclusivity; kind belongs to class identity, never an option — lead) and
+draws the coverage rings inside `deckLayer`, toggleable via a **עיגול** control (a boolean `toggle()` switch since 2026-08-19; a מוצג/מוסתר
+options-cycle before that, named טווח until 2026-08-18 — lead wants plain-written words over
+jargon, his picks) — circles die with the look, "circles without colors" impossible by construction. The N
+**Plurality lives on Radar, not Colormap** (lead 2026-08-18, fourth iteration of the day —
+`Grid.merge` (union-at-finest-cell) → per-site beaten-cell clearing (value-space max, built,
+verified seamless) → plain stacked maps ("all the max value calculations are causing this to be
+way too complicated for no reason" — overlap is uncommon, the top map reads clearly over the
+bottom, hover reports the true max over covering sites regardless of paint) → finally his "why
+does Colormap carry Grid[] at all?": **`Colormap extends Look<Grid>`** — single input, single
+`last` memo, model providers return a bare grid — and **`Radar` is a standalone `Look<Grid[]>`**,
+no longer a Colormap subclass (input types differ): it owns its palette/legend/opacity/עיגול
+wiring and composes the shared **`buildImage(grid, scale, interpolation, filterValue,
+blur)`** module function (the pixel loop + the blur feather, exported from `colormap.ts`
+— plain positional args and a plain verb+noun name: a RasterStyle params-bag, `rasterize`
+(graphics jargon), and `imageOf` (the -Of accessor pattern belongs to cheap data reads, not
+builders) were all rejected the same day, lead-picked `buildImage`; nothing outside the two look files depended on
+the Colormap class — exclusivity and registry go through `LookKind`). Radar renders one
+BitmapLayer per grid, plain — no compositing; per-grid `Map` memo keyed on identity alone, so a
+site flip re-rasters only itself, zero coupling between sites (the merge-cost concern that
+started the redesign); the Map swaps per render so departed grids drop, `release()` clears it.
+Accepted flags: in overlap a strong echo can sit under a weak one (z-order = list order, not
+severity — hover compensates) and the top circle's blur-feathered rim fades as a faint arc across
+the bottom map. Providers stay pure (`radar: loop.radars.map(site => site.shown.map)`, rings =
+`grids.map(grid => grid.bounds)`), no side channels.
+`blur` stays layer-overridable through Radar's ctor options; the echo floor is a
+`minimumValue` ctor param (lead 2026-08-18: the layer owns the number — RadarLayer's
+`minimumRain = 0.1` field feeds both the look's filterValue and the hover's — cutoff, one source;
+the look's default is `-Infinity`, a default that doesn't filter). Bands
+0.1/1/4/8 mm/h stepped blue→green→yellow→red (invented stand-ins), swatches legend, 0.85 opacity.
+Hover = max over covering radars' nearest values → `Quantity.Rain` (new, mm/h) through Units. Ask idiom =
+satellite's (last 30 min before `exactTime`, ±30 min relevance pads, `timeWindow { 24, 0, 1h }`).
+Radar coverage is a **circle in degree space** (lead 2026-08-10: "same lat lon coverage") —
+values never exist outside the inscribed circle of the square bounds; the look draws a subtle
+1.5px **coverage ring** per radar (72-segment, equal lat/lon radii from the bounds — renders
+slightly tall on mercator, that's the projection, not a bug) and the fixture masks cells outside
+the circle to null. Fixture (**rewritten 2026-08-18, lead: "follow the cloud for rain"**): rain
+is **sampled from the near-sector satellite frames themselves** — `synthetic-radar.ts` imports
+`SATELLITE_SECTORS`, loads the same `near-*.jpg` files at 512px into per-frame cloudiness maps
+(`min(r,g,b)` — whiteness beats luminance: desert is bright but blue-poor), and **subtracts the
+still ground**: background = per-pixel min across the 5 frames, dilated 1px (registration jitter
+flickers hard shoreline edges), baked into the maps at load. Only what MOVES between frames rains
+(the lead's own test: "look as it doesnt move" — sun-brightening drift and the bright rift/Dead
+Sea ground cancel to ≤0.05, real streets swing 0.16–0.44); rain = `((signal−0.06)/0.3)^1.5 · 9`
+mm/h, 3×3-smoothed, so echo is a coherent band under the visible cloud street, mostly blue/green
+with rare cores. Frame content maps through `sourceIndexAt` (`synthetic-satellite.ts`, shared): the 5 sources
+**ping-pong** over 5-min slots (0,1,2,3,4,3,2,1,…) instead of `% 5` — the lead caught the plain
+modulo mid-loop ("maybe its the picture itself"): a 25-min source cycle inside the ~30-min window
+put a 40-min cloud rewind in EVERY loop, and radar (round-slot) crossed the seam ~250 ms apart
+from satellite (floor-slot), a double lurch. Ping-pong keeps every neighboring slot one real step
+apart (sim: worst mid-window jump = 1; only the loop restart jumps 0–2 steps, where a jump is
+natural — motion reverses direction instead, the accepted trade for 5 vendored frames). The radar
+still rounds its frame time to the nearest slot before mapping (nearest-source, matching
+nearest-display atTime — with floor-baking the rain visibly trailed the cloud at every 5-min
+boundary, lead caught that too). Kills three rejected generations: the vendored
+RainViewer decode silently blanked the layer (canvas premultiplication guts color below ~alpha
+100; the alpha≥200 gate kept 0.5% of echo), the alpha-only rewrite painted an everywhere-storm
+("absolutely not real"), and raw whiteness rained on bright ground. The two sites keep their
+**deliberately different cadences** (lead 2026-08-10, sync stress test: center every 3 min, north
+every 10 — the merged playhead walks the union while each radar shows its own nearest frame);
+routes `/api/radar/times` + `/api/radar`. Startup shows radar too (lead's own edit).
+The RainViewer tiles (`public/fixtures/radar/`) and satellite v1's `mideast_truecolor.png` are
+deleted (lead 2026-08-18) — the radar fixture reads only the vendored `near-*.jpg` frames.
+**Fixture imagery is vendored** (lead 2026-08-13, "load once pictures" — runtime EUMETView fetches
+broke the app during their outage): `public/fixtures/satellite/` holds 5 same-hour GeoColor frames
+per sector (2026-08-07 09:00–09:40Z — daylit, marine cloud streets over the eastern Med) and
+`public/fixtures/radar/` 5 real RainViewer composite tiles; the fixtures fetch only these local
+files, zero external requests at runtime. **Frames stream in as they load** (lead 2026-08-13, both
+loop layers): `resource({ stream })` + a per-activation frame cache — first paint doesn't wait for
+the slowest image, window slides fetch only NEW times (previously every live tick re-fetched the
+whole window), failed frames evict and retry; the cache key is the request itself: each request entry carries
+ONE params `Record`, `load` sends it to HttpClient verbatim and `FrameLoader` keys on it privately
+(JSON.stringify inside the loader — lead 2026-08-18: summoning HttpParams just to mint a key
+string "is too much"; a hand-invented `|` key format was rejected 2026-08-13 the same way); the publish gates distinguish empty-while-loading
+(undefined, via the times/hours resources) from empty-window (null).
 
 **Satellite layer v1 — static (2026-08-02; full record in [`docs/satellite.md`](docs/satellite.md)):**
 first imagery layer. `SatelliteLayer` (`layers/satellite/`) on the lead's wire contract:
@@ -640,7 +780,7 @@ carry a JSON-stringify value-`equal` (identity churn refetches). Images are equi
 in latitude; real-backend projection TBD). Fixture = real EUMETSAT MTG GeoColor via anonymous
 EUMETView WMS, 5 same-hour frames (yesterday 09:00Z + i·10 min), one image grayscaled for IR;
 `latest` computed per request (never frozen at load). **The look is deliberately static** — the
-newest frame as one image: the animation was built four ways (own rAF loop → playingTime on
+newest frame as one image: the animation was built four ways (own rAF loop → loopTime on
 Look → on Layer → engine-wide Animator → LoopPlayer + LoopLayer) and **stripped 2026-08-02 for a
 clean retry**; every ask, decision, rejection, and landmine (per-layer draw isolation or wind
 resets at 2 Hz; loop restarts on props change; deck lineage registration) is recorded in

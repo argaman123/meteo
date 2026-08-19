@@ -16,6 +16,7 @@ module.exports = defineConfig([
     ],
     processor: angular.processInlineTemplates,
     rules: {
+      '@typescript-eslint/no-empty-function': ['error', { allow: ['methods'] }],
       '@angular-eslint/directive-selector': [
         'error',
         {
@@ -39,6 +40,7 @@ module.exports = defineConfig([
     rules: {
       '@angular-eslint/directive-selector': 'off',
       '@angular-eslint/component-selector': 'off',
+      '@angular-eslint/no-input-rename': 'off',
     },
   },
   {
