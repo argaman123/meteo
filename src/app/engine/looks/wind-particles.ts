@@ -181,7 +181,7 @@ in vec2 corner;
 in vec4 segment;
 out float edge;
 const vec2 resolution = vec2(${width}.0, ${height}.0);
-const float halfWidth = float(${LINE_WIDTH}) / 2.0;
+const float halfWidth = float(${LINE_WIDTH * devicePixelRatio}) / 2.0;
 void main() {
   edge = corner.y;
   vec2 from = segment.xy * resolution;

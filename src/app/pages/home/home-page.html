@@ -18,6 +18,30 @@
         }
       </hlm-dropdown-menu>
     </ng-template>
+    <button hlmBtn size="sm" class="w-9 px-0" aria-label="קואורדינטות"
+            [variant]="layers.isLayerActive(coordinates) ? 'default' : 'ghost'"
+            [attr.aria-pressed]="layers.isLayerActive(coordinates)"
+            [hlmDropdownMenuTrigger]="coordinatesMenu">
+      <ng-icon name="lucideCrosshair"/>
+    </button>
+    <ng-template #coordinatesMenu>
+      <hlm-dropdown-menu>
+        <button hlmDropdownMenuRadio [checked]="!layers.isLayerActive(coordinates)"
+                [keepOpen]="false" (triggered)="layers.hideLayer(coordinates)">
+          <hlm-dropdown-menu-radio-indicator/>
+          כבוי
+        </button>
+        @for (choice of coordinates.format.choices; track choice.value) {
+          <button hlmDropdownMenuRadio
+                  [checked]="layers.isLayerActive(coordinates) && coordinates.format() === choice.value"
+                  [keepOpen]="false"
+                  (triggered)="layers.isLayerActive(coordinates) || layers.showLayer(coordinates); coordinates.format.set(choice.value)">
+            <hlm-dropdown-menu-radio-indicator/>
+            {{ choice.label }}
+          </button>
+        }
+      </hlm-dropdown-menu>
+    </ng-template>
   </header>
   <app-legend-bar class="absolute bottom-18 end-3" />
   <app-layer-bar class="absolute start-3 top-15" />

@@ -310,7 +310,8 @@ the midpoint) — and its constant `Texture` feeds the same `BitmapLayer` warp (
 Two hard-won shader rules: the fade decays **alpha only with rgb pinned white** (multiplying rgba
 grays old trails), and the decay is **floored at 8-bit resolution** (`floor(a·DECAY·255)/255`) —
 otherwise low alphas round back up and paint permanent residue on the map. Tuning knobs at the top
-of the file: `COUNT` 2000, `DECAY` 0.94, `LINE_WIDTH`; texture = bounds' screen footprint × dpr
+of the file: `COUNT` 2000, `DECAY` 0.94, `LINE_WIDTH` (css px — the shader bakes `× dpr` since
+2026-08-19; trails were half-width on the hidpi MacBook); texture = bounds' screen footprint × dpr
 capped 4096. The GPU passes run from the rAF tick on the shared luma device (state-tracked
 alongside maplibre — if other layers ever glitch while wind animates, move the passes into deck's
 draw cycle). `GeoCanvas` died orphaned. `AnimatedLayer` (rAF loop, `step(dt)` + `rebuild()`)
@@ -588,12 +589,19 @@ re-adding it is one file + a registry entry (plan.md filler row).
 mercator/bounds home): pure `formatCoordinates(lon, lat, CoordinateFormat)` — decimal (lat-first)
 and DMS (seconds-carry math). MGRS and its `mgrs` package were built then removed same day (lead:
 "no need right now" — restoring is one enum member + one case + the dep, noted on the plan's MGRS
-row). The readout is a **layer** (lead's call): `Coordinates` in `layers/coordinates/` — no looks,
+row). The readout is a **layer** (lead's call): `Coordinates` in `layers/general/` — no looks,
 `timeWindow: null` (the base field went nullable; timeless layers contribute no window,
 `syncTimeWindows` filters), `fetch()` returns `signal(null)`, and `hover` formats the cursor
 through its persisted format control (DD/DMS Select, `settings.coordinates.format`) — so the
-chip line, the menu row, and the picker all fall out of existing machinery; value chips became
-`min-w-9` so long labels don't overflow. Startup shows it alongside the polygons layer (lead
+chip line and the picker fall out of existing machinery; value chips became
+`min-w-9` so long labels don't overflow. **Moved out of the layer card 2026-08-19** (lead: "its
+location is the issue not the layer itself"): a crosshair icon button in the top bar (pressed
+while active) opens a כבוי/DD/DMS radio menu — off deactivates, picking a format activates + sets
+it; the mechanism is the registry's **`menuLayers`** list (the card renders exactly it, in its
+order — coordinates is registered but not listed; a `Layer.inMenu` flag was built and rejected
+the same day, lead: "a layer should absolutely not know if its on the menu" — presentation
+groupings live in the registry beside `shortcuts`, never on layers), so the layer, its settings
+key, and the hover line are untouched. Startup shows it alongside the polygons layer (lead
 2026-07-23). Typed-coordinate parsing waits for its first consumer (search/fly-to).
 
 **Borders above weather (2026-07-28, lead-verified):** the basemap's country borders, a new
@@ -739,13 +747,14 @@ flickers hard shoreline edges), baked into the maps at load. Only what MOVES bet
 (the lead's own test: "look as it doesnt move" — sun-brightening drift and the bright rift/Dead
 Sea ground cancel to ≤0.05, real streets swing 0.16–0.44); rain = `((signal−0.06)/0.3)^1.5 · 9`
 mm/h, 3×3-smoothed, so echo is a coherent band under the visible cloud street, mostly blue/green
-with rare cores. Frame content maps through `sourceIndexAt` (`synthetic-satellite.ts`, shared): the 5 sources
-**ping-pong** over 5-min slots (0,1,2,3,4,3,2,1,…) instead of `% 5` — the lead caught the plain
-modulo mid-loop ("maybe its the picture itself"): a 25-min source cycle inside the ~30-min window
-put a 40-min cloud rewind in EVERY loop, and radar (round-slot) crossed the seam ~250 ms apart
-from satellite (floor-slot), a double lurch. Ping-pong keeps every neighboring slot one real step
-apart (sim: worst mid-window jump = 1; only the loop restart jumps 0–2 steps, where a jump is
-natural — motion reverses direction instead, the accepted trade for 5 vendored frames). The radar
+with rare cores. Frame content maps through `sourceMixAt` (`synthetic-satellite.ts`, shared): a
+**crossfade-closed 7-slot cycle** — 5 real sources forward, then two synthetic slots dissolving
+frame 4 back into frame 0 (mix ⅓, ⅔), so motion never reverses and never rewinds (the classic
+seamless-loop trick; replaced ping-pong 2026-08-19, lead disliked the direction reversal, which
+had replaced plain `% 5` whose 25-min cycle put a 40-min rewind in every loop — "maybe its the
+picture itself"). The 35-min cycle ≈ the ~30-min window, so even the loop restart lands one
+cycle-step apart (sim: every window alignment wraps at distance 1). Satellite blends via
+`globalAlpha` draw; radar lerps the two sources' still-ground-subtracted cloudiness. The radar
 still rounds its frame time to the nearest slot before mapping (nearest-source, matching
 nearest-display atTime — with floor-baking the rain visibly trailed the cloud at every 5-min
 boundary, lead caught that too). Kills three rejected generations: the vendored

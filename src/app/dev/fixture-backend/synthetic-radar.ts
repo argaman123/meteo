@@ -1,7 +1,7 @@
 import { RadarTimes } from '../../types/radar';
 import { Wrap } from '../../types/wrap';
 import { minutesToMs } from '../../utils/time';
-import { SATELLITE_SECTORS, sourceIndexAt } from './synthetic-satellite';
+import { SATELLITE_SECTORS, sourceMixAt } from './synthetic-satellite';
 
 const RADAR_SITES: Record<string, { center: [number, number]; span: number; stepMinutes: number }> = {
   center: { center: [34.9, 32.0], span: 1.6, stepMinutes: 3 },
@@ -32,7 +32,8 @@ export async function syntheticRadarWrap(radar: string, time: number): Promise<W
   if (!site) return null;
   const sources = await loadSources();
   const cloudStepMs = minutesToMs(CLOUD_SECTOR.stepMinutes);
-  const source = sources[sourceIndexAt(Math.round(time / cloudStepMs) * cloudStepMs, CLOUD_SECTOR.stepMinutes)];
+  const slotTime = Math.round(time / cloudStepMs) * cloudStepMs;
+  const { from, to, mix } = sourceMixAt(slotTime, CLOUD_SECTOR.stepMinutes);
   const radius = (GRID_SIZE - 1) / 2;
   const [lon, lat] = site.center;
   const half = site.span / 2;
@@ -46,7 +47,7 @@ export async function syntheticRadarWrap(radar: string, time: number): Promise<W
       }
       const cellLon = lon - half + (col * site.span) / (GRID_SIZE - 1);
       const cellLat = lat + half - (row * site.span) / (GRID_SIZE - 1);
-      cells.push(rainAt(source, cellLon, cellLat));
+      cells.push(rainAt(sources[from], sources[to], mix, cellLon, cellLat));
     }
     values.push(cells);
   }
@@ -67,8 +68,15 @@ export async function syntheticRadarWrap(radar: string, time: number): Promise<W
   };
 }
 
-function rainAt(source: Uint8ClampedArray, lon: number, lat: number): number {
-  const movingCloud = movingCloudAt(source, lon, lat);
+function rainAt(
+  from: Uint8ClampedArray,
+  to: Uint8ClampedArray,
+  mix: number,
+  lon: number,
+  lat: number,
+): number {
+  const movingCloud =
+    (1 - mix) * movingCloudAt(from, lon, lat) + mix * movingCloudAt(to, lon, lat);
   if (movingCloud < 0.06) return 0;
   const strength = Math.min(1, (movingCloud - 0.06) / 0.3);
   return Number((Math.pow(strength, 1.5) * 9).toFixed(1));

@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucidePalette } from '@ng-icons/lucide';
+import { lucideCrosshair, lucidePalette } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import {
   HlmDropdownMenu,
@@ -32,13 +32,14 @@ import { layers } from '../../layers/registry';
     LegendBar,
     TimeBar,
   ],
-  viewProviders: [provideIcons({ lucidePalette })],
+  viewProviders: [provideIcons({ lucideCrosshair, lucidePalette })],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
 })
 export class HomePage implements AfterViewInit, OnDestroy {
   protected map = inject(MapService);
-  private layers = inject(LayersService);
+  protected layers = inject(LayersService);
+  protected coordinates = layers.coordinates;
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
 
   ngAfterViewInit(): void {

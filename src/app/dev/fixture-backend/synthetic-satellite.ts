@@ -31,19 +31,27 @@ export function syntheticSatelliteImage(sector: string, channel: string, time: n
   return frame;
 }
 
-export function sourceIndexAt(time: number, stepMinutes: number): number {
+export function sourceMixAt(
+  time: number,
+  stepMinutes: number,
+): { from: number; to: number; mix: number } {
   const slot = Math.floor(time / minutesToMs(stepMinutes));
-  const position = slot % (2 * SOURCE_COUNT - 2);
-  return position < SOURCE_COUNT ? position : 2 * SOURCE_COUNT - 2 - position;
+  const position = slot % (SOURCE_COUNT + 2);
+  if (position < SOURCE_COUNT) return { from: position, to: position, mix: 0 };
+  return { from: SOURCE_COUNT - 1, to: 0, mix: (position - SOURCE_COUNT + 1) / 3 };
 }
 
 async function renderFrame(sector: string, channel: string, time: number): Promise<Blob> {
   const { size, stepMinutes } = SATELLITE_SECTORS[sector] ?? SATELLITE_SECTORS['near'];
-  const source = await loadSource(sector, sourceIndexAt(time, stepMinutes));
+  const { from, to, mix } = sourceMixAt(time, stepMinutes);
   const canvas = new OffscreenCanvas(size, size);
   const context = canvas.getContext('2d')!;
   if (channel === 'ir') context.filter = 'grayscale(1)';
-  context.drawImage(source, 0, 0, size, size);
+  context.drawImage(await loadSource(sector, from), 0, 0, size, size);
+  if (mix > 0) {
+    context.globalAlpha = mix;
+    context.drawImage(await loadSource(sector, to), 0, 0, size, size);
+  }
   return canvas.convertToBlob({ type: 'image/png' });
 }
 

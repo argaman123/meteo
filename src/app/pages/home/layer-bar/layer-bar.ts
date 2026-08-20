@@ -20,7 +20,7 @@ import { HlmSlider } from '@spartan-ng/helm/slider';
 import { HlmSwitch } from '@spartan-ng/helm/switch';
 import { Layer } from '../../../layers/base/layer';
 import { LayersService } from '../../../layers/layers-service';
-import { layers, shortcuts } from '../../../layers/registry';
+import { menuLayers, shortcuts } from '../../../layers/registry';
 import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from '../../../utils/controls';
 
 @Component({
@@ -50,7 +50,7 @@ export class LayerBar {
   protected readonly OptionsPresentation = OptionsPresentation;
 
   protected readonly layersService = inject(LayersService);
-  protected readonly layers = Object.values(layers);
+  protected readonly layers = menuLayers;
   protected readonly shortcuts = Object.values(shortcuts);
   protected readonly openGroups = signal(new Set<Layer<unknown>>());
 

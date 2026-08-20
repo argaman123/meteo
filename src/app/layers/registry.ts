@@ -19,6 +19,15 @@ export const layers = registerLayers({
   coordinates: new Coordinates(),
 });
 
+export const menuLayers = [
+  layers.temperature,
+  layers.wind,
+  layers.geopotential,
+  layers.satellite,
+  layers.radar,
+  layers.polygons,
+];
+
 export const shortcuts = {
   weather: new Shortcut('מזג אוויר', [
     { layer: layers.temperature, looks: [LookKind.Colormap] },
