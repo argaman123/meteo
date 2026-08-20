@@ -100,11 +100,20 @@
 ## Fixture (dev/fixture-backend/synthetic-satellite.ts)
 
 - **Imagery is VENDORED since 2026-08-13** (lead: "load once pictures from a visible hours
-  preferably a cloudy day" — runtime WMS fetches broke the app during an EUMETView 502 outage):
-  `public/fixtures/satellite/{near,wide}-{0..4}.jpg` = 5 same-hour GeoColor frames per sector,
-  2026-08-07 09:00–09:40Z (cloudiest day in retention by jpeg-size probe — marine cloud streets),
-  fetched once by the paragraph below's recipe and committed. The fixture reads only these local
-  files. The original runtime source, kept for re-vendoring:
+  preferably a cloudy day" — runtime WMS fetches broke the app during an EUMETView 502 outage).
+  **Extended to a 3-hour sequence 2026-08-20** (lead: "i dont want the clouds to go back" — with
+  only 5 frames every pure time-mapping had to cycle, and every cycling variant showed backward
+  motion: `% 5` rewound, ping-pong reversed, crossfade returned, and a ground/cloud-decomposition
+  drift construction still wobbled because the real frames are only ~half pure-drift):
+  `public/fixtures/satellite/{near,wide}-{0..18}.jpg` = 19 GeoColor frames per sector at the real
+  10-min cadence, 2026-08-17 07:00–10:00Z (cloudiest day of its week by jpeg-size probe — a
+  frontal band over Israel), fetched by `tools/fetch-satellite.mjs <day> [startHourZ] [frames]`
+  and committed. Requested times map **monotonically** into the sequence, anchored at app load
+  (`sourceIndexAt`: `ANCHOR_INDEX 12` + `round((time − SEQUENCE_EPOCH)/step)`, clamped) — ~2h of
+  history behind, ~1h of live headroom ahead; a session older than that sees a frozen newest
+  frame (restart the app, or re-vendor a fresh day with the script). Motion inside any loop sweep
+  is strictly forward; the loop restart replays the window, as loops do. The runtime source, kept
+  for re-vendoring:
 - **Real imagery from EUMETSAT's open WMS** (EUMETView, anonymous):
   `https://view.eumetsat.int/geoserver/wms` … `layers=mtg_fd:rgb_geocolour`, `srs=EPSG:4326`,
   `bbox=west,south,east,north` (version 1.1.1), `time=<ISO>`. MTG GeoColor at 10-min native
@@ -115,10 +124,11 @@
   one image per day; final: **5 EUMETSAT frames from the same hour** (yesterday 09:00 UTC + i·10
   min — noon local, always daylit) — "take pictures that are all from the same hour so it looks
   more real". One image serves both channels (IR = canvas `grayscale(1)`).
-- Sectors: `near` = [30,27,40,36] 1024², 5-min cadence (was 10 — lowered so ≥5 frames fit a
-  30-min window); `wide` = [20,18,52,44] 3000², 15-min. Frame time → source index =
-  `floor(time/step) % 5` (consecutive frames = consecutive sources; the mod wrap can land
-  mid-loop — accepted).
+- Sectors: `near` = [30,27,40,36] 1024² at 5-min steps, `wide` = [20,18,52,44] 3000² at 15-min —
+  the underlying sequence is 10-min real cadence; off-grid ask times get **forward temporal
+  interpolation** (`sourceMixAt`: continuous position → floor/ceil frames + mix; satellite
+  `globalAlpha` blend, radar cloudiness lerp) — still strictly monotonic (lead wanted the 5-min
+  feel back, 2026-08-20).
 - **`latest` is computed per request from the real clock** — it was originally frozen at module
   load, which froze the fixture's newest frame at page-load time (the stuck "10:30–10:40 while
   it's 11:01" bug).

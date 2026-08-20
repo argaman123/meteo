@@ -6,7 +6,7 @@ export const SATELLITE_SECTORS: Record<string, { bounds: Bounds; size: number; s
   wide: { bounds: [20, 18, 52, 44], size: 3000, stepMinutes: 15 },
 };
 
-const SOURCE_COUNT = 5;
+export const SOURCE_COUNT = 19;
 
 const sourcePromises = new Map<string, Promise<ImageBitmap>>();
 const framePromises = new Map<string, Promise<Blob>>();
@@ -31,24 +31,28 @@ export function syntheticSatelliteImage(sector: string, channel: string, time: n
   return frame;
 }
 
-export function sourceMixAt(
-  time: number,
-  stepMinutes: number,
-): { from: number; to: number; mix: number } {
-  const slot = Math.floor(time / minutesToMs(stepMinutes));
-  const position = slot % (SOURCE_COUNT + 2);
-  if (position < SOURCE_COUNT) return { from: position, to: position, mix: 0 };
-  return { from: SOURCE_COUNT - 1, to: 0, mix: (position - SOURCE_COUNT + 1) / 3 };
+const ANCHOR_INDEX = 12;
+const SEQUENCE_STEP_MINUTES = 10;
+const SEQUENCE_EPOCH = Date.now();
+
+export function sourceMixAt(time: number): { from: number; to: number; mix: number } {
+  const position = Math.min(
+    SOURCE_COUNT - 1,
+    Math.max(0, ANCHOR_INDEX + (time - SEQUENCE_EPOCH) / minutesToMs(SEQUENCE_STEP_MINUTES)),
+  );
+  const from = Math.floor(position);
+  const to = Math.min(SOURCE_COUNT - 1, from + 1);
+  return { from, to, mix: position - from };
 }
 
 async function renderFrame(sector: string, channel: string, time: number): Promise<Blob> {
-  const { size, stepMinutes } = SATELLITE_SECTORS[sector] ?? SATELLITE_SECTORS['near'];
-  const { from, to, mix } = sourceMixAt(time, stepMinutes);
+  const { size } = SATELLITE_SECTORS[sector] ?? SATELLITE_SECTORS['near'];
+  const { from, to, mix } = sourceMixAt(time);
   const canvas = new OffscreenCanvas(size, size);
   const context = canvas.getContext('2d')!;
   if (channel === 'ir') context.filter = 'grayscale(1)';
   context.drawImage(await loadSource(sector, from), 0, 0, size, size);
-  if (mix > 0) {
+  if (mix > 0.01) {
     context.globalAlpha = mix;
     context.drawImage(await loadSource(sector, to), 0, 0, size, size);
   }

@@ -1,7 +1,7 @@
 import { RadarTimes } from '../../types/radar';
 import { Wrap } from '../../types/wrap';
 import { minutesToMs } from '../../utils/time';
-import { SATELLITE_SECTORS, sourceMixAt } from './synthetic-satellite';
+import { SATELLITE_SECTORS, SOURCE_COUNT, sourceMixAt } from './synthetic-satellite';
 
 const RADAR_SITES: Record<string, { center: [number, number]; span: number; stepMinutes: number }> = {
   center: { center: [34.9, 32.0], span: 1.6, stepMinutes: 3 },
@@ -9,7 +9,6 @@ const RADAR_SITES: Record<string, { center: [number, number]; span: number; step
 };
 
 const CLOUD_SECTOR = SATELLITE_SECTORS['near'];
-const SOURCE_COUNT = 5;
 const SAMPLE_SIZE = 512;
 const GRID_SIZE = 80;
 
@@ -33,7 +32,7 @@ export async function syntheticRadarWrap(radar: string, time: number): Promise<W
   const sources = await loadSources();
   const cloudStepMs = minutesToMs(CLOUD_SECTOR.stepMinutes);
   const slotTime = Math.round(time / cloudStepMs) * cloudStepMs;
-  const { from, to, mix } = sourceMixAt(slotTime, CLOUD_SECTOR.stepMinutes);
+  const { from, to, mix } = sourceMixAt(slotTime);
   const radius = (GRID_SIZE - 1) / 2;
   const [lon, lat] = site.center;
   const half = site.span / 2;
@@ -75,8 +74,7 @@ function rainAt(
   lon: number,
   lat: number,
 ): number {
-  const movingCloud =
-    (1 - mix) * movingCloudAt(from, lon, lat) + mix * movingCloudAt(to, lon, lat);
+  const movingCloud = (1 - mix) * movingCloudAt(from, lon, lat) + mix * movingCloudAt(to, lon, lat);
   if (movingCloud < 0.06) return 0;
   const strength = Math.min(1, (movingCloud - 0.06) / 0.3);
   return Number((Math.pow(strength, 1.5) * 9).toFixed(1));

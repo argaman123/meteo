@@ -747,17 +747,22 @@ flickers hard shoreline edges), baked into the maps at load. Only what MOVES bet
 (the lead's own test: "look as it doesnt move" — sun-brightening drift and the bright rift/Dead
 Sea ground cancel to ≤0.05, real streets swing 0.16–0.44); rain = `((signal−0.06)/0.3)^1.5 · 9`
 mm/h, 3×3-smoothed, so echo is a coherent band under the visible cloud street, mostly blue/green
-with rare cores. Frame content maps through `sourceMixAt` (`synthetic-satellite.ts`, shared): a
-**crossfade-closed 7-slot cycle** — 5 real sources forward, then two synthetic slots dissolving
-frame 4 back into frame 0 (mix ⅓, ⅔), so motion never reverses and never rewinds (the classic
-seamless-loop trick; replaced ping-pong 2026-08-19, lead disliked the direction reversal, which
-had replaced plain `% 5` whose 25-min cycle put a 40-min rewind in every loop — "maybe its the
-picture itself"). The 35-min cycle ≈ the ~30-min window, so even the loop restart lands one
-cycle-step apart (sim: every window alignment wraps at distance 1). Satellite blends via
-`globalAlpha` draw; radar lerps the two sources' still-ground-subtracted cloudiness. The radar
-still rounds its frame time to the nearest slot before mapping (nearest-source, matching
-nearest-display atTime — with floor-baking the rain visibly trailed the cloud at every 5-min
-boundary, lead caught that too). Kills three rejected generations: the vendored
+with rare cores. Frame content maps **monotonically into a vendored 3-hour real sequence** (lead
+2026-08-20: "i dont want the clouds to go back" — with 5 frames every pure time-mapping cycles,
+and every cycling variant moved backward somewhere: `% 5` rewound 40 min mid-loop, ping-pong
+reversed, a crossfade-closed cycle still returned, and a ground/cloud-decomposition drift
+construction wobbled since the real frames are only ~half pure-drift; full saga in
+docs/satellite.md): 19 GeoColor frames per sector at the real 10-min cadence (2026-08-17
+07:00–10:00Z, fetched by `tools/fetch-satellite.mjs`; near asks back at 5-min steps, wide 15 —
+in-between frames are **forward temporal interpolation**: `sourceMixAt` returns the continuous
+sequence position's floor/ceil pair + mix, satellite blends via `globalAlpha`, radar lerps
+cloudiness — monotonic by construction, lead asked for the 5-min feel back);
+`sourceIndexAt` = app-load-anchored `round((time − SEQUENCE_EPOCH)/step)` clamped into the
+sequence — ~2h history, ~1h live headroom, strictly forward inside any sweep (the loop restart
+replays the window, as loops do); sessions past the headroom freeze the newest frame (re-vendor
+or restart). Radar builds its cloudiness maps over all 19 frames (deeper still-ground min) and
+samples the same mapping's frame, rounded to the nearest slot (with floor-baking the rain
+visibly trailed the cloud, lead caught that). Kills three rejected generations: the vendored
 RainViewer decode silently blanked the layer (canvas premultiplication guts color below ~alpha
 100; the alpha≥200 gate kept 0.5% of echo), the alpha-only rewrite painted an everywhere-storm
 ("absolutely not real"), and raw whiteness rained on bright ground. The two sites keep their
