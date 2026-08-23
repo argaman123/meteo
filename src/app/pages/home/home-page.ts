@@ -1,6 +1,6 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideCrosshair, lucidePalette } from '@ng-icons/lucide';
+import { lucideActivity, lucideCrosshair, lucidePalette } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import {
   HlmDropdownMenu,
@@ -14,6 +14,7 @@ import { LayersService } from '../../layers/layers-service';
 import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { LegendBar } from './legend-bar/legend-bar';
+import { LevelBar } from './level-bar/level-bar';
 import { TimeBar } from './time-bar/time-bar';
 import { layers } from '../../layers/registry';
 
@@ -30,9 +31,10 @@ import { layers } from '../../layers/registry';
     HoverReadout,
     LayerBar,
     LegendBar,
+    LevelBar,
     TimeBar,
   ],
-  viewProviders: [provideIcons({ lucideCrosshair, lucidePalette })],
+  viewProviders: [provideIcons({ lucideActivity, lucideCrosshair, lucidePalette })],
   host: { class: 'block h-full' },
   templateUrl: './home-page.html',
 })
@@ -41,6 +43,7 @@ export class HomePage implements AfterViewInit, OnDestroy {
   protected layers = inject(LayersService);
   protected coordinates = layers.coordinates;
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
+  protected perfHud = viewChild(PerfHud);
 
   ngAfterViewInit(): void {
     void this.start();
@@ -56,5 +59,6 @@ export class HomePage implements AfterViewInit, OnDestroy {
     this.layers.showLayer(layers.satellite);
     this.layers.showLayer(layers.radar);
     this.layers.showLayer(layers.observations);
+    this.layers.showLayer(layers.wind);
   }
 }

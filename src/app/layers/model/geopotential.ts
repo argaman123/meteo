@@ -8,6 +8,10 @@ import { Quantity, Unit, format } from '../../utils/units';
 export class Geopotential extends ModelLayer {
   readonly name = 'גובה גיאופוטנציאלי';
   readonly parameters = [Parameter.GeopotentialHeight];
+
+  protected override levelParam(level: number | string): Record<string, string> {
+    return typeof level === 'string' ? { pressure: level } : {};
+  }
   readonly looks = [
     {
       look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(20), String, '#38bdf8'),

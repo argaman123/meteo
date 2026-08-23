@@ -94,7 +94,7 @@ export class Contours extends Look<Grid> {
     const canvas = document.createElement('canvas');
     canvas.height = height;
     const context = canvas.getContext('2d')!;
-    const font = `400 ${11 * scale}px 'Heebo Variable', sans-serif`;
+    const font = `400 ${11 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
     context.font = font;
     const width = Math.ceil(context.measureText(text).width + 12 * scale);
     canvas.width = width;

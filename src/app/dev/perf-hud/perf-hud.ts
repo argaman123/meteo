@@ -12,7 +12,7 @@ const hourFormat = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '
 export class PerfHud {
   private layersService = inject(LayersService);
 
-  protected visible = signal(true);
+  readonly visible = signal(true);
   protected fps = signal(0);
   protected heapMb = signal<number | null>(null);
   private frameHandle = 0;
@@ -45,8 +45,12 @@ export class PerfHud {
     inject(DestroyRef).onDestroy(() => cancelAnimationFrame(this.frameHandle));
   }
 
+  toggle(): void {
+    this.visible.update((on) => !on);
+  }
+
   protected onKey(event: KeyboardEvent): void {
-    if (event.ctrlKey && event.altKey && event.code === 'KeyP') this.visible.update((on) => !on);
+    if (event.ctrlKey && event.altKey && event.code === 'KeyP') this.toggle();
   }
 
   private startLoop(): void {

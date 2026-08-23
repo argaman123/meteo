@@ -29,6 +29,7 @@
     "@deck.gl/mapbox": "^9.3.3",
     "@ng-icons/core": ">=32.0.0 <34.0.0",
     "@ng-icons/lucide": ">=32.0.0 <34.0.0",
+    "@ng-icons/material-icons": "^33.4.0",
     "@spartan-ng/brain": "^1.0.4",
     "@turf/bbox-clip": "^7.3.5",
     "@turf/boolean-point-in-polygon": "^7.3.5",

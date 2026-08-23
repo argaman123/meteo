@@ -11,6 +11,7 @@ import {
 import { LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
 import { Overlay } from '../engine/overlay';
+import { LevelService } from '../services/level-service';
 import { LoopPlayer } from '../services/loop-player';
 import { TimeService } from '../services/time-service';
 import { Inputs, Layer, LookEntry } from './base/layer';
@@ -23,6 +24,7 @@ export class LayersService {
   private overlay = inject(Overlay);
   private map = inject(MapService);
   private time = inject(TimeService);
+  private level = inject(LevelService);
   private player = inject(LoopPlayer);
   private layerInjectors = new Map<Layer<unknown>, EnvironmentInjector>();
 
@@ -39,6 +41,7 @@ export class LayersService {
     exactTime: () => this.time.exactTime(),
     window: () => this.time.window(),
     zoom: () => this.map.settledZoom() ?? 0,
+    level: () => this.level.activeLevel(),
   };
 
   private syncLoops = effect(() => {

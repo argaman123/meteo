@@ -157,7 +157,7 @@ export class Polygons extends Look<PolygonsView> {
     const lineHeight = 20 * scale;
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d')!;
-    const font = `500 ${17 * scale}px 'Heebo Variable', sans-serif`;
+    const font = `500 ${17 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
     context.font = font;
     const width = Math.ceil(
       Math.max(...shape.text.map((line) => context.measureText(line).width)) + 14 * scale,

@@ -10,6 +10,7 @@ export interface Inputs {
   exactTime(): number;
   window(): TimeRange;
   zoom(): number;
+  level(): number | string | null;
 }
 
 export interface LookEntry {
@@ -23,6 +24,7 @@ export abstract class Layer<D> {
   abstract readonly looks: LookEntry[];
   readonly controls: Control[] = [];
   abstract readonly timeWindow: TimeWindow | null;
+  readonly staticLevel: boolean = true;
   forcedTimes: Signal<number[]> | null = null;
 
   abstract hover(data: D, lon: number, lat: number): string;

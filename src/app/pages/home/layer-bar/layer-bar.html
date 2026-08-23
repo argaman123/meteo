@@ -1,8 +1,10 @@
-<div class="flex w-48 flex-col gap-1 rounded-xl border bg-card/75 backdrop-blur-md p-1.5 shadow-lg">
+<div dir="ltr"
+     class="h-full w-48 overflow-y-auto overscroll-contain bg-card [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-secondary">
+<div dir="rtl" class="flex min-h-full flex-col gap-1.5 p-1.5 px-3">
   <h2 class="px-2 py-1 text-xs font-medium text-muted-foreground">קיצורים</h2>
   @for (shortcut of shortcuts; track shortcut) {
     <button hlmBtn size="sm" class="justify-start"
-            [variant]="layersService.isShortcutActive(shortcut) ? 'default' : 'ghost'"
+            [variant]="layersService.isShortcutActive(shortcut) ? 'default' : 'secondary'"
             [attr.aria-pressed]="layersService.isShortcutActive(shortcut)"
             (click)="layersService.toggleShortcut(shortcut)">
       {{ shortcut.name }}
@@ -11,7 +13,7 @@
   <h2 class="mt-1 border-t px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">שכבות</h2>
   @for (layer of layers; track layer) {
     <div class="flex gap-1">
-      <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'ghost'"
+      <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'secondary'"
               [attr.aria-pressed]="layersService.isLayerActive(layer)" (click)="layersService.toggleLayer(layer)">
         {{ layer.name }}
       </button>
@@ -164,4 +166,5 @@
       </div>
     }
   }
+</div>
 </div>

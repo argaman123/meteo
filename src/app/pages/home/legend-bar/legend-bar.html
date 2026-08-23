@@ -1,7 +1,8 @@
 @if (layerLegends().length) {
-  <div class="flex w-36 flex-col gap-1 rounded-xl border bg-card/75 backdrop-blur-md p-1.5 shadow-lg">
+  <div class="flex w-36 flex-col gap-1 rounded-xl border bg-background/70 backdrop-blur-lg p-1.5 shadow-[0_0_12px_rgb(0_0_0/0.45)]">
     @for (card of layerLegends(); track card.legend) {
-      <button hlmBtn size="sm" variant="ghost" class="justify-between gap-2"
+      <button hlmBtn size="sm" class="justify-between gap-2"
+              [variant]="openLegend() === card.legend ? 'default' : 'ghost'"
               [attr.aria-expanded]="openLegend() === card.legend" (click)="toggleLegend(card.legend)">
         {{ card.title }}
         <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="openLegend() === card.legend"/>
@@ -10,8 +11,8 @@
         @switch (card.legend.type) {
           @case (LegendType.Gradient) {
             <div class="flex justify-center gap-2 py-1">
-              <div class="my-2 w-4 rounded-full" [style.background]="gradientBackground(card.legend)"></div>
-              <div dir="ltr" class="flex h-56 flex-col-reverse justify-between text-end text-xs tabular-nums">
+              <div class="h-56 w-4 rounded-full" [style.background]="gradientBackground(card.legend)"></div>
+              <div dir="ltr" class="flex h-56 flex-col-reverse justify-between text-end text-xs font-medium tabular-nums">
                 @for (stop of card.legend.stops; track $index) {
                   <span>{{ stop.label }}</span>
                 }

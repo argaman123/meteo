@@ -20,6 +20,7 @@ export enum Quantity {
   Rain = 'rain',
   CloudCover = 'cloud-cover',
   CloudBase = 'cloud-base',
+  Altitude = 'altitude',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -31,6 +32,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.Rain]: Unit.MillimetersPerHour,
   [Quantity.CloudCover]: Unit.Eighths,
   [Quantity.CloudBase]: Unit.Kilofeet,
+  [Quantity.Altitude]: Unit.Feet,
 };
 
 const knotsPerMeterPerSecond = 1.943844;
@@ -67,7 +69,7 @@ export function format(value: number, quantity: Quantity, from: Unit): string {
     case Unit.Eighths:
       return `${rounded}/8`;
     case Unit.Feet:
-      return `${rounded} ft`;
+      return `${rounded} רגל מעפ״י`;
     case Unit.Kilofeet:
       return `${Number(converted.toFixed(1))}'`;
   }

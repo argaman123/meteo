@@ -59,6 +59,8 @@ export class SyntheticWeather {
     bounds: Bounds,
     hours: number,
     runTime: number,
+    heightFeet: number | null = null,
+    pressureMb: number | null = null,
   ): Wrap | null {
     const model = MODELS.find((candidate) => candidate.name === modelName);
     if (!model) return null;
@@ -68,6 +70,8 @@ export class SyntheticWeather {
     const north = Math.min(bounds[3], model.north);
     if (west >= east || south >= north) return null;
     const maskWaves = isWave(parameter);
+    const effectiveFeet =
+      pressureMb === null ? (heightFeet ?? 0) : 145366 * (1 - Math.pow(pressureMb / 1013.25, 0.1903));
     const values: (number | null)[][] = [];
     for (let r = 0; r < RESPONSE_SIZE; r++) {
       const lat = north + ((south - north) * r) / (RESPONSE_SIZE - 1);
@@ -75,7 +79,9 @@ export class SyntheticWeather {
       for (let c = 0; c < RESPONSE_SIZE; c++) {
         const lon = west + ((east - west) * c) / (RESPONSE_SIZE - 1);
         row.push(
-          maskWaves && isLand(this.land, lat, lon) ? null : this.field(lat, lon, hours, parameter),
+          maskWaves && isLand(this.land, lat, lon)
+            ? null
+            : this.field(lat, lon, hours, parameter, effectiveFeet, pressureMb),
         );
       }
       values.push(row);
@@ -90,27 +96,40 @@ export class SyntheticWeather {
         forecast_time: runTime + hoursToMs(hours),
         model: modelName,
         param: parameter,
-        pressure: parameter === 'hgt' ? '1000' : null,
-        height: null,
+        pressure: pressureMb !== null ? String(pressureMb) : parameter === 'hgt' ? '1000' : null,
+        height: heightFeet === null ? null : String(heightFeet),
       },
       values,
     };
   }
 
-  private field(lat: number, lon: number, hours: number, parameter: string): number {
+  private field(
+    lat: number,
+    lon: number,
+    hours: number,
+    parameter: string,
+    heightFeet: number,
+    pressureMb: number | null,
+  ): number {
     if (parameter === 'waveHeight') return round1(waveHeightAt(lat, lon, hours));
-    if (parameter === 'temperature') return round1(temperatureAt(lat, lon, hours));
-    if (parameter === 'hgt') return round1(8 * (pressureAt(lat, lon, hours) - 1000));
+    if (parameter === 'temperature') {
+      return round1(temperatureAt(lat, lon, hours) - heightFeet * 0.002);
+    }
+    if (parameter === 'hgt') {
+      if (pressureMb === null) return round1(8 * (pressureAt(lat, lon, hours) - 1000));
+      return round1(heightFeet * 0.3048 + 8 * (pressureAt(lat, lon, hours) - 1013));
+    }
     const wind = this.windAt(lat, lon, hours);
-    if (parameter === 'windSpeed') return round1(wind.speedKnots);
-    const radians = (wind.directionDegrees * Math.PI) / 180;
+    const speedKnots = wind.speedKnots * (1 + (heightFeet / 10000) * 0.6);
+    const radians = ((wind.directionDegrees + (heightFeet / 1000) * 2) * Math.PI) / 180;
+    if (parameter === 'windSpeed') return round1(speedKnots);
     if (parameter === 'waveU' || parameter === 'waveV') {
       const height = waveHeightAt(lat, lon, hours);
       return round1(
         parameter === 'waveU' ? -height * Math.sin(radians) : -height * Math.cos(radians),
       );
     }
-    const speedMs = wind.speedKnots / KNOTS_PER_METER_PER_SECOND;
+    const speedMs = speedKnots / KNOTS_PER_METER_PER_SECOND;
     return round1(parameter === 'u' ? -speedMs * Math.sin(radians) : -speedMs * Math.cos(radians));
   }
 

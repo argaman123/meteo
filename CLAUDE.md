@@ -472,17 +472,45 @@ tsconfig paths; ESLint's selector-prefix rules are off for that folder (spartan 
 selectors). Header, basemap switcher, layer bar, and time bar use `hlmBtn`/`hlm-slider`; selection
 lists show the active item by switching `variant` (`default`↔`ghost`) + `aria-pressed`. The
 custom color tokens in `styles.css` are deleted — spartan's CSS-variable theme is the only color
-system (Heebo `--font-sans` kept). **Chrome look (lead, 2026-07-06): full-bleed map, floating
-frosted-glass instrument cards** — one card recipe (`rounded-xl border bg-card/75 backdrop-blur-md
-shadow-lg`) for the layer card (top-start), legend accordion (bottom-end), and centered bottom
-time bar; slim `bg-background` top bar owned by the home page itself (no global header — the
-frame is a bare page slot, lead 2026-07-22). The basemap picker is a top-bar icon button
-(lucidePalette, end side) opening a spartan dropdown of the styles (lead 2026-07-22 — the floating
-top-end card is gone). Backdrop-blur is an always-on compositor cost over the animating
-map (flagged, accepted by the lead — small vs the per-frame canvas upload; can move behind a
-quality knob if fleet measurement ever demands; the per-frame canvas upload it was once weighed
-against is gone since the GL particles, 2026-07-30). The old custom look is retired — do not
-imitate it in new chrome.
+system (Heebo `--font-sans` kept; **since 2026-08-23 the stack is `'Source Sans 3', 'Heebo'`** —
+the lead called Heebo's Latin/digits "super basic and defaulty" (accurate: Heebo's Latin IS
+Roboto) and, across four rendered candidate rounds, went Manrope → DM Sans ("too childish...
+it should look modern, clean, and professional") → **Source Sans 3 at weight 400 for ticks**,
+picked from a replica of the legend card next to Inter/Plex/B612; Rubik and Space Grotesk
+rejected en route. Latin+latin-ext variable woff2 vendored in `public/fonts/source-sans/` + OFL;
+Hebrew still renders Heebo via per-glyph fallback — no wrapper spans; the three canvas-sprite
+font strings (labels/contours/polygons looks) carry the same stack so map text matches the
+chrome). **Chrome look — overhauled 2026-08-23 in a live lead-iteration marathon (replaces the
+2026-07-06 full-bleed-map + frosted-floating-cards look): the map is a rounded window in solid
+chrome.** Docked and SOLID (`bg-card`, no blur, no seam borders): the **right menu** — the layer
+card became a full-height scrollable side panel (`start-0 top-12 bottom-14.5`, `w-48`; scrollbar
+always-visible via webkit pseudo styling, thumb `bg-secondary`; a `dir="ltr"` scroller wrapping
+`dir="rtl"` content puts it on the screen-edge side; content `px-3`, rows `gap-1.5`) — plus the
+top bar and time bar. The **map canvas itself is rounded**: an inset wrapper (`top-12
+bottom-14.5 start-48 end-0 overflow-hidden rounded-xl`) around the maplibre container —
+maplibre's own css forces `position: relative` on its container and unlayered css beats
+Tailwind's layered utilities, so sizing MUST live on a wrapper div; bonus: fetch bboxes now match
+the truly visible map (radial-gradient corner pieces were built first and replaced by this; note
+the root is 17px, so `top-12` etc. are rem-true — pixel math at 16px caused an alignment round).
+**Floating windows** (legend, level rail + chip, loop pill, hover readout, perf HUD) are frosted
+`bg-background/70 backdrop-blur-lg` with **centered ambient shadows**
+(`shadow-[0_0_12px_rgb(0_0_0/0.45)]`, 8px on small chips) — blur cost is now only these small
+surfaces. **Nested-blur rule**: a child of a backdrop-blurred element cannot blur the page
+behind it — a card whose children must frost (the level chip) stays blur-free itself and puts
+its frost on an `absolute inset-0 -z-10` layer inside an `isolate` card. **Dark palette re-tuned
+to neutral gray** (lead-picked from a rendered ramp sheet, then live-nudged to the A/B midpoint):
+card `oklch(0.195 0.005 260)`, background `0.153`, secondary/muted/accent `0.28`, chroma ≈ 0 —
+the slate-blue cast is gone; light theme untouched (a dark/light toggle was built and removed
+same day — lead: styling later, see Presets & theming row). **Buttons**: main rows (menu
+layers/shortcuts) and top-bar icons use `secondary` when inactive (lead: visible button
+affordance); tiny value chips and chevrons stay `ghost`; ghost lost its `aria-expanded`
+background in our hlm-button copy (chevrons icon-only — this also killed a
+hover-darkens-vs-lightens mismatch); secondary's hover lightens via `color-mix`. Top bar order,
+leftmost first: **perf HUD toggle** (lucideActivity, `viewChild(PerfHud)` + public `toggle()`;
+Ctrl+Alt+P still works), **basemap** (lucidePalette), coordinates. Legend gradient: bar
+full-height with the label column top/bottom-aligned to it (`justify-between`), labels
+weight-500; the open legend title gets the `secondary` fill. The old looks (2026-07-06 frosted
+cards AND the pre-spartan custom chrome) are retired — do not imitate them.
 
 **Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified; Units API reshaped
 2026-07-08; moved to `utils/units.ts` 2026-07-14):** the Units module is quantity-based, windy's settings screen as the model: callers
@@ -650,15 +678,16 @@ contract obligation with a footgun (a lazy `true` freezes the loop, a lazy `fals
 churn); the recipe stands here as the ready re-add if the perf HUD on a real mini-PC ever points
 at playhead churn: abstract `sameData` reference-comparing frames+shown per layer, passed as the
 computed's `equal` with null-guards. Newest-hold = `restartDelayMs` 1500ms (converted to data-time overshoot past the newest frame — the sweep coasts, consumers nearest-pick, no hold accumulator). **Loop player controls (2026-08-19, lead: "very important")**: a floating frosted pill
-(card recipe, `dir=ltr`) above the time bar's end side, visible only while `loopTime` is non-null
+(card recipe, `dir=ltr`) **centered above the time bar** (lead 2026-08-23, was end side; lifted
+`mb-17` so the handle's readout chip passes under it at any position), visible only while `loopTime` is non-null
 — ⏮ ⏸/▶ ⏭ (lucide) + a ×N **cycle chip** ×0.5/×1/×2/×4 (an in-strip block was tried first —
 lead: too cramped — and a popover speed slider — lead: cycle icon instead). `LoopPlayer.playing`
 + `speed` signals (speed scales frameMs; the hold stays 1500ms wall at any speed; session-only),
 public `play()`/`pause()`/`stepFrame(±1)` over private `run()`/`halt()`; `stepFrame` auto-pauses
 and walks the merged times list with wraparound; `setTimes` respects a user pause while loops
 live, but the pause **dies with the loop session** (empty setTimes resets playing — pausing then
-re-showing a loop layer plays, the lead's bug). Perf HUD moved `bottom-18`→`bottom-28` to clear
-the pill's band. The timeline view boots **centered on now** (lead's ask — `paddedWindow` centers
+re-showing a loop layer plays, the lead's bug). Perf HUD sits **top-left** since 2026-08-23
+(`end-3 top-15`, lead's arrangement round; it had chased the pill through `bottom-18`→`bottom-28`). The timeline view boots **centered on now** (lead's ask — `paddedWindow` centers
 the window's span on `time.now()`, handle at 50%). Caveat: a multi-site layer merges its sites' times before the
 player sees them (3&10-min sites → phantom 1-min union gaps understate its cadence) — harmless
 while a sparser layer is active; per-site lists are the fix if a radar-alone loop ever paces
@@ -878,6 +907,50 @@ overlap is the accepted trade, polygons-style relaxation is the answer if it eve
 inside an Israel-region `within` box (lon 33.8–36.9, lat 29.2–35.0 — must cover Lebanon–Syria or
 tile lines braid with the vendored envelope). Top bar is frosted and overlays the map
 (`bg-card/75 backdrop-blur-md`, layer card at `top-15`).
+
+**Level selector v1 (2026-08-23, lead-verified spec answers):** the global vertical dimension,
+windy-style. `LevelService` (`services/`, the TimeService mirror): `levels` = surface (`null`) +
+**every 1,000 ft from 1' to 40'** (lead's list), `activeLevel` signal (session-only — the
+settings machinery binds only layer/look fields; persistence is an open plan row). `Inputs`
+gained `level()`. **Pressures landed the same day — vocabulary (lead): the collective is
+"levels", ft levels are "heights", mb levels are "pressures"**: `Level = number | string`
+(number = ALWAYS feet, string = mb), `LevelKind = 'heights' | 'pressures'`; `heightLevels` =
+surface (`null`) + the feet list, `pressureLevels` = surface + 1000/925/850/700/500/400/300/250/
+200 mb (stand-ins); `kind` signal picks the list (`levels` computed), `setKind` converts the
+active level to the **nearest stop in the new vocabulary** through `feetOf` (barometric
+`145366·(1−(mb/1013.25)^0.1903)`). **`Layer.staticLevel` (base field, default `true` —
+lead-picked negative polarity over usesLevels, double-negative reads flagged)**: a layer opts
+into the vertical dimension by overriding `false` (ModelLayer does); the level-bar shows while
+any active layer has `!staticLevel` — layers declare, no instanceof (the timeWindow model; an
+earlier `followsLevel`-on-ModelLayer + instanceof check was lead-rejected as model-specific
+knowledge in the component). **Wire**: feet → `height=<feet>` (**assumed, confirm with backend
+lead**; `wrap_info.height` echoes), mb → `pressure=<mb>` (**lead-corrected** — an invented
+`level` param was wrong); `ModelLayer.levelParam(level)` builds the fragment and `Geopotential`
+overrides it to respond to pressures only — a feet level drops the param, request identity stays
+stable, no refetch ("static when kft, moves when pressures"; verified live: `'500'` drew the
+500 mb isobar ~5,700 m, a feet pick returned it to its default 1000 mb map). Level switches
+refetch through request identity, draw follows.
+UI: `pages/home/level-bar/` — **slimmed through a live lead-iteration marathon (2026-08-23)** to
+a narrow frosted column beside the menu panel (`start-51 top-15`): a **kft/mb cycle toggle** on
+top (fixed `w-8`, secondary tint), a clickable bold top label (bare number in mb mode — the unit
+lives only in the chip), the rail, and a clickable **`matTerrainRound`** surface icon (the icon
+journey — hand-drawn line and hills "goofy", lucideMountain "too sharp", game-icons' gameHills
+busy scene-art — ended at material-round terrain from a rendered candidate sheet;
+`@ng-icons/material-icons` added). **Rail stops sit at TRUE barometric altitudes**
+(`stopPercent` = feetOf/feetOf(max); lead: equal-mb gaps must widen with height — 500→300 spans
+more rail than 700→500; drag snaps to the nearest stop by altitude, not by even slots; the feet
+ladder is linear so it kept its look). Pointer model = drag previews / release commits (the
+time-handle idiom, `dragIndex` local signal); the value chip — "the popup text is helpful" —
+**rides the handle on the map side** (`start-full ms-5`), white `bg-primary text-sm`, reading
+`N רגל מעפ״י` via `Quantity.Altitude` (display unit Feet, the `רגל מעפ״י` suffix is the Feet
+format case) or `300mb`, wrapped in an inner `dir="auto"` span (bidi renders `mb300` otherwise).
+Hard-won RTL rule: `dir` for notation goes on an INNER span — on the positioned element itself
+it flips the element's own inset-inline resolution (the chip rendered off-screen on both sides
+before this clicked). Fixture: −2°C per 1,000 ft lapse, wind +60% per 10,000 ft + 2°/1,000 ft
+veer; pressure asks synthesize via the barometric-equivalent feet, hgt at a `pressure` returns
+the isobar height in meters + synoptic ripple — all invented stand-ins; verified end-to-end.
+`activeLevel` is session-only (the settings machinery binds only layer/look fields). Deferred
+(plan row): level persistence, real level lists, keyboard a11y, height-param confirmation.
 
 **Legends (2026-07-22):** `Look.legend` (`engine/base/look.ts`, default null) — typed like the
 Control vocabulary: `Legend = GradientLegend | SwatchesLegend`, discriminated by a `LegendType`

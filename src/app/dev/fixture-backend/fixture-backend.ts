@@ -115,8 +115,18 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
   const model = request.params.get('model') ?? 'wide';
   const time = Number(request.params.get('time'));
   const bounds = (request.params.get('bbox') ?? '').split(',').map(Number) as Bounds;
+  const height = request.params.get('height');
+  const pressure = request.params.get('pressure');
   const weather = await loadWeather();
-  const wrap = weather.wrap(model, parameter, bounds, frameHours(time), RUN_TIME);
+  const wrap = weather.wrap(
+    model,
+    parameter,
+    bounds,
+    frameHours(time),
+    RUN_TIME,
+    height === null ? null : Number(height),
+    pressure === null ? null : Number(pressure),
+  );
   if (!wrap) {
     throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Outside coverage' });
   }

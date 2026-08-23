@@ -1,12 +1,10 @@
-<div class="relative h-full">
-  <div #mapContainer class="h-full w-full"></div>
-  <header class="absolute inset-x-0 top-0 flex h-12 items-center gap-2 border-b bg-card/75 px-4 backdrop-blur-md">
+<div class="relative h-full bg-card">
+  <div class="absolute top-12 bottom-14.5 start-48 end-0 overflow-hidden rounded-xl">
+    <div #mapContainer class="h-full w-full"></div>
+  </div>
+  <header class="absolute inset-x-0 top-0 flex h-12 items-center gap-2 bg-card px-4">
     <span class="text-base font-semibold">מטאו</span>
     <span class="text-sm text-muted-foreground">Meteo</span>
-    <button hlmBtn variant="ghost" size="sm" class="ms-auto w-9 px-0" aria-label="מפת רקע"
-            [hlmDropdownMenuTrigger]="basemapMenu">
-      <ng-icon name="lucidePalette"/>
-    </button>
     <ng-template #basemapMenu>
       <hlm-dropdown-menu>
         @for (item of map.basemaps; track item.id) {
@@ -18,8 +16,8 @@
         }
       </hlm-dropdown-menu>
     </ng-template>
-    <button hlmBtn size="sm" class="w-9 px-0" aria-label="קואורדינטות"
-            [variant]="layers.isLayerActive(coordinates) ? 'default' : 'ghost'"
+    <button hlmBtn size="sm" class="ms-auto w-9 px-0" aria-label="קואורדינטות"
+            [variant]="layers.isLayerActive(coordinates) ? 'default' : 'secondary'"
             [attr.aria-pressed]="layers.isLayerActive(coordinates)"
             [hlmDropdownMenuTrigger]="coordinatesMenu">
       <ng-icon name="lucideCrosshair"/>
@@ -42,9 +40,20 @@
         }
       </hlm-dropdown-menu>
     </ng-template>
+    <button hlmBtn variant="secondary" size="sm" class="w-9 px-0" aria-label="מפת רקע"
+            [hlmDropdownMenuTrigger]="basemapMenu">
+      <ng-icon name="lucidePalette"/>
+    </button>
+    <button hlmBtn size="sm" class="w-9 px-0" aria-label="חיווי ביצועים"
+            [variant]="perfHud()?.visible() ? 'default' : 'secondary'"
+            [attr.aria-pressed]="perfHud()?.visible()"
+            (click)="perfHud()?.toggle()">
+      <ng-icon name="lucideActivity"/>
+    </button>
   </header>
   <app-legend-bar class="absolute bottom-18 end-3" />
-  <app-layer-bar class="absolute start-3 top-15" />
+  <app-level-bar class="absolute start-51 top-15" />
+  <app-layer-bar class="absolute start-0 top-12 bottom-14.5" />
   <app-time-bar class="absolute inset-x-0 bottom-0" />
   <app-hover-readout />
   <app-perf-hud />

@@ -12,6 +12,7 @@ const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
 
 export abstract class ModelLayer extends Layer<Grid[]> {
   abstract readonly parameters: Parameter[];
+  override readonly staticLevel: boolean = false;
   override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
 
   relevanceOf(grids: Grid[]): TimeRange {
@@ -39,14 +40,18 @@ export abstract class ModelLayer extends Layer<Grid[]> {
   private request(parameter: Parameter, on: Inputs): HttpResourceRequest | undefined {
     const bbox = on.bbox();
     if (!bbox) return undefined;
-    return {
-      url: '/api/grids',
-      params: {
-        parameter,
-        model: containsBounds(LOCAL_COVERAGE, bbox) ? 'local' : 'wide',
-        time: String(on.displayTime()),
-        bbox: bbox.join(','),
-      },
+    const params: Record<string, string> = {
+      parameter,
+      model: containsBounds(LOCAL_COVERAGE, bbox) ? 'local' : 'wide',
+      time: String(on.displayTime()),
+      bbox: bbox.join(','),
     };
+    const level = this.staticLevel ? null : on.level();
+    if (level !== null) Object.assign(params, this.levelParam(level));
+    return { url: '/api/grids', params };
+  }
+
+  protected levelParam(level: number | string): Record<string, string> {
+    return typeof level === 'number' ? { height: String(level) } : { pressure: level };
   }
 }
