@@ -1,3 +1,4 @@
+import { Signal, signal } from '@angular/core';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { BitmapLayer, PathLayer } from '@deck.gl/layers';
 import { Grid } from '../../objects/grid';
@@ -19,8 +20,8 @@ export class Radar extends Look<Grid[]> {
     { value: 4, color: '#facc15', label: 'גשם חזק' },
     { value: 8, color: '#ef4444', label: 'גשם עז' },
   ];
-  override readonly legend: Legend = { type: LegendType.Swatches, stops: this.bands };
-  private readonly scale: ColorScale = colorScale(this.bands, 'stepped');
+  override readonly legend: Signal<Legend> = signal({ type: LegendType.Swatches, stops: this.bands });
+  private readonly colorScale: ColorScale = colorScale(this.bands, 'stepped');
   private readonly filterValue: (value: number) => boolean;
   private readonly blur: boolean;
   private images = new Map<Grid, ImageData>();
@@ -44,7 +45,7 @@ export class Radar extends Look<Grid[]> {
     const layers: DeckLayer[] = grids.map((grid, index) => {
       const image =
         this.images.get(grid) ??
-        buildImage(grid, this.scale, 'nearest', this.filterValue, this.blur);
+        buildImage(grid, this.colorScale, 'nearest', this.filterValue, this.blur);
       cache.set(grid, image);
       return new BitmapLayer({
         id: `${id}-${index}`,

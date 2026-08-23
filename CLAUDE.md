@@ -786,6 +786,64 @@ ONE params `Record`, `load` sends it to HttpClient verbatim and `FrameLoader` ke
 string "is too much"; a hand-invented `|` key format was rejected 2026-08-13 the same way); the publish gates distinguish empty-while-loading
 (undefined, via the times/hours resources) from empty-window (null).
 
+**Observations layer v1 (2026-08-20):** third loop kind — `ObservationsLayer extends
+LoopLayer<ObservationsLoop>` (`layers/observations/`; `{ frames, shown }`, frames =
+`{ time, points: ObservationPoint[] }`, wire `{ lat, lon, value }[]` per parameter — the lead's
+fixture shape, no station identity). **One layer, one parameter at a time** (lead): a פרמטר
+Table control (טמפרטורה/רוח) — the fetch re-asks and the look re-renders on switch. Time model
+(lead 2026-08-20): obs arrive every 10 min; **jumps stay hourly** (`timeWindow { 24, 0, 1h }`)
+showing latest values, but **the loop plays 10-min frames** — ask = the 10-min-aligned
+`requestTimes` (lead's name, was "marks") — `requestParams`/`obsRequest` privates since the
+2026-08-23 split ("obs" is lead-accepted shorthand, flagged against §6 and kept) — in the hour
+before `exactTime` (client-generated grid, `askMinutes 60` / `stepMinutes 10` fields; ask-by-time
+contract `/api/observations?parameter&time` — **assumed, confirm with backend lead**), each frame
+carrying the latest-known value per point (server-side semantic; a station that reports hourly
+holds through six frames). Being the sparsest active loop layer, obs set the loop pace (10 min
+per beat, verified). Rendering: the generic **`Labels` look** (`engine/looks/labels.ts`,
+`LookKind.Text`'s first use) — canvas-sprite text via `IconLayer` (the house contour-label
+technique: strokeText halo + fillText, 2× oversampled, cached per color+text, `release()` clears;
+a deck `TextLayer` sdf version was built first and rejected 2026-08-23 — synthesized halos looked
+wrong at any tuning, and sdf is only worth it for unbounded unique strings; **stress-measured
+5,000 stations at locked 120 fps** since value-labels are ~100 unique sprites IconLayer
+instances). Values are `format`ed with unit suffix ("31°C", "8 kt") and **colored by
+per-parameter severity scales** (2026-08-23): **one file per parameter** in
+`layers/observations/` (the polygons event-kind pattern; lead 2026-08-23 "split the code to
+different parameters, that's why the folder exists") — each exports an `ObservationParameter`
+const (interface in the layer file: `parameter` — the request's own query-param name, lead
+2026-08-23 over "wire" — `label`, `colorScale: ColorScale`, precomputed `legend`,
+`textOf(point)`; his picks, replacing wire/scale/describe: "you got to work on your naming".
+`colorScale` is the settled name for the concept EVERYWHERE — type, builder, and every
+field/param including Colormap's and Radar's privates and `buildImage`'s param; a colorOf round
+was tried first, then the lead unified: "lets do colorScale everywhere") built
+from a local STOPS table; scale and legend are **built once at module load** (`colorScale` +
+`gradientLegend`, which lives beside the Legend types in `engine/base/look.ts` — lead 2026-08-23:
+a generic helper is "written and used outside", never exported from a feature file; a lazy
+per-parameter legend cache Map was the first version and the lead called out the apparatus;
+precomputed module consts give legend identity stability for free). The parameter drives label color, hover, AND the legend — `Look.legend` is a
+**`Signal<Legend | null>`** across all looks (lead 2026-08-23 — a getter version was built first
+and he called it out: signals-first is the house way; static looks wrap theirs in `signal(...)`,
+Labels takes a legend fn wrapped in `computed`, the legend-bar reads `legend()`). Four
+parameters: טמפרטורה, רוח, גשם (mm/h), and **עננות combined** (lead 2026-08-23: "clouds should be
+combined together" — one synoptic pair per station, "6/8 12.5'": `value` = cover eighths, and
+`CloudPoint extends ObservationPoint` adds the optional `base` ft (lead 2026-08-23: a
+kind-specific wire field never widens the shared point contract — `types/observations.ts` holds
+both, cloud's `describe` casts, the one genuine friction point); each parameter's `describe(point)`
+builds label AND hover text, color/legend ride the cover scale; new Quantity.CloudCover/
+Unit.Eighths + Quantity.CloudBase/Unit.Kilofeet prime notation). Fixture quantizes base to 500 ft
+steps — free-precision bases made ~1,700 unique label strings and sprite churn dropped fps to 64;
+quantized ≈360 bounded sprites, back to 120 (unique-string boundedness is the Labels look's
+scaling contract). All scales are invented stand-ins awaiting the lead's real ones. Hover = nearest station within
+0.35°, else —. Relevance = frames
+−10min/+60min (latest holds an hour). Fixture: `synthetic-observations.ts` builds **~1,000 land-only
+stations** (lead 2026-08-23, grounded on ~8,600 worldwide SYNOP: the lead-supplied
+temperature.json stations + deterministic seeds over the wide-sector bbox, land-tested via
+`isLand`/`collectLandPolygons` now exported from synthetic-weather — windSpeed.json is no longer
+read, delete or keep is the lead's call). Values are **smooth regional ripple fields** per
+parameter (lat/lon sines drifting with time + small per-station jitter — lead: "make them change
+from area to area so i see the full colored range"), each anchored to the station's own
+last-update mark — every 5th station updates hourly, the rest each 10 min, so loop persistence is
+visible; route `/api/observations`.
+
 **Satellite layer v1 — static (2026-08-02; full record in [`docs/satellite.md`](docs/satellite.md)):**
 first imagery layer. `SatelliteLayer` (`layers/satellite/`) on the lead's wire contract:
 `getConfiguration` (default channel/sector + the satellite id to display — the user never picks a
@@ -827,7 +885,13 @@ enum so future legend kinds can carry extra fields or custom UI; both current ki
 its palette plus a new `label: (value) => string` constructor param (temperature °C identity, wind
 m/s→kt — every tick flows through the Units module) and it renders as a continuous vertical strip:
 low value at the bottom, stops **evenly spaced** (windy's model, not value-proportional — keeps
-dense low-end palettes readable). `Polygons` receives a hand-authored discrete list (lead-picked
+dense low-end palettes readable). **Severest-on-top is the standard for ALL legends** (lead
+2026-08-23): stops are always AUTHORED ascending (colorScale needs that) and the legend-bar
+renders both kinds bottom-up — the gradient's `flex-col-reverse` labels + `to top` strip, and
+since 2026-08-23 the swatches rows are `flex-col-reverse` too (definitions never reverse
+themselves). The observations **rain** legend is a hand-authored `SwatchesLegend` (גשם קל→עז,
+the radar bands' vocabulary; lead: textual over mm/h ticks — per-parameter authored legends make
+this a one-file edit). `Polygons` receives a hand-authored discrete list (lead-picked
 representative colors: low/mid/high clouds, fog, haze, CB) rendered as swatch rows.
 `pages/home/legend-bar/` is one frosted accordion card at the bottom-end corner: a title row per
 active look carrying a legend (titled by the layer name), one body open at a time: a `linkedSignal`

@@ -1,6 +1,9 @@
+import { Signal, signal } from '@angular/core';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Provider } from '../../objects/provider';
+import { ColorStop } from '../../utils/color-scale';
 import { Control } from '../../utils/controls';
+import { Quantity, Unit, format } from '../../utils/units';
 
 export enum LookKind {
   Image,
@@ -36,10 +39,17 @@ export interface SwatchesLegend {
 
 export type Legend = GradientLegend | SwatchesLegend;
 
+export function gradientLegend(stops: ColorStop[], quantity: Quantity, unit: Unit): Legend {
+  return {
+    type: LegendType.Gradient,
+    stops: stops.map(({ value, color }) => ({ color, label: format(value, quantity, unit) })),
+  };
+}
+
 export abstract class Look<I> {
   abstract readonly kind: LookKind;
   readonly controls: Control[] = [];
-  readonly legend: Legend | null = null;
+  readonly legend: Signal<Legend | null> = signal(null);
   constructor(readonly provider: Provider<I>) {}
   abstract deckLayer(id: string, input: I): DeckLayer | DeckLayer[];
   release(): void {}

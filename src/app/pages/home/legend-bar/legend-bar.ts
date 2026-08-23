@@ -20,8 +20,9 @@ export class LegendBar {
     const legends: { title: string; legend: Legend }[] = [];
     for (const layer of this.layersService.activeLayers().keys()) {
       for (const entry of layer.looks) {
-        if (this.layersService.isLookActive(entry) && entry.look.legend) {
-          legends.push({ title: layer.name, legend: entry.look.legend });
+        const legend = this.layersService.isLookActive(entry) ? entry.look.legend() : null;
+        if (legend) {
+          legends.push({ title: layer.name, legend });
         }
       }
     }

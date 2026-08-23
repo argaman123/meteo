@@ -1,3 +1,4 @@
+import { Signal, signal } from '@angular/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Control, PercentControl, percent } from '../../utils/controls';
@@ -19,8 +20,8 @@ export class Colormap extends Look<Grid> {
   readonly kind: LookKind = LookKind.Colormap;
   readonly opacity: PercentControl;
   override readonly controls: Control[];
-  override readonly legend: Legend;
-  private readonly scale: ColorScale;
+  override readonly legend: Signal<Legend>;
+  private readonly colorScale: ColorScale;
   private readonly interpolation: 'bilinear' | 'nearest';
   private readonly filterValue?: (value: number) => boolean;
   private readonly blur: boolean;
@@ -33,16 +34,16 @@ export class Colormap extends Look<Grid> {
     options: ColormapOptions = {},
   ) {
     super(provider);
-    this.scale = colorScale(palette.stops, palette.style);
+    this.colorScale = colorScale(palette.stops, palette.style);
     this.interpolation = options.interpolation ?? 'bilinear';
     this.filterValue = options.filterValue;
     this.blur = options.blur ?? false;
     this.opacity = percent(options.opacity ?? 0.6);
     this.controls = [this.opacity];
-    this.legend = options.legend ?? {
+    this.legend = signal(options.legend ?? {
       type: LegendType.Gradient,
       stops: palette.stops.map((stop) => ({ color: stop.color, label: label(stop.value) })),
-    };
+    });
   }
 
   override release(): void {
@@ -53,7 +54,7 @@ export class Colormap extends Look<Grid> {
     if (!this.last || this.last.grid !== grid) {
       const image = buildImage(
         grid,
-        this.scale,
+        this.colorScale,
         this.interpolation,
         this.filterValue,
         this.blur,
@@ -71,7 +72,7 @@ export class Colormap extends Look<Grid> {
 
 export function buildImage(
   grid: Grid,
-  scale: ColorScale,
+  colorScale: ColorScale,
   interpolation: 'bilinear' | 'nearest',
   filterValue: ((value: number) => boolean) | undefined,
   blur: boolean,
@@ -91,7 +92,7 @@ export function buildImage(
       const value = grid.valueAt(lon, lat, interpolation);
       if (Number.isNaN(value)) continue;
       if (filterValue && !filterValue(value)) continue;
-      const color = scale(value);
+      const color = colorScale(value);
       const offset = (row * width + col) * 4;
       rgba[offset] = color.r;
       rgba[offset + 1] = color.g;

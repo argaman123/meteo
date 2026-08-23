@@ -1,3 +1,4 @@
+import { Signal, signal } from '@angular/core';
 import type { Color, Layer as DeckLayer } from '@deck.gl/core';
 import { IconLayer, PathLayer, SolidPolygonLayer } from '@deck.gl/layers';
 import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
@@ -50,12 +51,12 @@ interface PolygonLabel {
 
 export class Polygons extends Look<PolygonsView> {
   readonly kind = LookKind.Polygons;
-  override readonly legend: Legend;
+  override readonly legend: Signal<Legend>;
   private labelIcons = new Map<string, LabelIcon>();
 
   constructor(provider: Provider<PolygonsView>, legend: Legend) {
     super(provider);
-    this.legend = legend;
+    this.legend = signal(legend);
   }
 
   override release(): void {

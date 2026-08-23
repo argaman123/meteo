@@ -55,5 +55,6 @@ export class HomePage implements AfterViewInit, OnDestroy {
     this.layers.showLayer(layers.coordinates);
     this.layers.showLayer(layers.satellite);
     this.layers.showLayer(layers.radar);
+    this.layers.showLayer(layers.observations);
   }
 }

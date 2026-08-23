@@ -11,6 +11,7 @@ import { Bounds } from '../../types/wrap';
 import { hoursToMs, msToHours } from '../../utils/time';
 import { syntheticPolygons } from './synthetic-polygons';
 import { radarTimes, syntheticRadarWrap } from './synthetic-radar';
+import { syntheticObservations } from './synthetic-observations';
 import { SATELLITE_SECTORS, satelliteHours, syntheticSatelliteImage } from './synthetic-satellite';
 import { SyntheticWeather } from './synthetic-weather';
 
@@ -75,6 +76,13 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
       throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'No radar' });
     }
     return new HttpResponse({ status: 200, body: wrap });
+  }
+  if (request.url === '/api/observations') {
+    const points = await syntheticObservations(
+      request.params.get('parameter') ?? '',
+      Number(request.params.get('time')),
+    );
+    return new HttpResponse({ status: 200, body: points });
   }
   if (request.url === '/api/hours') {
     return new HttpResponse({ status: 200, body: hoursBetween(request, -BACK_HOURS, FORWARD_HOURS) });

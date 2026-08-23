@@ -7,6 +7,7 @@ import { SatelliteLayer } from './satellite/satellite-layer';
 import { Shortcut } from './base/shortcut';
 import { Temperature } from './model/temperature';
 import { Wind } from './model/wind';
+import { ObservationsLayer } from './observations/observations-layer';
 import { PolygonsLayer } from './polygons/polygons-layer';
 
 export const layers = registerLayers({
@@ -16,6 +17,7 @@ export const layers = registerLayers({
   satellite: new SatelliteLayer(),
   radar: new RadarLayer(),
   polygons: new PolygonsLayer(),
+  observations: new ObservationsLayer(),
   coordinates: new Coordinates(),
 });
 
@@ -26,6 +28,7 @@ export const menuLayers = [
   layers.satellite,
   layers.radar,
   layers.polygons,
+  layers.observations,
 ];
 
 export const shortcuts = {

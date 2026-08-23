@@ -22,7 +22,7 @@ interface GfsRecord {
   data: number[];
 }
 
-interface LandPolygon {
+export interface LandPolygon {
   rings: number[][][];
   west: number;
   south: number;
@@ -75,7 +75,7 @@ export class SyntheticWeather {
       for (let c = 0; c < RESPONSE_SIZE; c++) {
         const lon = west + ((east - west) * c) / (RESPONSE_SIZE - 1);
         row.push(
-          maskWaves && this.isLand(lat, lon) ? null : this.field(lat, lon, hours, parameter),
+          maskWaves && isLand(this.land, lat, lon) ? null : this.field(lat, lon, hours, parameter),
         );
       }
       values.push(row);
@@ -141,25 +141,6 @@ export class SyntheticWeather {
     };
   }
 
-  private isLand(lat: number, lon: number): boolean {
-    for (const polygon of this.land) {
-      if (lon < polygon.west || lon > polygon.east || lat < polygon.south || lat > polygon.north) {
-        continue;
-      }
-      let crossings = 0;
-      for (const ring of polygon.rings) {
-        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-          const [xi, yi] = ring[i];
-          const [xj, yj] = ring[j];
-          if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
-            crossings++;
-          }
-        }
-      }
-      if (crossings % 2 === 1) return true;
-    }
-    return false;
-  }
 }
 
 function isWave(parameter: string): boolean {
@@ -221,7 +202,27 @@ function findWindRecords(gfsRecords: unknown): { u: GfsRecord; v: GfsRecord } | 
   return u && v ? { u, v } : null;
 }
 
-function collectLandPolygons(landGeojson: unknown): LandPolygon[] {
+export function isLand(land: LandPolygon[], lat: number, lon: number): boolean {
+    for (const polygon of land) {
+      if (lon < polygon.west || lon > polygon.east || lat < polygon.south || lat > polygon.north) {
+        continue;
+      }
+      let crossings = 0;
+      for (const ring of polygon.rings) {
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const [xi, yi] = ring[i];
+          const [xj, yj] = ring[j];
+          if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+            crossings++;
+          }
+        }
+      }
+      if (crossings % 2 === 1) return true;
+    }
+    return false;
+}
+
+export function collectLandPolygons(landGeojson: unknown): LandPolygon[] {
   const geojson = landGeojson as {
     features: { geometry: { type: string; coordinates: unknown } }[];
   };
