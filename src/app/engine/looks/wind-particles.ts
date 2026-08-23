@@ -11,7 +11,7 @@ import { Look, LookKind } from '../base/look';
 
 const COUNT = 2000;
 const DECAY = 0.94;
-const LINE_WIDTH = 1.75;
+const LINE_WIDTH = 2.5;
 
 export interface WindField {
   u: Grid;

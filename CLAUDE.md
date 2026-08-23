@@ -306,7 +306,8 @@ streak) and emits geo lon/lat segments; `TrailRenderer.paint(segments)` uploads 
 positions and runs two passes on a ping-pong framebuffer pair — fade the previous frame, then draw
 the newest segments as **instanced quads** (perpendicular-expanded in the vertex shader with
 smoothstep soft edges; WebGL native lines are 1 px only, `LINE_WIDTH` 1.75 was picked by eye as
-the midpoint) — and its constant `Texture` feeds the same `BitmapLayer` warp (mercator-banded y).
+the midpoint, then lead-retuned to **2.5** on the MacBook 2026-08-23 — "still way too small" even
+dpr-true) — and its constant `Texture` feeds the same `BitmapLayer` warp (mercator-banded y).
 Two hard-won shader rules: the fade decays **alpha only with rgb pinned white** (multiplying rgba
 grays old trails), and the decay is **floored at 8-bit resolution** (`floor(a·DECAY·255)/255`) —
 otherwise low alphas round back up and paint permanent residue on the map. Tuning knobs at the top

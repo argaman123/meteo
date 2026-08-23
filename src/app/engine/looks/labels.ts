@@ -43,7 +43,7 @@ export class Labels extends Look<LabelsInput> {
     const canvas = document.createElement('canvas');
     canvas.height = height;
     const context = canvas.getContext('2d')!;
-    const font = `600 ${13 * scale}px 'Heebo Variable', sans-serif`;
+    const font = `500 ${13 * scale}px 'Heebo Variable', sans-serif`;
     context.font = font;
     const width = Math.ceil(context.measureText(text).width + 8 * scale);
     canvas.width = width;
