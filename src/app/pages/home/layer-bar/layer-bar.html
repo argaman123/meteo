@@ -15,10 +15,12 @@
               [attr.aria-pressed]="layersService.isLayerActive(layer)" (click)="layersService.toggleLayer(layer)">
         {{ layer.name }}
       </button>
-      <button hlmBtn size="sm" variant="ghost" class="w-9 px-0" [attr.aria-expanded]="isGroupOpen(layer)"
-        [attr.aria-label]="'אפשרויות ' + layer.name" (click)="toggleGroup(layer)">
-        <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="isGroupOpen(layer)"/>
-      </button>
+      @if (layersService.isLayerActive(layer)) {
+        <button hlmBtn size="sm" variant="ghost" class="w-9 px-0" [attr.aria-expanded]="isExpanded(layer)"
+          [attr.aria-label]="'אפשרויות ' + layer.name" (click)="toggleGroup(layer)">
+          <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="isExpanded(layer)"/>
+        </button>
+      }
     </div>
     @if (hasChildRows(layer)) {
       <div class="ms-4 flex flex-col gap-1 border-s ps-1">
@@ -70,7 +72,7 @@
           }
         }
         @for (entry of layer.looks; track entry.look) {
-          @if (isGroupOpen(layer) || layersService.isLookActive(entry)) {
+          @if (isExpanded(layer)) {
             <div class="flex items-center gap-2 py-1 ps-1.5 text-sm" [class.opacity-50]="!layersService.isLayerActive(layer)">
               <label class="flex grow items-center gap-2">
                 <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="layersService.isLookActive(entry)"

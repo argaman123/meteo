@@ -379,10 +379,12 @@ icons < text — lead reordered contours below particles 2026-07-14); colormap-k
 carry `Layer.name` + per-look `{ look, name, checked }` — `checked` starts as the definition default
 and mutates in place as the layer's session memory of its checkbox states (kind vocabulary:
 צבעים/אנימציה/קונטורים).
-The layer card: foldable groups (explicit chevron, never auto-unfold; a layer's control/look rows
-sit in an indented container behind a thin start guide line — tree look, lead-picked from three
-screenshot mockups 2026-07-22, gated by `hasChildRows` so an active layer with nothing visible
-draws no stub), checkbox per look, and
+The layer card: foldable groups (a layer's control/look rows sit in an indented container behind
+a thin start guide line — tree look, lead-picked from three screenshot mockups 2026-07-22;
+**simplified 2026-08-23 through four lead iterations** to: an enabled layer shows ALL its rows
+— every look, checked or not, plus controls — with a chevron to collapse-all; a disabled layer
+shows no rows AND no chevron (`groupStates` Map gated by `isLayerActive`, the old
+only-active-looks filtering deleted), checkbox per look, and
 **generic controls** (2026-07-15): looks/layers expose `controls: Control[]` — typed descriptors
 rendered by one template switch — `options(initial, choices, label?, presentation?)` (a persisted setting-signal with metadata
 attached; `OptionsPresentation` = Cycle click-cycle (named Toggle until 2026-08-19) / Select popup list / Table — a titleless

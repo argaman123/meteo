@@ -52,24 +52,19 @@ export class LayerBar {
   protected readonly layersService = inject(LayersService);
   protected readonly layers = menuLayers;
   protected readonly shortcuts = Object.values(shortcuts);
-  protected readonly openGroups = signal(new Set<Layer<unknown>>());
+  protected readonly groupStates = signal(new Map<Layer<unknown>, boolean>());
 
-  protected isGroupOpen(layer: Layer<unknown>): boolean {
-    return this.openGroups().has(layer);
+  protected isExpanded(layer: Layer<unknown>): boolean {
+    return this.layersService.isLayerActive(layer) && (this.groupStates().get(layer) ?? true);
   }
 
   protected toggleGroup(layer: Layer<unknown>): void {
-    this.openGroups.update((current) => {
-      const next = new Set(current);
-      if (!next.delete(layer)) next.add(layer);
-      return next;
-    });
+    const expand = !this.isExpanded(layer);
+    this.groupStates.update((current) => new Map(current).set(layer, expand));
   }
 
   protected hasChildRows(layer: Layer<unknown>): boolean {
-    if (this.isGroupOpen(layer)) return true;
-    if (!this.layersService.isLayerActive(layer)) return false;
-    return layer.controls.length > 0 || layer.looks.some((entry) => this.layersService.isLookActive(entry));
+    return this.isExpanded(layer) && (layer.controls.length > 0 || layer.looks.length > 0);
   }
 
   protected cycleOptions(control: OptionsControl<unknown>): void {
