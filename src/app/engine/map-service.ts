@@ -39,8 +39,12 @@ export class MapService {
       minZoom: Math.max(0, Math.log2(container.clientWidth / 512)),
       attributionControl: false,
       canvasContextAttributes: { antialias: true },
+      dragRotate: false,
+      pitchWithRotate: false,
+      touchPitch: false,
     });
     this.map.keyboard.disable();
+    this.map.touchZoomRotate.disableRotation();
     this.map.on('move', () => this.publish());
     this.map.on('moveend', () => {
       this.settledBbox.set(this.bbox());
