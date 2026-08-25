@@ -15,7 +15,14 @@ export class PerfHud {
   readonly visible = signal(true);
   protected fps = signal(0);
   protected heapMb = signal<number | null>(null);
+  protected fpsHistory = signal<number[]>([]);
   private frameHandle = 0;
+
+  protected sparkPoints = computed(() =>
+    this.fpsHistory()
+      .map((fps, index) => `${index},${16 - Math.min(16, (fps / 120) * 16)}`)
+      .join(' '),
+  );
 
   protected layerTimes = computed(() => {
     const lines: { name: string; time: string; relevant: boolean }[] = [];
@@ -59,7 +66,9 @@ export class PerfHud {
     const tick = (now: number) => {
       frames++;
       if (now - windowStart >= 500) {
-        this.fps.set(Math.round((frames * 1000) / (now - windowStart)));
+        const fps = Math.round((frames * 1000) / (now - windowStart));
+        this.fps.set(fps);
+        this.fpsHistory.update((history) => [...history.slice(-59), fps]);
         frames = 0;
         windowStart = now;
         const memory = (performance as { memory?: { usedJSHeapSize: number } }).memory;

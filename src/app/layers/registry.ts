@@ -32,9 +32,31 @@ export const menuLayers = [
 ];
 
 export const shortcuts = {
-  weather: new Shortcut('מזג אוויר', [
-    { layer: layers.temperature, looks: [LookKind.Colormap] },
-    { layer: layers.wind, looks: [LookKind.Particles] },
-    { layer: layers.geopotential, looks: [LookKind.Contours] },
-  ]),
+  weather: new Shortcut(
+    'מזג אוויר',
+    [
+      { layer: layers.temperature, looks: [LookKind.Colormap] },
+      { layer: layers.wind, looks: [LookKind.Particles] },
+      { layer: layers.geopotential, looks: [LookKind.Contours] },
+    ],
+    'lucideCloudSun',
+  ),
+  imagery: new Shortcut(
+    'לוויין ומכ"ם',
+    [
+      { layer: layers.satellite, looks: [LookKind.Image] },
+      { layer: layers.radar, looks: [LookKind.Radar] },
+    ],
+    'lucideSatellite',
+  ),
+  polygons: new Shortcut(
+    'עננות ותופעות',
+    [{ layer: layers.polygons, looks: [LookKind.Polygons] }],
+    'lucideCloudy',
+  ),
+  observations: new Shortcut(
+    'תצפיות',
+    [{ layer: layers.observations, looks: [LookKind.Text] }],
+    'lucideBinoculars',
+  ),
 };

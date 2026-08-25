@@ -5,5 +5,6 @@ export class Shortcut {
   constructor(
     readonly name: string,
     readonly parts: { layer: Layer<unknown>; looks: LookKind[] }[],
+    readonly icon = '',
   ) {}
 }

@@ -44,7 +44,7 @@ const LEGEND: SwatchesLegend = {
 
 export class PolygonsLayer extends Layer<PolygonMap> {
   readonly name = 'עננות ותופעות';
-  override readonly timeWindow = { backHours: 0, forwardHours: 96 };
+  override readonly timeWindow = { backHours: 3, forwardHours: 96 };
   readonly sector = options<Sector>(Sector.Center, [
     { value: Sector.Center, label: 'מרכז' },
     { value: Sector.North, label: 'צפון' },

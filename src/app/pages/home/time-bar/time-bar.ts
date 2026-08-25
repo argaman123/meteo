@@ -4,14 +4,13 @@ import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideChevronLeft,
   lucideChevronRight,
-  lucideChevronsLeft,
-  lucideChevronsRight,
   lucidePause,
   lucidePlay,
   lucideSkipBack,
   lucideSkipForward,
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { LayersService } from '../../../layers/layers-service';
 import { LoopPlayer } from '../../../services/loop-player';
 import { TimeService } from '../../../services/time-service';
@@ -32,13 +31,11 @@ interface TimelineView {
 
 @Component({
   selector: 'app-time-bar',
-  imports: [Dir, HlmButton, NgIcon],
+  imports: [Dir, HlmButton, HlmTooltip, NgIcon],
   viewProviders: [
     provideIcons({
       lucideChevronLeft,
       lucideChevronRight,
-      lucideChevronsLeft,
-      lucideChevronsRight,
       lucidePause,
       lucidePlay,
       lucideSkipBack,
@@ -58,6 +55,7 @@ export class TimeBar {
   protected player = inject(LoopPlayer);
   private view = signal(this.paddedWindow());
   private scrubTime = signal<number | null>(null);
+  private hoverTime = signal<number | null>(null);
   private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimelineView } | null =
     null;
 
@@ -77,8 +75,23 @@ export class TimeBar {
     }));
   });
 
+  protected stopMarkers = computed(() =>
+    this.time
+      .timeStops()
+      .map((stop) => this.positionOf(stop))
+      .filter((position) => position >= 0 && position <= 100),
+  );
+
   protected pastBand = computed(() => this.bandBetween(this.time.window().start, this.time.now()));
   protected futureBand = computed(() => this.bandBetween(this.time.now(), this.time.window().end));
+
+  protected hoverPreview = computed(() => {
+    const hovered = this.hoverTime();
+    if (hovered === null || hovered === this.time.displayTime()) return null;
+    const position = this.positionOf(hovered);
+    if (position < 0 || position > 100) return null;
+    return { position, label: formatLocalTime(hovered) };
+  });
 
   protected handlePosition = computed(() => this.positionOf(this.shownTime()));
   protected nowPosition = computed(() => this.positionOf(this.time.now()));
@@ -133,7 +146,11 @@ export class TimeBar {
 
   protected onPointerMove(event: PointerEvent): void {
     const drag = this.drag;
-    if (!drag) return;
+    if (!drag) {
+      this.hoverTime.set(this.time.snapJump(this.timeAt(event)));
+      return;
+    }
+    this.hoverTime.set(null);
     if (drag.mode === 'pending' && Math.abs(event.clientX - drag.startX) > 4) drag.mode = 'pan';
     if (drag.mode === 'scrub') {
       this.scrubTime.set(this.timeAt(event));
@@ -144,6 +161,10 @@ export class TimeBar {
       const shift = ((drag.startX - event.clientX) / track.width) * (drag.view.end - drag.view.start);
       this.view.set({ start: drag.view.start + shift, end: drag.view.end + shift });
     }
+  }
+
+  protected onPointerLeave(): void {
+    this.hoverTime.set(null);
   }
 
   protected onPointerUp(event: PointerEvent): void {

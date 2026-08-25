@@ -6,6 +6,8 @@ import { Overlay } from './overlay';
 
 export type BasemapId = 'dark' | 'light' | 'colorful';
 
+export const basemapBright = signal(false);
+
 @Service()
 export class MapService {
   private overlay = inject(Overlay);
@@ -17,10 +19,10 @@ export class MapService {
   readonly settledZoom = signal<number | null>(null);
   readonly cursor = signal<[number, number] | null>(null);
   readonly basemap = signal<BasemapId>('dark');
-  readonly basemaps: { id: BasemapId; label: string }[] = [
-    { id: 'dark', label: 'כהה' },
-    { id: 'light', label: 'בהיר' },
-    { id: 'colorful', label: 'צבעוני' },
+  readonly basemaps: { id: BasemapId; label: string; bright: boolean }[] = [
+    { id: 'dark', label: 'כהה', bright: false },
+    { id: 'light', label: 'בהיר', bright: true },
+    { id: 'colorful', label: 'צבעוני', bright: true },
   ];
 
   async init(container: HTMLElement): Promise<void> {
@@ -74,6 +76,7 @@ export class MapService {
 
   setBasemap(id: BasemapId): void {
     this.basemap.set(id);
+    basemapBright.set(this.basemaps.find((item) => item.id === id)!.bright);
     void this.applyStyle(id);
   }
 

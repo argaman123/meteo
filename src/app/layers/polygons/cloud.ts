@@ -19,8 +19,6 @@ export class Cloud implements EventAppearance<CloudEvent> {
     const alpha = Math.round(255 * (thin + (thick - thin) * cover));
     const style: PolygonStyle = {
       fill: rgba(level.color, alpha),
-      outline: rgba('#ffffff', 160),
-      outlineWidth: 1,
       pattern: level.pattern,
       text: this.text(event),
     };

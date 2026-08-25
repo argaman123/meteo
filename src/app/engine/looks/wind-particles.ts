@@ -6,6 +6,7 @@ import { Grid } from '../../objects/grid';
 import { Bounds } from '../../types/wrap';
 import { Control, options } from '../../utils/controls';
 import { MercatorBand, contains } from '../../utils/geo';
+import { basemapBright } from '../map-service';
 import { AnimatedLayer, AnimatedState } from '../base/animated-layer';
 import { Look, LookKind } from '../base/look';
 
@@ -54,11 +55,12 @@ class WindParticleLayer extends AnimatedLayer<ParticleProps> {
     );
     const width = Math.max(256, Math.min(4096, Math.round(cssSpan * devicePixelRatio)));
     const height = Math.max(2, Math.round((width * (north - south)) / (east - west)));
-    this.state.trails?.destroy();
+    const previous = this.state.trails;
     this.setState({
       sim: new ParticleSim(this.props.u, this.props.v),
-      trails: new TrailRenderer(this.context.device, this.props.u.bounds, width, height),
+      trails: new TrailRenderer(this.context.device, this.props.u.bounds, width, height, basemapBright()),
     });
+    if (previous) requestAnimationFrame(() => previous.destroy());
   }
 
   override renderLayers(): DeckLayer {
@@ -70,6 +72,7 @@ class WindParticleLayer extends AnimatedLayer<ParticleProps> {
   }
 
   step(deltaSeconds: number): void {
+    if (this.state.trails.bright !== basemapBright()) this.rebuild();
     this.state.sim.advance(deltaSeconds * this.props.speed());
     this.state.trails.paint(this.state.sim.segments);
   }
@@ -165,15 +168,21 @@ void main() {
   gl_Position = vec4(corner, 0.0, 1.0);
 }`;
 
-const FADE_FS = `#version 300 es
+function inkOf(bright: boolean): string {
+  return bright ? '0.13, 0.14, 0.16' : '1.0, 1.0, 1.0';
+}
+
+function fadeFs(bright: boolean): string {
+  return `#version 300 es
 precision highp float;
 uniform sampler2D previousFrame;
 in vec2 uv;
 out vec4 fragColor;
 void main() {
   float alpha = floor(texture(previousFrame, uv).a * ${DECAY} * 255.0) / 255.0;
-  fragColor = vec4(1.0, 1.0, 1.0, alpha);
+  fragColor = vec4(${inkOf(bright)}, alpha);
 }`;
+}
 
 function lineVs(width: number, height: number): string {
   return `#version 300 es
@@ -193,13 +202,15 @@ void main() {
 }`;
 }
 
-const LINE_FS = `#version 300 es
+function lineFs(bright: boolean): string {
+  return `#version 300 es
 precision highp float;
 in float edge;
 out vec4 fragColor;
 void main() {
-  fragColor = vec4(1.0, 1.0, 1.0, 0.9 * (1.0 - smoothstep(0.5, 1.0, abs(edge))));
+  fragColor = vec4(${inkOf(bright)}, 0.9 * (1.0 - smoothstep(0.5, 1.0, abs(edge))));
 }`;
+}
 
 class TrailRenderer {
   private readonly west: number;
@@ -219,6 +230,7 @@ class TrailRenderer {
     bounds: Bounds,
     width: number,
     height: number,
+    readonly bright: boolean,
   ) {
     const [west, south, east, north] = bounds;
     this.west = west;
@@ -231,7 +243,7 @@ class TrailRenderer {
     this.fade = new Model(device, {
       id: 'wind-trail-fade',
       vs: FADE_VS,
-      fs: FADE_FS,
+      fs: fadeFs(bright),
       topology: 'triangle-strip',
       vertexCount: 4,
       bufferLayout: [{ name: 'corner', format: 'float32x2' }],
@@ -241,7 +253,7 @@ class TrailRenderer {
     this.lines = new Model(device, {
       id: 'wind-trail-lines',
       vs: lineVs(width, height),
-      fs: LINE_FS,
+      fs: lineFs(bright),
       topology: 'triangle-strip',
       vertexCount: 4,
       instanceCount: COUNT,

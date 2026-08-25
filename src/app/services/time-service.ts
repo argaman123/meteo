@@ -34,7 +34,7 @@ export class TimeService {
     { equal: (a, b) => a.start === b.start && a.end === b.end },
   );
 
-  private timeStops = computed(() => {
+  readonly timeStops = computed(() => {
     const { start, end } = this.window();
     const forced = this.forcedTimes();
     if (forced.length) return forced;

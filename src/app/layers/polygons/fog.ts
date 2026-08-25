@@ -8,8 +8,6 @@ export class Fog implements EventAppearance<FogEvent> {
   style(event: FogEvent): PolygonStyle {
     return {
       fill: rgba('#535353', Math.round(255 * (0.4 + 0.3 * visibilityPosition(event)))),
-      outline: rgba('#ffffff', 160),
-      outlineWidth: 1,
       pattern: PolygonPattern.Grid,
       text: [`${event.minVis}-${event.maxVis} km`],
     };

@@ -2,18 +2,20 @@
   <div class="relative isolate flex flex-col items-center gap-4 rounded-xl border px-1.5 py-2.5 shadow-[0_0_12px_rgb(0_0_0/0.45)] select-none">
     <div class="absolute inset-0 -z-10 rounded-xl bg-background/70 backdrop-blur-lg"></div>
     <button type="button" dir="ltr" aria-label="סוג רמות"
-            class="w-8 cursor-pointer rounded-md bg-secondary py-1 text-center text-[10px] leading-none tabular-nums"
+            hlmTooltip="סוג רמות" position="left"
+            class="w-8 cursor-pointer rounded-full border border-border bg-muted/30 py-1 text-center text-[10px] leading-none tabular-nums hover:bg-muted"
             (click)="level.setKind(level.kind() === 'heights' ? 'pressures' : 'heights')">
       {{ level.kind() === 'heights' ? 'kft' : 'mb' }}
     </button>
     <button type="button" dir="ltr" aria-label="לגובה המרבי"
+            hlmTooltip="לגובה המרבי" position="left"
             class="cursor-pointer text-sm leading-none font-bold text-foreground tabular-nums"
             (click)="level.setLevel(maxLevel())">{{ topLabel(maxLevel()) }}</button>
     <div class="relative h-44 w-4 cursor-pointer touch-none" role="slider" aria-label="גובה"
          aria-valuemin="0" [attr.aria-valuemax]="level.levels().length - 1"
          [attr.aria-valuenow]="shownIndex()" [attr.aria-valuetext]="shownLabel()"
          (pointerdown)="onPointerDown($event)" (pointermove)="onPointerMove($event)"
-         (pointerup)="onPointerUp()">
+         (pointerup)="onPointerUp()" (pointerleave)="onPointerLeave()">
       <div class="absolute inset-y-0 left-1/2 w-0.5 -translate-x-1/2 rounded-full bg-muted-foreground/60"></div>
       @for (stop of level.levels(); track stop) {
         @if (isTick(stop)) {
@@ -27,8 +29,15 @@
            [style.bottom.%]="positionPercent()">
         <span dir="auto">{{ shownLabel() }}</span>
       </div>
+      @if (hoverChip(); as chip) {
+        <div class="pointer-events-none absolute start-full z-10 ms-5 translate-y-1/2 rounded-md border bg-card px-2 py-1 text-xs whitespace-nowrap text-muted-foreground tabular-nums"
+             [style.bottom.%]="chip.percent">
+          <span dir="auto">{{ chip.label }}</span>
+        </div>
+      }
     </div>
     <button type="button" aria-label="קרקע" class="flex cursor-pointer text-foreground"
+            hlmTooltip="קרקע" position="left"
             (click)="level.setLevel(null)">
       <ng-icon name="matTerrainRound" size="20"/>
     </button>

@@ -205,6 +205,10 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
   tuning-knobs block at the top of that file (2026-07-30).
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
+- **Colors are authored as hex, never RGBA number arrays** (lead, 2026-08-24): every authored
+  color literal goes through `rgba('#94a3b8', 140)` (`utils/color-scale`); a bare
+  `[148, 163, 184, 140]` hides the color from the reader. Component math derived from an existing
+  color (destructuring a fill to adjust alpha) is exempt.
 - **spartan components are ours:** Helm components are copied into the repo — RTL/theme concerns
   are fixed directly in them, no wrapper layer. Thin wrappers only for third-party widgets we
   don't own.
@@ -511,6 +515,73 @@ Ctrl+Alt+P still works), **basemap** (lucidePalette), coordinates. Legend gradie
 full-height with the label column top/bottom-aligned to it (`justify-between`), labels
 weight-500; the open legend title gets the `secondary` fill. The old looks (2026-07-06 frosted
 cards AND the pre-spartan custom chrome) are retired — do not imitate them.
+
+**Chrome polish marathon (2026-08-24, six lead-driven rounds — refines the 2026-08-23 look):**
+**Menu hierarchy**: active layer rows = white `default` fill + bold; inactive = the new **`soft`
+button variant in our hlm-button copy** (`bg-secondary/50`, hover restores full secondary — added
+because a dynamic `[class]` STRING binding on hlmBtn corrupts the variant classes; per-key
+`[class.x]` bindings are safe, semantic states become variants); an expanded layer's rows sit in a
+full-width bordered `bg-background/50` panel (dropdown feel — a wrap-box and behind-the-button
+overlap were rendered and rejected); unchecked look rows mute their LABEL text + dim their
+chips/switches at opacity-50 but never the checkbox (reads disabled otherwise); value chips are
+`rounded-full border-border bg-muted/30` pills (the app-wide chip language — level rail's kft/mb
+toggle and the loop pill's ×N speak it too); section headers are 11px tracked; שכבות is a
+collapsible section (open by default, session-only state); scrollbar shows on hover only + a
+static bottom mask fade. **Shortcuts are icon rows** (lucide icon per bundle, stored on
+`Shortcut.icon` in the registry): מזג אוויר cloud-sun, **לוויין ומכ"ם** satellite (new bundle),
+**עננות ותופעות** cloudy + **תצפיות** binoculars (new single-layer bundles — the lead wants them
+one-tap visible; catalog rows stay icon-less, that asymmetry separates the species).
+**Time bar**: bands are vertical fades (`from-*/25 to 75%` height, lead-tuned twice; a horizontal
+corner-fade was tried and reverted); single-chevron step buttons with hairline separators
+(`‹3h ‹ › 3h›`); 18px handle dot (integer — fractional sizes rendered a split stem on the lead's
+display); glowing emerald now-line; **`hoverPreview`** = a faint line + time label at the SNAPPED
+would-land stop while hovering the track (hidden while dragging; metaphor names like "ghost" are
+banned — plain nouns); hairline **stop-marker ticks** along the track bottom at `timeStops` (now
+public); tick labels edge-fade via mask; the handle chip's pointer stem is track-anchored at
+`handlePosition` so it stays truthful when the chip clamps at 7–93%. **Loop pill redesigned**
+(three iterations + a mocked 4-sheet): a column of a centered transport row — circular `soft`
+skip buttons, larger `secondary` play/pause, divider, fixed-width ×N chip — over a full-width
+3px progress track fed by `LoopPlayer.loopProgress` (raw-sweep fraction between first/last merged
+times); a media-row and a conic ring around play were built and rejected. **Top bar**: tracked-caps
+METEO wordmark; perf toggle ghost-when-off; **tooltips everywhere** via the vendored spartan
+tooltip (`src/spartan/tooltip/`, `position` per placement): top-bar icons (perf includes the
+Ctrl+Alt+P hint), step buttons (map-step pair includes arrow-key hints), loop pill, level rail.
+**Basemap picker**: full-bleed rows — 380×90 self-captured thumbnails (`public/basemaps/
+thumbnails/`, re-capture via Playwright when styles change) under a `bg-linear-to-l` darkening
+overlay, label + inline indicator (`class="static"` — the helm indicator is `absolute end-2` and
+collides inside custom rows otherwise), `mt-1 first:mt-0` spacing. **Motion pass** (Angular
+`animate.enter`/`animate.leave` + keyframe tokens in styles.css: unfold/fold, expand/collapse
+— the layout-squashing pair via max-height 200px for layer panels — pop-in/pop-out for legend
+card + pill): שכבות section, layer panels, floating cards; legend BODIES animate nothing (both
+ends removed — simultaneous fold+unfold jittered the card). **Adaptive ink** (`basemapBright`
+module signal in map-service, written by `setBasemap` from the basemaps list's new `bright` flag;
+dark=false, light/colorful=true): wind trails bake `inkOf(bright)` into both shaders (white on
+dark, `#212429` on bright — TrailRenderer carries `bright`, `step()` rebuilds on flip with a
+one-frame deferred destroy of the old GPU resources; a two-tone core+casing look was built three
+ways and rejected: "no casing"); polygons' default separation outline (now look-side
+`defaultOutline` — `PolygonStyle.outline` went OPTIONAL, the triplicated white outline left
+cloud/fog/haze; precip/CB overrides untouched); radar coverage rings. Looks re-render on flip
+because deckLayer runs inside the per-activation draw effect (signal read = dependency); deck
+needs `updateTriggers` when the color sits in an accessor. **Convention (lead): colors are NEVER
+authored as RGBA number arrays — always hex via `rgba(hex, alpha)`** (derived component math
+exempt; contours casing converted in the sweep). **Obs labels** grew to 16px/22px sprites.
+**Legend**: w-36 + truncated titles (chevron group shrink-0), collapsed titles show a palette
+sliver (`sliverBackground` — smooth for gradients, hard-stop for swatches). **Hover readout**:
+rounded-xl (radius sweep with the HUD); a legend-color dot per line was built and removed — "the
+colors do not correspond to anything" at the cursor. **Perf HUD**: monospace 11px + a 60-sample
+FPS sparkline (500ms cadence SVG polyline). **Menu row loading pulse** while a layer's data is
+in flight. **Two machinery bugs fixed en route**: polygons' `timeWindow.backHours` 0→3 — with 0,
+a polygons-only window started AT now, the hours ask couldn't see the currently-in-force map
+(started in the past), and the exactTime relevance gate correctly nulled the future frame (other
+layers' back-windows had masked this since the exactTime split); and `syncLoops` gained a
+loading-guard — a live-tick refetch briefly empties all loop data (undefined), which read as a
+loop-session death and reset a user's pause; while any active loop layer is loading and none has
+times, the player now holds state (all-null relevance still ends the session, per spec).
+Rejected in the marathon (don't re-offer): weekend timeline tint, count badge on שכבות, readout
+dots/colors, crosshair cursor while coordinates active, "עכשיו" now-line label, אוטו chips
+showing the resolved config value (needs a Control-vocabulary extension — the lead passed), zoom
+pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
+per-basemap border ink.
 
 **Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified; Units API reshaped
 2026-07-08; moved to `utils/units.ts` 2026-07-14):** the Units module is quantity-based, windy's settings screen as the model: callers

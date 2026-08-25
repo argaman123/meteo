@@ -1,13 +1,14 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { matTerrainRound } from '@ng-icons/material-icons/round';
+import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { LayersService } from '../../../layers/layers-service';
 import { Level, LevelService } from '../../../services/level-service';
 import { Quantity, Unit, format } from '../../../utils/units';
 
 @Component({
   selector: 'app-level-bar',
-  imports: [NgIcon],
+  imports: [HlmTooltip, NgIcon],
   viewProviders: [provideIcons({ matTerrainRound })],
   templateUrl: './level-bar.html',
 })
@@ -15,6 +16,7 @@ export class LevelBar {
   protected readonly level = inject(LevelService);
   private layersService = inject(LayersService);
   private readonly dragIndex = signal<number | null>(null);
+  private readonly hoverIndex = signal<number | null>(null);
 
   protected visible = computed(() =>
     [...this.layersService.activeLayers().keys()].some((layer) => !layer.staticLevel),
@@ -59,8 +61,16 @@ export class LevelBar {
   }
 
   protected onPointerMove(event: PointerEvent): void {
-    if (this.dragIndex() === null) return;
+    if (this.dragIndex() === null) {
+      this.hoverIndex.set(this.indexAt(event));
+      return;
+    }
+    this.hoverIndex.set(null);
     this.dragIndex.set(this.indexAt(event));
+  }
+
+  protected onPointerLeave(): void {
+    this.hoverIndex.set(null);
   }
 
   protected onPointerUp(): void {
@@ -69,6 +79,13 @@ export class LevelBar {
     this.level.setLevel(this.level.levels()[index]);
     this.dragIndex.set(null);
   }
+
+  protected hoverChip = computed(() => {
+    const index = this.hoverIndex();
+    if (index === null || this.dragIndex() !== null || index === this.shownIndex()) return null;
+    const level = this.level.levels()[index];
+    return { percent: this.stopPercent(level), label: this.label(level) };
+  });
 
   private indexAt(event: PointerEvent): number {
     const track = (event.currentTarget as HTMLElement).getBoundingClientRect();

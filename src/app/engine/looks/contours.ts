@@ -3,6 +3,7 @@ import { IconLayer, PathLayer } from '@deck.gl/layers';
 import { rgb } from 'd3-color';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
+import { rgba } from '../../utils/color-scale';
 import { ContourLine, contourLines } from '../../utils/contours';
 import { Control, color as colorControl } from '../../utils/controls';
 import { LabelIcon, Look, LookKind } from '../base/look';
@@ -63,7 +64,7 @@ export class Contours extends Look<Grid> {
         id: `${id}-casing`,
         data: lines,
         getPath: (line) => line.path,
-        getColor: [15, 23, 42, 140],
+        getColor: rgba('#0f172a', 140),
         getWidth: 4,
         widthUnits: 'pixels',
       }),

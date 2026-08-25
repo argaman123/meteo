@@ -1,13 +1,16 @@
 @if (visible()) {
   <div
-    class="pointer-events-none fixed end-3 top-15 z-50 rounded-md border bg-background/70 backdrop-blur-lg px-2 py-1 text-xs tabular-nums shadow-[0_0_8px_rgb(0_0_0/0.45)]"
+    class="pointer-events-none fixed end-3 top-15 z-50 rounded-xl border bg-background/70 backdrop-blur-lg px-2.5 py-1.5 font-mono text-[11px] leading-4 tabular-nums text-muted-foreground shadow-[0_0_8px_rgb(0_0_0/0.45)]"
   >
-    <div dir="ltr" class="text-end">
+    <div dir="ltr" class="text-end text-foreground/80">
       {{ fps() }} fps
       @if (heapMb() !== null) {
         · {{ heapMb() }} MB
       }
     </div>
+    <svg viewBox="0 0 60 16" class="mt-1 h-4 w-full text-foreground/50" preserveAspectRatio="none">
+      <polyline [attr.points]="sparkPoints()" fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
     @if (layerTimes().length) {
       <div class="mt-1 flex flex-col gap-0.5 border-t pt-1">
         @for (line of layerTimes(); track line.name) {

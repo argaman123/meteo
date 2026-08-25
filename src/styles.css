@@ -42,6 +42,62 @@
 
 @theme {
   --font-sans: 'Source Sans 3', 'Heebo', sans-serif;
+
+  --animate-unfold: unfold 0.15s ease-out;
+  --animate-fold: fold 0.12s ease-in both;
+  --animate-expand: expand 0.15s ease-out;
+  --animate-collapse: collapse 0.18s ease-out both;
+  --animate-pop-in: pop-in 0.15s ease-out;
+  --animate-pop-out: pop-out 0.12s ease-in both;
+
+  @keyframes unfold {
+    from {
+      opacity: 0;
+      translate: 0 -0.25rem;
+    }
+  }
+  @keyframes fold {
+    to {
+      opacity: 0;
+      translate: 0 -0.25rem;
+    }
+  }
+  @keyframes expand {
+    from {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+    }
+    to {
+      max-height: 200px;
+      overflow: hidden;
+      opacity: 1;
+    }
+  }
+  @keyframes collapse {
+    from {
+      max-height: 200px;
+      overflow: hidden;
+    }
+    to {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      padding-block: 0;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      scale: 0.95;
+    }
+  }
+  @keyframes pop-out {
+    to {
+      opacity: 0;
+      scale: 0.95;
+    }
+  }
 }
 
 html,

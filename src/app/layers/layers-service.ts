@@ -46,13 +46,19 @@ export class LayersService {
 
   private syncLoops = effect(() => {
     const loopTimes: number[][] = [];
+    let loadingLayers = 0;
     for (const [layer, data] of this.activeLayers()) {
       if (!(layer instanceof LoopLayer)) continue;
       if (!layer.looks.some((entry) => this.activeLooks().has(entry))) continue;
       const value = data();
-      if (value === undefined || value === null) continue;
+      if (value === undefined) {
+        loadingLayers++;
+        continue;
+      }
+      if (value === null) continue;
       loopTimes.push(layer.loopTimesOf(value));
     }
+    if (loadingLayers > 0 && loopTimes.length === 0) return;
     this.player.setTimes(...loopTimes);
   });
 

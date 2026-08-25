@@ -2,6 +2,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } fr
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideActivity, lucideCrosshair, lucidePalette } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
+import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import {
   HlmDropdownMenu,
   HlmDropdownMenuRadio,
@@ -22,6 +23,7 @@ import { layers } from '../../layers/registry';
   selector: 'app-home-page',
   imports: [
     HlmButton,
+    HlmTooltip,
     HlmDropdownMenu,
     HlmDropdownMenuRadio,
     HlmDropdownMenuRadioIndicator,

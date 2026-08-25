@@ -8,6 +8,7 @@ import { polygon } from '@turf/helpers';
 import polylabel from 'polylabel';
 import { Bounds } from '../../types/wrap';
 import { rgba } from '../../utils/color-scale';
+import { basemapBright } from '../map-service';
 import { LabelIcon, Legend, Look, LookKind } from '../base/look';
 import { Provider } from '../../objects/provider';
 
@@ -20,8 +21,8 @@ export enum PolygonPattern {
 
 export interface PolygonStyle {
   fill: Color;
-  outline: Color;
-  outlineWidth: number;
+  outline?: Color;
+  outlineWidth?: number;
   pattern: PolygonPattern;
   text: string[];
 }
@@ -64,6 +65,7 @@ export class Polygons extends Look<PolygonsView> {
   }
 
   deckLayer(id: string, view: PolygonsView): DeckLayer[] {
+    const defaultOutline = basemapBright() ? rgba('#212429', 160) : rgba('#ffffff', 160);
     const [west, south, east, north] = view.frame;
     const frame: [number, number][] = [
       [west, south],
@@ -127,9 +129,10 @@ export class Polygons extends Look<PolygonsView> {
         id: `${id}-outlines`,
         data: view.polygons,
         getPath: (shape) => shape.coordinates,
-        getColor: (shape) => shape.outline,
-        getWidth: (shape) => shape.outlineWidth,
+        getColor: (shape) => shape.outline ?? defaultOutline,
+        getWidth: (shape) => shape.outlineWidth ?? 1,
         widthUnits: 'pixels',
+        updateTriggers: { getColor: defaultOutline },
       }),
       new PathLayer<StyledLine>({
         id: `${id}-inner-borders`,

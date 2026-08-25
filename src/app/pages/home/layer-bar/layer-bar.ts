@@ -1,6 +1,12 @@
 import { Component, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideChevronDown } from '@ng-icons/lucide';
+import {
+  lucideBinoculars,
+  lucideChevronDown,
+  lucideCloudSun,
+  lucideCloudy,
+  lucideSatellite,
+} from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import {
@@ -41,7 +47,15 @@ import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from
     NgIcon,
     DecimalPipe,
   ],
-  viewProviders: [provideIcons({ lucideChevronDown })],
+  viewProviders: [
+    provideIcons({
+      lucideBinoculars,
+      lucideChevronDown,
+      lucideCloudSun,
+      lucideCloudy,
+      lucideSatellite,
+    }),
+  ],
   host: { class: 'block' },
   templateUrl: './layer-bar.html',
 })
@@ -53,9 +67,15 @@ export class LayerBar {
   protected readonly layers = menuLayers;
   protected readonly shortcuts = Object.values(shortcuts);
   protected readonly groupStates = signal(new Map<Layer<unknown>, boolean>());
+  protected readonly layersExpanded = signal(true);
 
   protected isExpanded(layer: Layer<unknown>): boolean {
     return this.layersService.isLayerActive(layer) && (this.groupStates().get(layer) ?? true);
+  }
+
+  protected isLayerLoading(layer: Layer<unknown>): boolean {
+    const data = this.layersService.activeLayers().get(layer);
+    return data !== undefined && data() === undefined;
   }
 
   protected toggleGroup(layer: Layer<unknown>): void {

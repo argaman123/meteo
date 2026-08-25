@@ -38,4 +38,15 @@ export class LegendBar {
   protected gradientBackground(legend: GradientLegend): string {
     return `linear-gradient(to top, ${legend.stops.map((stop) => stop.color).join(', ')})`;
   }
+
+  protected sliverBackground(legend: Legend): string {
+    if (legend.type === LegendType.Gradient) {
+      return `linear-gradient(to left, ${legend.stops.map((stop) => stop.color).join(', ')})`;
+    }
+    const share = 100 / legend.stops.length;
+    const bands = legend.stops.map(
+      (stop, index) => `${stop.color} ${index * share}% ${(index + 1) * share}%`,
+    );
+    return `linear-gradient(to left, ${bands.join(', ')})`;
+  }
 }

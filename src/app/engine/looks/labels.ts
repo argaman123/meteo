@@ -29,7 +29,7 @@ export class Labels extends Look<LabelsInput> {
       data: input.points,
       getPosition: (point) => [point.lon, point.lat],
       getIcon: (point) => this.icon(point.text, point.color),
-      getSize: 18,
+      getSize: 22,
       sizeUnits: 'pixels',
     });
   }
@@ -39,11 +39,11 @@ export class Labels extends Look<LabelsInput> {
     const cached = this.labelIcons.get(key);
     if (cached) return cached;
     const scale = 2;
-    const height = 18 * scale;
+    const height = 22 * scale;
     const canvas = document.createElement('canvas');
     canvas.height = height;
     const context = canvas.getContext('2d')!;
-    const font = `500 ${13 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
+    const font = `500 ${16 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
     context.font = font;
     const width = Math.ceil(context.measureText(text).width + 8 * scale);
     canvas.width = width;

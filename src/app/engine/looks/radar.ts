@@ -4,8 +4,9 @@ import { BitmapLayer, PathLayer } from '@deck.gl/layers';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Bounds } from '../../types/wrap';
-import { ColorScale, colorScale } from '../../utils/color-scale';
+import { ColorScale, colorScale, rgba } from '../../utils/color-scale';
 import { Control, PercentControl, percent, toggle } from '../../utils/controls';
+import { basemapBright } from '../map-service';
 import { Legend, LegendType, Look, LookKind } from '../base/look';
 import { ColormapOptions, buildImage } from './colormap';
 
@@ -61,7 +62,7 @@ export class Radar extends Look<Grid[]> {
           id: `${id}-circles`,
           data: grids.map((grid) => grid.bounds),
           getPath: (bounds) => coverageRing(bounds),
-          getColor: [148, 163, 184, 140],
+          getColor: basemapBright() ? rgba('#212429', 160) : rgba('#94a3b8', 140),
           getWidth: 1.5,
           widthUnits: 'pixels',
         }),

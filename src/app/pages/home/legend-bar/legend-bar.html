@@ -1,11 +1,17 @@
 @if (layerLegends().length) {
-  <div class="flex w-36 flex-col gap-1 rounded-xl border bg-background/70 backdrop-blur-lg p-1.5 shadow-[0_0_12px_rgb(0_0_0/0.45)]">
+  <div class="flex w-36 flex-col gap-1 rounded-xl border bg-background/70 backdrop-blur-lg p-1.5 shadow-[0_0_12px_rgb(0_0_0/0.45)]"
+       animate.enter="animate-pop-in" animate.leave="animate-pop-out">
     @for (card of layerLegends(); track card.legend) {
-      <button hlmBtn size="sm" class="justify-between gap-2"
+      <button hlmBtn size="sm" class="min-w-0 justify-between gap-2"
               [variant]="openLegend() === card.legend ? 'default' : 'ghost'"
               [attr.aria-expanded]="openLegend() === card.legend" (click)="toggleLegend(card.legend)">
-        {{ card.title }}
-        <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="openLegend() === card.legend"/>
+        <span class="truncate">{{ card.title }}</span>
+        <span class="flex shrink-0 items-center gap-1.5">
+          @if (openLegend() !== card.legend) {
+            <span class="h-2 w-6 rounded-full" [style.background]="sliverBackground(card.legend)"></span>
+          }
+          <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-90]="openLegend() !== card.legend"/>
+        </span>
       </button>
       @if (openLegend() === card.legend) {
         @switch (card.legend.type) {

@@ -12,6 +12,13 @@ export class LoopPlayer {
     const loopTime = this.loopTime();
     return loopTime === null ? null : findNearestTime(this.times, loopTime, 24);
   });
+  readonly loopProgress = computed(() => {
+    const loopTime = this.loopTime();
+    if (loopTime === null || this.times.length < 2) return null;
+    const first = this.times[0];
+    const last = this.times[this.times.length - 1];
+    return Math.min(1, Math.max(0, (loopTime - first) / (last - first)));
+  });
   private times: number[] = [];
   private layerDataStepMs = 0;
 

@@ -1,37 +1,46 @@
 <div dir="ltr"
-     class="h-full w-48 overflow-y-auto overscroll-contain bg-card [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-secondary">
+     class="h-full w-48 overflow-y-auto overscroll-contain bg-card [mask-image:linear-gradient(to_bottom,black_calc(100%-16px),rgb(0_0_0/0.3))] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-transparent [&:hover::-webkit-scrollbar-thumb]:bg-secondary">
 <div dir="rtl" class="flex min-h-full flex-col gap-1.5 p-1.5 px-3">
-  <h2 class="px-2 py-1 text-xs font-medium text-muted-foreground">קיצורים</h2>
+  <h2 class="px-2 py-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70">קיצורים</h2>
   @for (shortcut of shortcuts; track shortcut) {
-    <button hlmBtn size="sm" class="justify-start"
+    <button hlmBtn class="justify-start gap-2 border-border font-semibold"
             [variant]="layersService.isShortcutActive(shortcut) ? 'default' : 'secondary'"
             [attr.aria-pressed]="layersService.isShortcutActive(shortcut)"
             (click)="layersService.toggleShortcut(shortcut)">
+      <ng-icon [name]="shortcut.icon" class="opacity-70"/>
       {{ shortcut.name }}
     </button>
   }
-  <h2 class="mt-1 border-t px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">שכבות</h2>
+  <button class="mt-2 flex items-center justify-between border-t px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70 hover:text-foreground"
+          [attr.aria-expanded]="layersExpanded()" (click)="layersExpanded.set(!layersExpanded())">
+    שכבות
+    <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-90]="!layersExpanded()"/>
+  </button>
+  @if (layersExpanded()) {
+  <div class="flex flex-col gap-1.5" animate.enter="animate-unfold" animate.leave="animate-fold">
   @for (layer of layers; track layer) {
     <div class="flex gap-1">
-      <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'secondary'"
+      <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'soft'"
+              [class.font-semibold]="layersService.isLayerActive(layer)"
+              [class.animate-pulse]="isLayerLoading(layer)"
               [attr.aria-pressed]="layersService.isLayerActive(layer)" (click)="layersService.toggleLayer(layer)">
         {{ layer.name }}
       </button>
       @if (layersService.isLayerActive(layer)) {
         <button hlmBtn size="sm" variant="ghost" class="w-9 px-0" [attr.aria-expanded]="isExpanded(layer)"
           [attr.aria-label]="'אפשרויות ' + layer.name" (click)="toggleGroup(layer)">
-          <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-180]="isExpanded(layer)"/>
+          <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-90]="!isExpanded(layer)"/>
         </button>
       }
     </div>
     @if (hasChildRows(layer)) {
-      <div class="ms-4 flex flex-col gap-1 border-s ps-1">
+      <div class="flex flex-col gap-1 rounded-md border bg-background/50 p-1.5 transition-colors hover:border-foreground/20"
+           animate.enter="animate-expand" animate.leave="animate-collapse">
         @for (control of layer.controls; track control) {
           @if (control.type === ControlType.Options) {
             @switch (control.presentation) {
               @case (OptionsPresentation.Table) {
-                <div class="flex flex-wrap gap-1 py-1 ps-1.5"
-                     [class.opacity-50]="!layersService.isLayerActive(layer)">
+                <div class="flex flex-wrap gap-1 py-1 ps-1.5">
                   @for (choice of control.choices; track choice.value) {
                     <button hlmBtn size="sm" class="h-6 grow px-2 text-xs"
                             [variant]="choice.value === control() ? 'default' : 'ghost'"
@@ -43,11 +52,10 @@
                 </div>
               }
               @default {
-                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm"
-                     [class.opacity-50]="!layersService.isLayerActive(layer)">
+                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
                   <span class="grow">{{ control.label }}</span>
                   @if (control.presentation === OptionsPresentation.Select) {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
                             [attr.aria-label]="control.label" [hlmDropdownMenuTrigger]="choicesMenu">
                       {{ optionLabel(control) }}
                     </button>
@@ -63,7 +71,7 @@
                       </hlm-dropdown-menu>
                     </ng-template>
                   } @else {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
                             [attr.aria-label]="control.label" (click)="cycleOptions(control)">
                       {{ optionLabel(control) }}
                     </button>
@@ -75,12 +83,13 @@
         }
         @for (entry of layer.looks; track entry.look) {
           @if (isExpanded(layer)) {
-            <div class="flex items-center gap-2 py-1 ps-1.5 text-sm" [class.opacity-50]="!layersService.isLayerActive(layer)">
+            <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
               <label class="flex grow items-center gap-2">
                 <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="layersService.isLookActive(entry)"
                               [disabled]="!layersService.isLayerActive(layer)" (checkedChange)="layersService.toggleLook(entry)"/>
-                {{ entry.name }}
+                <span class="transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ entry.name }}</span>
               </label>
+              <span class="flex items-center gap-2 transition-opacity" [class.opacity-50]="!layersService.isLookActive(entry)">
               @for (control of entry.look.controls; track control) {
                 @switch (control.type) {
                   @case (ControlType.Color) {
@@ -91,7 +100,7 @@
                   @case (ControlType.Percent) {
                     <hlm-popover class="contents">
                       <button hlmPopoverTrigger hlmBtn variant="ghost" size="sm"
-                              class="h-5 min-w-9 px-1 text-xs tabular-nums" aria-label="שקיפות">
+                              class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums" aria-label="שקיפות">
                         {{ control() * 100 | number: '1.0-0' }}%
                       </button>
                       <hlm-popover-content *hlmPopoverPortal class="w-44 p-3">
@@ -102,7 +111,7 @@
                   }
                   @case (ControlType.Options) {
                     @if (!control.label) {
-                      <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                      <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
                               aria-label="אפשרויות" (click)="cycleOptions(control)">
                         {{ optionLabel(control) }}
                       </button>
@@ -118,26 +127,26 @@
                   }
                 }
               }
+              </span>
             </div>
             @for (control of entry.look.controls; track control) {
               @if (control.type === ControlType.Toggle && control.label) {
-                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm"
-                     [class.opacity-50]="!layersService.isLayerActive(layer)">
+                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
                   <span class="w-4"></span>
-                  <span class="grow">{{ control.label }}</span>
-                  <span class="flex w-9 justify-center">
+                  <span class="grow transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ control.label }}</span>
+                  <span class="flex w-9 justify-center transition-opacity" [class.opacity-50]="!layersService.isLookActive(entry)">
                     <hlm-switch size="sm" [attr.aria-label]="control.label"
                                 [checked]="control()" (checkedChange)="control.set($event)"/>
                   </span>
                 </div>
               }
               @if (control.type === ControlType.Options && control.label) {
-                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm"
-                     [class.opacity-50]="!layersService.isLayerActive(layer)">
+                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
                   <span class="w-4"></span>
-                  <span class="grow">{{ control.label }}</span>
+                  <span class="grow transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ control.label }}</span>
                   @if (control.presentation === OptionsPresentation.Select) {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
+                            [class.opacity-50]="!layersService.isLookActive(entry)"
                             [attr.aria-label]="control.label" [hlmDropdownMenuTrigger]="choicesMenu">
                       {{ optionLabel(control) }}
                     </button>
@@ -153,7 +162,8 @@
                       </hlm-dropdown-menu>
                     </ng-template>
                   } @else {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 px-1 text-xs tabular-nums"
+                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
+                            [class.opacity-50]="!layersService.isLookActive(entry)"
                             [attr.aria-label]="control.label" (click)="cycleOptions(control)">
                       {{ optionLabel(control) }}
                     </button>
@@ -165,6 +175,8 @@
         }
       </div>
     }
+  }
+  </div>
   }
 </div>
 </div>

@@ -11,8 +11,6 @@ export class Haze implements EventAppearance<HazeEvent> {
     const alpha = Math.round(255 * (thin + (thick - thin) * visibilityPosition(event)));
     return {
       fill: rgba(surface ? '#ff9800' : '#ffe33f', alpha),
-      outline: rgba('#ffffff', 160),
-      outlineWidth: 1,
       pattern: PolygonPattern.Solid,
       text: [`${event.minVis}-${event.maxVis} km`],
     };
