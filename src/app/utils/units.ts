@@ -1,3 +1,5 @@
+import { unitControls } from '../pages/home/settings-panel/settings-controls';
+
 export enum Unit {
   Celsius = 'celsius',
   MetersPerSecond = 'meters-per-second',
@@ -35,15 +37,22 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.Altitude]: Unit.Feet,
 };
 
+function displayUnitOf(quantity: Quantity): Unit {
+  return unitControls[quantity]?.() ?? displayUnit[quantity];
+}
+
 const knotsPerMeterPerSecond = 1.943844;
+const feetPerMeter = 3.28084;
 
 export function convert(value: number, quantity: Quantity, from: Unit): number {
-  const to = displayUnit[quantity];
+  const to = displayUnitOf(quantity);
   if (from === to) return value;
   if (from === Unit.MetersPerSecond && to === Unit.Knots) return value * knotsPerMeterPerSecond;
   if (from === Unit.Knots && to === Unit.MetersPerSecond) return value / knotsPerMeterPerSecond;
   if (from === Unit.Feet && to === Unit.Kilofeet) return value / 1000;
   if (from === Unit.Kilofeet && to === Unit.Feet) return value * 1000;
+  if (from === Unit.Meters && to === Unit.Feet) return value * feetPerMeter;
+  if (from === Unit.Feet && to === Unit.Meters) return value / feetPerMeter;
   throw new Error(`no conversion from ${from} to ${to}`);
 }
 
@@ -51,7 +60,7 @@ export function format(value: number, quantity: Quantity, from: Unit): string {
   if (Number.isNaN(value)) return '—';
   const converted = convert(value, quantity, from);
   const rounded = Math.round(converted);
-  switch (displayUnit[quantity]) {
+  switch (displayUnitOf(quantity)) {
     case Unit.Celsius:
       return `${rounded}°C`;
     case Unit.Knots:
@@ -69,7 +78,7 @@ export function format(value: number, quantity: Quantity, from: Unit): string {
     case Unit.Eighths:
       return `${rounded}/8`;
     case Unit.Feet:
-      return `${rounded} רגל מעפ״י`;
+      return quantity === Quantity.Altitude ? `${rounded} רגל מעפ״י` : `${rounded} ft`;
     case Unit.Kilofeet:
       return `${Number(converted.toFixed(1))}'`;
   }

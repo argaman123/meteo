@@ -31,7 +31,7 @@ export interface ObservationParameter {
   parameter: string;
   label: string;
   colorScale: ColorScale;
-  legend: Legend;
+  legend: Signal<Legend>;
   textOf: (point: ObservationPoint) => string;
 }
 
@@ -69,7 +69,7 @@ export class ObservationsLayer extends LoopLayer<ObservationsLoop> {
             }),
           };
         }),
-        () => this.currentParameter().legend,
+        () => this.currentParameter().legend(),
       ),
       name: 'ערכים',
       checked: true,

@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { ColorStop, colorScale } from '../../utils/color-scale';
 import { Quantity, Unit, format } from '../../utils/units';
 import { gradientLegend } from '../../engine/base/look';
@@ -17,6 +18,6 @@ export const TEMPERATURE: ObservationParameter = {
   parameter: 'temperature',
   label: 'טמפרטורה',
   colorScale: colorScale(STOPS, 'smooth'),
-  legend: gradientLegend(STOPS, Quantity.Temperature, Unit.Celsius),
+  legend: signal(gradientLegend(STOPS, Quantity.Temperature, Unit.Celsius)),
   textOf: (point) => format(point.value, Quantity.Temperature, Unit.Celsius),
 };

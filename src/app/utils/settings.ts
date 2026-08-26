@@ -18,13 +18,13 @@ export function setting<T>(initial: T): WritableSignal<T> {
 
 export function registerLayers<T extends Record<string, Layer<unknown>>>(layers: T): T {
   for (const [key, layer] of Object.entries(layers)) {
-    bindSettings(layer, key);
-    for (const { look } of layer.looks) bindSettings(look, `${key}.${LookKind[look.kind]}`);
+    registerSettings(layer, key);
+    for (const { look } of layer.looks) registerSettings(look, `${key}.${LookKind[look.kind]}`);
   }
   return layers;
 }
 
-function bindSettings(owner: object, scope: string): void {
+export function registerSettings(owner: object, scope: string): void {
   for (const [field, value] of Object.entries(owner)) {
     const binding = value instanceof Object ? bindings.get(value) : undefined;
     if (!binding) continue;

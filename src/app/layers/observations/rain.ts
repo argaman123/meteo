@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { LegendType } from '../../engine/base/look';
 import { colorScale } from '../../utils/color-scale';
 import { Quantity, Unit, format } from '../../utils/units';
@@ -14,6 +15,6 @@ export const RAIN: ObservationParameter = {
   parameter: 'rain',
   label: 'גשם',
   colorScale: colorScale(STOPS, 'stepped'),
-  legend: { type: LegendType.Swatches, stops: STOPS },
+  legend: signal({ type: LegendType.Swatches, stops: STOPS }),
   textOf: (point) => format(point.value, Quantity.Rain, Unit.MillimetersPerHour),
 };

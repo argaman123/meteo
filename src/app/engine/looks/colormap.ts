@@ -1,4 +1,4 @@
-import { Signal, signal } from '@angular/core';
+import { Signal, computed, signal } from '@angular/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Control, PercentControl, percent } from '../../utils/controls';
@@ -40,10 +40,12 @@ export class Colormap extends Look<Grid> {
     this.blur = options.blur ?? false;
     this.opacity = percent(options.opacity ?? 0.6);
     this.controls = [this.opacity];
-    this.legend = signal(options.legend ?? {
-      type: LegendType.Gradient,
-      stops: palette.stops.map((stop) => ({ color: stop.color, label: label(stop.value) })),
-    });
+    this.legend = options.legend
+      ? signal(options.legend)
+      : computed(() => ({
+          type: LegendType.Gradient,
+          stops: palette.stops.map((stop) => ({ color: stop.color, label: label(stop.value) })),
+        }));
   }
 
   override release(): void {

@@ -1,3 +1,4 @@
+import { signal } from '@angular/core';
 import { gradientLegend } from '../../engine/base/look';
 import { CloudPoint } from '../../types/observations';
 import { ColorStop, colorScale } from '../../utils/color-scale';
@@ -16,7 +17,7 @@ export const CLOUD: ObservationParameter = {
   parameter: 'cloud',
   label: 'עננות',
   colorScale: colorScale(STOPS, 'stepped'),
-  legend: gradientLegend(STOPS, Quantity.CloudCover, Unit.Eighths),
+  legend: signal(gradientLegend(STOPS, Quantity.CloudCover, Unit.Eighths)),
   textOf: (point) => {
     const { value, base } = point as CloudPoint;
     return base === undefined || value === 0

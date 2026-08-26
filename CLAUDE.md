@@ -583,6 +583,34 @@ showing the resolved config value (needs a Control-vocabulary extension — the 
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
 
+**Settings panel v1 (2026-08-26, lead-iterated to rest):** a gear button in the top bar opens a
+frosted popover (the floating-window recipe, `align="end"` — a centered popover overflows at the
+corner) with one יחידות list: **רוח kt/m·s⁻¹**, **גובה גיאופוטנציאלי m/ft**, and **קואורדינטות
+כבוי/DD/DMS** — the coordinates surface moved here WHOLLY (the crosshair top-bar button + its
+menu are deleted; כבוי hides the layer, picking a format shows it + sets it; the format control
+moved OFF the Coordinates layer, which is now pure hover machinery). **The settings' home is
+`pages/home/settings-panel/settings-controls.ts`** — control definitions (plain `options()`
+Controls, Table presentation) + their `registerSettings` calls co-located (lead settled here
+after a full exploration: definitions inside `settings-panel.ts` itself CRASH BOOT — units.ts is
+imported by every layer, the component file imports the registry which constructs every layer,
+and the resulting import cycle re-enters class definitions mid-load → "Class extends value
+undefined"; the sibling file stays import-light on purpose. `utils/settings.ts` stays pure
+machinery with `registerSettings` now exported). **Units machinery**: `displayUnitOf(quantity)`
+= `unitControls[q]?.() ?? displayUnit[q]` — the hard-coded record is the fallback, call sites
+untouched as the module always promised; m↔ft conversion added; the `Unit.Feet` format case
+splits by quantity (Altitude keeps רגל מעפ״י, geopotential reads "ft"). **Legends went
+signals-first for reactivity**: Colormap's derived legend is a `computed` (palette+label
+re-evaluate on unit switch; an explicit `options.legend` stays a static signal), and
+`ObservationParameter.legend` became `Signal<Legend>` (wind = `computed`, fixed-unit params =
+`signal(...)`). Unit switches re-render hover/legends/labels live through the provider/draw
+reactive chain. Fixed-by-lead: temp/visibility/rain/direction/altitude/cloud-base stay
+single-unit. **Recorded for the future זמן section (lead-approved spec, not built): Zulu/Local
+applies EVERYWHERE times display, format `14:00Z`.** Caveats standing: isotach levels stay
+kt-authored and geopotential's 20 m contour spacing shows non-round ft numbers (both wait for
+the switchable-conventions rework); perf + gear buttons carry no tooltips (a corner button's
+bottom tooltip falls back sideways across its neighbors — the palette keeps its). Adding a
+future setting = one `options()` entry in settings-controls.ts; the panel renders the list.
+
 **Hover readout + minimal Units + perf HUD (2026-07-06, lead-verified; Units API reshaped
 2026-07-08; moved to `utils/units.ts` 2026-07-14):** the Units module is quantity-based, windy's settings screen as the model: callers
 state what a value is and which unit it's in — `convert(value, Quantity, from)` /
