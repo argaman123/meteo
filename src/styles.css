@@ -49,6 +49,8 @@
   --animate-collapse: collapse 0.18s ease-out both;
   --animate-pop-in: pop-in 0.15s ease-out;
   --animate-pop-out: pop-out 0.12s ease-in both;
+  --animate-rise: rise 0.22s ease-out;
+  --animate-sink: sink 0.18s ease-in both;
 
   @keyframes unfold {
     from {
@@ -96,6 +98,16 @@
     to {
       opacity: 0;
       scale: 0.95;
+    }
+  }
+  @keyframes rise {
+    from {
+      height: 0;
+    }
+  }
+  @keyframes sink {
+    to {
+      height: 0;
     }
   }
 }

@@ -5,6 +5,10 @@ import { EventAppearance } from './polygons-layer';
 import { visibilityPosition, visibilityText } from './visibility';
 
 export class Fog implements EventAppearance<FogEvent> {
+  name(): string {
+    return 'ערפל';
+  }
+
   style(event: FogEvent): PolygonStyle {
     return {
       fill: rgba('#535353', Math.round(255 * (0.4 + 0.3 * visibilityPosition(event)))),
@@ -14,6 +18,6 @@ export class Fog implements EventAppearance<FogEvent> {
   }
 
   hoverText(event: FogEvent): string {
-    return `ערפל · ${visibilityText(event)}`;
+    return `${this.name()} · ${visibilityText(event)}`;
   }
 }

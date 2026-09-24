@@ -1,5 +1,15 @@
-import { Grid } from '../objects/grid';
 import { Bounds } from '../types/wrap';
+
+export type LevelPicker = (min: number, max: number) => number[];
+
+export function levelsEvery(interval: number): LevelPicker {
+  return (min, max) => {
+    const levels: number[] = [];
+    let level = Math.ceil(min / interval) * interval;
+    for (; level <= max; level += interval) levels.push(level);
+    return levels;
+  };
+}
 
 export interface ContourLine {
   level: number;
@@ -8,9 +18,15 @@ export interface ContourLine {
 
 // TODO: UNVERIFIED CODE BELOW
 
-export function contourLines(grid: Grid, levels: number[]): ContourLine[] {
-  const field = blurred(grid.data, grid.width, grid.height, 2);
-  const lattice = upsample(field, grid.width, grid.height, grid.bounds, 3);
+export function contourLines(
+  data: Float32Array,
+  width: number,
+  height: number,
+  bounds: Bounds,
+  levels: number[],
+): ContourLine[] {
+  const values = blurred(data, width, height, 2);
+  const lattice = upsample(values, width, height, bounds, 3);
   const lines: ContourLine[] = [];
   for (const level of levels) {
     for (const path of trace(lattice, level)) lines.push({ level, path: smoothed(path, 2) });

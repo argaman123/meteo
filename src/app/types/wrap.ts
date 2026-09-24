@@ -15,3 +15,9 @@ export interface Wrap {
   };
   values: (number | null)[][];
 }
+
+export interface MeteogramWrap {
+  times: number[];
+  heights: number[];
+  values: (number | null)[][];
+}

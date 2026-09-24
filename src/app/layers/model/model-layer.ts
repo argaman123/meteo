@@ -8,7 +8,7 @@ import { containsBounds } from '../../utils/geo';
 import { hoursToMs } from '../../utils/time';
 import { Inputs, Layer } from '../base/layer';
 
-const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
+export const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
 
 export abstract class ModelLayer extends Layer<Grid[]> {
   abstract readonly parameters: Parameter[];

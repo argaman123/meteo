@@ -1,5 +1,5 @@
 import { Dir } from '@angular/cdk/bidi';
-import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideChevronLeft,
@@ -13,22 +13,12 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { LayersService } from '../../../layers/layers-service';
 import { LoopPlayer } from '../../../services/loop-player';
-import { TimeService } from '../../../services/time-service';
-import {
-  clampToRange,
-  daysToMs,
-  formatLocalHour,
-  formatLocalTime,
-  hoursToMs,
-  timelineTicks,
-} from '../../../utils/time';
+import { TimeRange, TimeService } from '../../../services/time-service';
+import { clampToRange, formatLocalHour, formatLocalTime, timelineTicks } from '../../../utils/time';
+import { pointerFraction } from '../../../utils/pointer';
+import { TimeBarService } from './time-bar-service';
 
 // TODO: UNVERIFIED CODE BELOW
-interface TimelineView {
-  start: number;
-  end: number;
-}
-
 @Component({
   selector: 'app-time-bar',
   imports: [Dir, HlmButton, HlmTooltip, NgIcon],
@@ -51,12 +41,12 @@ interface TimelineView {
 })
 export class TimeBar {
   protected time = inject(TimeService);
+  private timeBar = inject(TimeBarService);
   protected layers = inject(LayersService);
   protected player = inject(LoopPlayer);
-  private view = signal(this.paddedWindow());
   private scrubTime = signal<number | null>(null);
   private hoverTime = signal<number | null>(null);
-  private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimelineView } | null =
+  private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimeRange } | null =
     null;
 
   protected shownTime = computed(() => this.scrubTime() ?? this.time.displayTime());
@@ -68,17 +58,17 @@ export class TimeBar {
   });
 
   protected ticks = computed(() => {
-    const { start, end } = this.view();
+    const { start, end } = this.timeBar.view();
     return timelineTicks(start, end).map((tick) => ({
       ...tick,
-      position: this.positionOf(tick.time),
+      position: this.timeBar.positionInView(tick.time),
     }));
   });
 
   protected stopMarkers = computed(() =>
     this.time
       .timeStops()
-      .map((stop) => this.positionOf(stop))
+      .map((stop) => this.timeBar.positionInView(stop))
       .filter((position) => position >= 0 && position <= 100),
   );
 
@@ -88,27 +78,17 @@ export class TimeBar {
   protected hoverPreview = computed(() => {
     const hovered = this.hoverTime();
     if (hovered === null || hovered === this.time.displayTime()) return null;
-    const position = this.positionOf(hovered);
+    const position = this.timeBar.positionInView(hovered);
     if (position < 0 || position > 100) return null;
     return { position, label: formatLocalTime(hovered) };
   });
 
-  protected handlePosition = computed(() => this.positionOf(this.shownTime()));
-  protected nowPosition = computed(() => this.positionOf(this.time.now()));
+  protected handlePosition = computed(() => this.timeBar.positionInView(this.shownTime()));
+  protected nowPosition = computed(() => this.timeBar.positionInView(this.time.now()));
   protected isHandleInView = computed(
     () => this.handlePosition() >= 0 && this.handlePosition() <= 100,
   );
   protected labelPosition = computed(() => clampToRange(this.handlePosition(), 7, 93));
-
-  private keepHandleInView = effect(() => {
-    const current = this.time.displayTime();
-    untracked(() => {
-      const { start, end } = this.view();
-      if (current >= start && current <= end) return;
-      const span = (end - start) / 2;
-      this.view.set({ start: current - span, end: current + span });
-    });
-  });
 
   protected onArrow(event: Event, direction: 1 | -1): void {
     event.preventDefault();
@@ -118,17 +98,8 @@ export class TimeBar {
 
   protected onWheel(event: WheelEvent): void {
     event.preventDefault();
-    const { start, end } = this.view();
-    const span = end - start;
-    if (event.shiftKey) {
-      const shift = span * 0.15 * Math.sign(event.deltaY);
-      this.view.set({ start: start + shift, end: end + shift });
-      return;
-    }
-    const fraction = this.fractionAt(event);
-    const anchor = start + fraction * span;
-    const zoomed = clampToRange(span * Math.exp(event.deltaY * 0.0015), hoursToMs(3), daysToMs(20 * 365));
-    this.view.set({ start: anchor - fraction * zoomed, end: anchor + (1 - fraction) * zoomed });
+    if (event.shiftKey) this.timeBar.shiftView(event.deltaY);
+    else this.timeBar.zoomView(pointerFraction(event).x, event.deltaY);
   }
 
   protected onPointerDown(event: PointerEvent): void {
@@ -139,7 +110,7 @@ export class TimeBar {
     this.drag = {
       mode: grabbedHandle ? 'scrub' : 'pending',
       startX: event.clientX,
-      view: this.view(),
+      view: this.timeBar.view(),
     };
     if (grabbedHandle) this.scrubTime.set(this.timeAt(event));
   }
@@ -158,8 +129,7 @@ export class TimeBar {
     }
     if (drag.mode === 'pan') {
       const track = (event.currentTarget as HTMLElement).getBoundingClientRect();
-      const shift = ((drag.startX - event.clientX) / track.width) * (drag.view.end - drag.view.start);
-      this.view.set({ start: drag.view.start + shift, end: drag.view.end + shift });
+      this.timeBar.panView(drag.view, (drag.startX - event.clientX) / track.width);
     }
   }
 
@@ -178,31 +148,13 @@ export class TimeBar {
   }
 
   private bandBetween(from: number, to: number): { left: number; width: number } {
-    const left = this.positionOf(from);
-    return { left, width: this.positionOf(to) - left };
-  }
-
-  private positionOf(unixTime: number): number {
-    const { start, end } = this.view();
-    return ((unixTime - start) / (end - start)) * 100;
+    const left = this.timeBar.positionInView(from);
+    return { left, width: this.timeBar.positionInView(to) - left };
   }
 
   private timeAt(event: PointerEvent): number {
-    const { start, end } = this.view();
     const { start: earliest, end: latest } = this.time.window();
-    return clampToRange(start + this.fractionAt(event) * (end - start), earliest, latest);
-  }
-
-  private fractionAt(event: PointerEvent | WheelEvent): number {
-    const track = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    return clampToRange((event.clientX - track.left) / track.width, 0, 1);
-  }
-
-  private paddedWindow(): TimelineView {
-    const { start, end } = this.time.window();
-    const span = (end - start) * 1.2;
-    const center = this.time.now();
-    return { start: center - span / 2, end: center + span / 2 };
+    return clampToRange(this.timeBar.timeInView(pointerFraction(event).x), earliest, latest);
   }
 
   private readonly speeds = [0.5, 1, 2, 4];

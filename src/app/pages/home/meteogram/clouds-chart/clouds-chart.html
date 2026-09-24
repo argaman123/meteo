@@ -1,0 +1,40 @@
+<app-meteogram-frame
+  [hoverText]="hoverText"
+  [topFt]="topFt()"
+  [loading]="forecasts.isLoading()"
+  [message]="message()"
+>
+  @for (block of shownClouds(); track $index) {
+    <div
+      class="pointer-events-none absolute flex items-center justify-center overflow-hidden text-[10px] font-medium whitespace-nowrap text-white tabular-nums [text-shadow:0_0_3px_rgb(0_0_0/0.9)]"
+      [style.left.%]="block.left"
+      [style.width.%]="block.width"
+      [style.top.%]="block.top"
+      [style.height.%]="block.height"
+      [style.background-color]="block.color"
+    >
+      {{ block.text }}
+    </div>
+  }
+  <div lanes class="flex flex-col">
+    @for (lane of lanes(); track lane.name) {
+      <div class="relative h-4 border-t">
+        @for (block of lane.blocks; track $index) {
+          <div
+            class="pointer-events-none absolute inset-y-0 flex items-center justify-center overflow-hidden text-[10px] font-medium whitespace-nowrap text-white tabular-nums [text-shadow:0_0_3px_rgb(0_0_0/0.9)]"
+            [style.left.%]="block.left"
+            [style.width.%]="block.width"
+            [style.background-color]="block.color"
+          >
+            {{ block.text }}
+          </div>
+        }
+        <span
+          class="pointer-events-none absolute inset-y-0 end-0 z-10 flex min-w-[38px] items-center justify-end border-s bg-card/80 ps-1.5 pe-[7px] text-[10px] leading-none text-muted-foreground"
+        >
+          {{ lane.name }}
+        </span>
+      </div>
+    }
+  </div>
+</app-meteogram-frame>

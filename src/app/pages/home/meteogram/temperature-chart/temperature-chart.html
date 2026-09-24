@@ -1,0 +1,13 @@
+<app-meteogram-frame
+  [hoverText]="hoverText"
+  [loading]="temperature.isLoading()"
+  [message]="temperature.error() ? 'אין נתונים' : null"
+>
+  @if (temperature.hasValue()) {
+    <app-meteogram-colormap
+      [data]="temperature.value()"
+      [colorScale]="colorScale"
+      [contours]="contours"
+    />
+  }
+</app-meteogram-frame>

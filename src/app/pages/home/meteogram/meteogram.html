@@ -1,0 +1,84 @@
+<div
+  #pin
+  class="size-4 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"
+  [class.hidden]="!meteogram.point()"
+></div>
+@if (meteogram.point()) {
+  <div
+    class="flex h-96 flex-col overflow-hidden bg-card"
+    animate.enter="animate-rise"
+    animate.leave="animate-sink"
+  >
+    <div class="flex h-12 shrink-0 items-end gap-3.5 border-b-2 border-secondary px-3">
+      <div class="flex flex-col self-center">
+        <span class="text-sm leading-[18px] font-bold">מטאוגרמה</span>
+        <span class="flex items-center gap-1 text-[11px] leading-3.5 text-muted-foreground">
+          <ng-icon name="lucideMapPin" size="12" />
+          <span dir="ltr" class="tabular-nums">{{ coordinates() }}</span>
+        </span>
+      </div>
+      <span class="h-6.5 w-px self-center bg-border"></span>
+      <hlm-tabs [tab]="meteogram.tab()" (tabActivated)="selectTab($event)">
+        <hlm-tabs-list variant="browser" aria-label="מטאוגרמה">
+          @for (entry of tabNames; track entry.tab) {
+            <button [hlmTabsTrigger]="entry.tab">
+              <ng-icon [name]="entry.icon" />
+              {{ entry.name }}
+            </button>
+          }
+        </hlm-tabs-list>
+      </hlm-tabs>
+      <div class="ms-auto flex items-center gap-4 self-center">
+        @if (legend(); as legend) {
+          @switch (legend.type) {
+            @case (LegendType.Gradient) {
+              <div dir="ltr" class="flex w-md flex-col gap-1">
+                <div class="h-2 rounded-full" [style.background]="gradientBackground(legend)"></div>
+                <div
+                  class="flex justify-between text-[11px] leading-none text-muted-foreground tabular-nums"
+                >
+                  @for (stop of legend.stops; track $index) {
+                    <span>{{ stop.label }}</span>
+                  }
+                </div>
+              </div>
+            }
+            @case (LegendType.Swatches) {
+              <div class="flex items-center gap-3 text-xs text-muted-foreground">
+                @for (stop of legend.stops; track $index) {
+                  <span class="flex items-center gap-1.5">
+                    <span class="size-2.5 rounded-sm" [style.background-color]="stop.color"></span>
+                    {{ stop.label }}
+                  </span>
+                }
+              </div>
+            }
+          }
+        }
+        <button
+          hlmBtn
+          variant="ghost"
+          size="sm"
+          class="size-8 px-0"
+          aria-label="סגירת מטאוגרמה"
+          (click)="meteogram.hideMeteogram()"
+        >
+          <ng-icon name="lucideX" />
+        </button>
+      </div>
+    </div>
+    <div class="min-h-0 flex-1 py-1.5">
+      @switch (meteogram.tab()) {
+        @case (tabs.Temperature) {
+          <app-temperature-chart />
+        }
+        @case (tabs.Wind) {
+          <app-wind-chart />
+        }
+        @case (tabs.Clouds) {
+          <app-clouds-chart />
+        }
+      }
+    </div>
+  </div>
+}

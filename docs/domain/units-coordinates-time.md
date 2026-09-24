@@ -33,7 +33,8 @@ Design notes:
 
 ## Time
 
-- **Zulu (UTC)** and **Local** shown together (dual display).
+- **Local time only** (lead 2026-09-23 — replaces the earlier dual Zulu/Local display; no toggle,
+  no Zulu anywhere).
 - The global time controller spans **real-time + forecast + history**; timestamps everywhere use the
-  Geo/time formatting (never ad-hoc), and respect Zulu/Local.
+  Geo/time formatting (never ad-hoc).
 - *(Local timezone source — fixed per deployment vs browser — TBD, locked once chosen.)*

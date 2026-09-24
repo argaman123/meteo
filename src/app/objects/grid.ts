@@ -1,4 +1,5 @@
 import { Bounds, Wrap } from '../types/wrap';
+import { bilinearAt } from '../utils/interpolation';
 
 interface GridInfo {
   param: string;
@@ -68,27 +69,6 @@ export class Grid {
   }
 
   private bilinear(col: number, row: number): number {
-    if (Number.isNaN(this.data[Math.round(row) * this.width + Math.round(col)])) return NaN;
-    const c0 = Math.floor(col);
-    const r0 = Math.floor(row);
-    const c1 = Math.min(c0 + 1, this.width - 1);
-    const r1 = Math.min(r0 + 1, this.height - 1);
-    const fc = col - c0;
-    const fr = row - r0;
-    const corners = [
-      this.data[r0 * this.width + c0],
-      this.data[r0 * this.width + c1],
-      this.data[r1 * this.width + c0],
-      this.data[r1 * this.width + c1],
-    ];
-    const weights = [(1 - fc) * (1 - fr), fc * (1 - fr), (1 - fc) * fr, fc * fr];
-    let sum = 0;
-    let weightSum = 0;
-    for (let i = 0; i < 4; i++) {
-      if (Number.isNaN(corners[i])) continue;
-      sum += corners[i] * weights[i];
-      weightSum += weights[i];
-    }
-    return weightSum > 0 ? sum / weightSum : NaN;
+    return bilinearAt(this.data, this.width, this.height, col, row);
   }
 }

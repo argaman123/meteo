@@ -1,6 +1,8 @@
 import { SECTORS } from '../../layers/polygons/polygons-layer';
 import { VISIBILITY_BANDS } from '../../layers/polygons/visibility';
-import { CloudEvent, PolygonsWrap, Sector } from '../../types/polygons';
+import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
+import { polygon } from '@turf/helpers';
+import { CloudEvent, PointForecast, PolygonsWrap, Sector } from '../../types/polygons';
 import { hoursToMs } from '../../utils/time';
 
 export function syntheticPolygons(
@@ -32,6 +34,25 @@ export function syntheticPolygons(
     sector,
     polygons,
   };
+}
+
+export function syntheticPointForecasts(
+  sector: Sector,
+  lon: number,
+  lat: number,
+  frameHours: number[],
+  runTime: number,
+): PointForecast[] {
+  return frameHours.flatMap((hours) => {
+    const wrap = syntheticPolygons(sector, hours, runTime);
+    if (!wrap) return [];
+    const forecastEvents = wrap.polygons
+      .filter((shape) =>
+        booleanPointInPolygon([lon, lat], polygon([shape.coordinates.map(([la, lo]) => [lo, la])])),
+      )
+      .flatMap((shape) => shape.forecastEvents);
+    return [{ startTime: wrap.startTime, endTime: wrap.endTime, forecastEvents }];
+  });
 }
 
 function lowCloud(frameHours: number): PolygonsWrap['polygons'][number] {

@@ -103,6 +103,18 @@ export class SyntheticWeather {
     };
   }
 
+  section(
+    parameter: string,
+    lat: number,
+    lon: number,
+    frameHours: number[],
+    heightsFeet: number[],
+  ): number[][] {
+    return heightsFeet.map((feet) =>
+      frameHours.map((hours) => this.field(lat, lon, hours, parameter, feet, null)),
+    );
+  }
+
   private field(
     lat: number,
     lon: number,

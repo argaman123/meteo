@@ -1,6 +1,7 @@
 import { Service, inject, signal } from '@angular/core';
 import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
+import { Subject } from 'rxjs';
 import { Bounds } from '../types/wrap';
 import { Overlay } from './overlay';
 
@@ -8,16 +9,26 @@ export type BasemapId = 'dark' | 'light' | 'colorful';
 
 export const basemapBright = signal(false);
 
+export interface MapClick {
+  lon: number;
+  lat: number;
+  clientX: number;
+  clientY: number;
+}
+
 @Service()
 export class MapService {
   private overlay = inject(Overlay);
   private map: maplibregl.Map | null = null;
+  private markers = new Map<HTMLElement, maplibregl.Marker>();
+  private clickSubject = new Subject<MapClick>();
 
   readonly bbox = signal<Bounds | null>(null);
   readonly settledBbox = signal<Bounds | null>(null);
   readonly zoom = signal<number | null>(null);
   readonly settledZoom = signal<number | null>(null);
   readonly cursor = signal<[number, number] | null>(null);
+  readonly clicks = this.clickSubject.asObservable();
   readonly basemap = signal<BasemapId>('dark');
   readonly basemaps: { id: BasemapId; label: string; bright: boolean }[] = [
     { id: 'dark', label: 'כהה', bright: false },
@@ -55,6 +66,14 @@ export class MapService {
     this.map.on('mousemove', (event) => {
       this.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
+    this.map.on('click', (event) => {
+      this.clickSubject.next({
+        lon: event.lngLat.lng,
+        lat: event.lngLat.lat,
+        clientX: event.originalEvent.clientX,
+        clientY: event.originalEvent.clientY,
+      });
+    });
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
     this.overlay.attach(this.map);
     this.publish();
@@ -63,6 +82,7 @@ export class MapService {
   }
 
   destroy(): void {
+    for (const element of [...this.markers.keys()]) this.hideMarker(element);
     this.overlay.detach();
     this.map?.remove();
     this.map = null;
@@ -82,6 +102,18 @@ export class MapService {
 
   flyTo(center: [number, number], zoom?: number): void {
     this.map?.flyTo({ center, zoom });
+  }
+
+  showMarker(element: HTMLElement, point: [number, number]): void {
+    if (!this.map) return;
+    const marker = this.markers.get(element) ?? new maplibregl.Marker({ element });
+    this.markers.set(element, marker);
+    marker.setLngLat(point).addTo(this.map);
+  }
+
+  hideMarker(element: HTMLElement): void {
+    this.markers.get(element)?.remove();
+    this.markers.delete(element);
   }
 
   private publish(): void {

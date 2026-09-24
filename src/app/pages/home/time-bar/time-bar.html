@@ -1,5 +1,5 @@
 <div class="relative flex items-center gap-2 bg-card pt-1.5">
-  <div dir="ltr" class="flex shrink-0 flex-col gap-1 px-2">
+  <div dir="ltr" class="flex shrink-0 flex-col gap-1 self-end px-2">
     <div class="flex items-center gap-1">
       <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="אחורה 3 שעות"
               hlmTooltip="אחורה 3 שעות" position="top" (click)="time.jumpBy(-3)">
@@ -64,6 +64,7 @@
     </div>
   }
   <div class="relative flex-1">
+    <ng-content />
     <div dir="ltr" class="relative h-12 cursor-grab overflow-hidden select-none active:cursor-grabbing [mask-image:linear-gradient(to_right,transparent,black_1.5rem,black_calc(100%-1.5rem),transparent)]"
          (wheel)="onWheel($event)" (pointerdown)="onPointerDown($event)"
          (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)"
@@ -73,7 +74,7 @@
       <div class="absolute top-5 bottom-0 bg-linear-to-t from-sky-500/25 to-sky-500/0 to-75%" [style.left.%]="futureBand().left"
            [style.width.%]="futureBand().width"></div>
       <div class="absolute inset-x-0 top-5 border-t"></div>
-      @for (position of stopMarkers(); track position) {
+      @for (position of stopMarkers(); track $index) {
         <span class="absolute bottom-0 h-1.5 w-px bg-foreground/30" [style.left.%]="position"></span>
       }
       @for (tick of ticks(); track tick.time) {

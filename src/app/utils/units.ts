@@ -23,6 +23,7 @@ export enum Quantity {
   CloudCover = 'cloud-cover',
   CloudBase = 'cloud-base',
   Altitude = 'altitude',
+  Height = 'height',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -35,6 +36,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.CloudCover]: Unit.Eighths,
   [Quantity.CloudBase]: Unit.Kilofeet,
   [Quantity.Altitude]: Unit.Feet,
+  [Quantity.Height]: Unit.Kilofeet,
 };
 
 function displayUnitOf(quantity: Quantity): Unit {
@@ -45,7 +47,10 @@ const knotsPerMeterPerSecond = 1.943844;
 const feetPerMeter = 3.28084;
 
 export function convert(value: number, quantity: Quantity, from: Unit): number {
-  const to = displayUnitOf(quantity);
+  return convertBetween(value, from, displayUnitOf(quantity));
+}
+
+export function convertBetween(value: number, from: Unit, to: Unit): number {
   if (from === to) return value;
   if (from === Unit.MetersPerSecond && to === Unit.Knots) return value * knotsPerMeterPerSecond;
   if (from === Unit.Knots && to === Unit.MetersPerSecond) return value / knotsPerMeterPerSecond;

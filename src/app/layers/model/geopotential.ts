@@ -1,4 +1,5 @@
-import { Contours, levelsEvery } from '../../engine/looks/contours';
+import { Contours } from '../../engine/looks/contours';
+import { levelsEvery } from '../../utils/contours';
 import { ModelLayer } from './model-layer';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';

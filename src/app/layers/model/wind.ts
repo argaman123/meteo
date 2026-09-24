@@ -8,7 +8,7 @@ import { Quantity, Unit, convert, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
 import { ModelLayer } from './model-layer';
 
-const SPEED_PALETTE: ColorStop[] = [
+export const WIND_SPEED_PALETTE: ColorStop[] = [
   { value: 0, color: '#6271b7' },
   { value: 1, color: '#39619f' },
   { value: 3, color: '#4a94a9' },
@@ -24,6 +24,10 @@ const SPEED_PALETTE: ColorStop[] = [
   { value: 24, color: '#6d61a3' },
 ];
 
+export function metDirection(u: number, v: number): number {
+  return 270 - (Math.atan2(v, u) * 180) / Math.PI;
+}
+
 export class Wind extends ModelLayer {
   readonly name = 'רוח';
   readonly parameters = [Parameter.U, Parameter.V];
@@ -31,7 +35,7 @@ export class Wind extends ModelLayer {
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => Grid.combine(grids, Math.hypot)),
-        { stops: SPEED_PALETTE, style: 'smooth' },
+        { stops: WIND_SPEED_PALETTE, style: 'smooth' },
         (value) => format(value, Quantity.WindSpeed, Unit.MetersPerSecond),
         { opacity: 0.55 },
       ),
@@ -60,7 +64,6 @@ export class Wind extends ModelLayer {
     const v = grids[1].valueAt(lon, lat, 'bilinear');
     const speed = Math.hypot(u, v);
     if (Number.isNaN(speed)) return format(NaN, Quantity.WindSpeed, Unit.MetersPerSecond);
-    const direction = 270 - (Math.atan2(v, u) * 180) / Math.PI;
-    return `${format(speed, Quantity.WindSpeed, Unit.MetersPerSecond)} · ${format(direction, Quantity.Direction, Unit.MetDegrees)}`;
+    return `${format(speed, Quantity.WindSpeed, Unit.MetersPerSecond)} · ${format(metDirection(u, v), Quantity.Direction, Unit.MetDegrees)}`;
   }
 }

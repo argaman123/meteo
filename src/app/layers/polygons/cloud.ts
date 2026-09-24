@@ -12,6 +12,10 @@ const LEVELS = [
 ];
 
 export class Cloud implements EventAppearance<CloudEvent> {
+  name(event: CloudEvent): string {
+    return `עננות ${LEVELS.find((candidate) => event.baseFt < candidate.belowFt)!.name}`;
+  }
+
   style(event: CloudEvent): PolygonStyle {
     const level = LEVELS.find((candidate) => event.baseFt < candidate.belowFt)!;
     const [thin, thick] = level.alphaRange;
@@ -27,8 +31,7 @@ export class Cloud implements EventAppearance<CloudEvent> {
   }
 
   hoverText(event: CloudEvent): string {
-    const level = LEVELS.find((candidate) => event.baseFt < candidate.belowFt)!;
-    const lines = [`עננות ${level.name} · ${event.eights}/8 · ${heightRange(event)}`];
+    const lines = [`${this.name(event)} · ${event.eights}/8 · ${heightRange(event)}`];
     if (event.precip) lines.push(precipHover(event.precip));
     if (event.precip?.cb) lines.push(cbHover(event.precip.cb));
     return lines.join('\n');

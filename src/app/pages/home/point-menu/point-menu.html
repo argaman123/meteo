@@ -1,0 +1,9 @@
+<span class="hidden" [hlmContextMenuTrigger]="menu"></span>
+<ng-template #menu>
+  <hlm-dropdown-menu class="w-40">
+    <button hlmDropdownMenuItem (triggered)="showMeteogram()">
+      <ng-icon name="lucideChartArea" />
+      מטאוגרמה
+    </button>
+  </hlm-dropdown-menu>
+</ng-template>

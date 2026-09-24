@@ -102,8 +102,8 @@ The rules that must never be broken:
    finalized with the registry in Slice 1.)
 3. **All values flow through the Units module.** No raw numbers rendered anywhere (hover, tables,
    charts, readouts) without going through unit conversion/formatting.
-4. **All coordinates/time flow through the Geo module.** Lat/Lon, DMS, MGRS, and Zulu/Local are
-   formatted in one place, never ad-hoc.
+4. **All coordinates/time flow through the Geo module.** Lat/Lon, DMS, MGRS, and times are
+   formatted in one place, never ad-hoc. Times are **local only** (lead 2026-09-23: no Zulu, no toggle).
 5. **State lives in a domain service** — one injectable `@Service` per domain that **co-locates its
    signals and the methods that change them**, in the domain's own folder (e.g. `MapService` in
    `engine/`, `LayersService` in `layers/`). There is **no separate `stores/` layer**: a domain is
@@ -131,6 +131,8 @@ src/app/
   app.routes.ts       # URL → page map ('/' = the home page)
   pages/              # one subfolder per page of the site
     home/             # the front page: top bar + map view (layer-bar, time-bar, legend-bar, hover-readout)
+      meteogram/      #   MeteogramService + the sheet + one folder per chart (meteogram-frame, meteogram-colormap, tabs)
+      point-menu/     #   the map-click chooser (מטאוגרם; later raw values / Skew-T)
   services/           # domain services with no natural feature folder (TimeService)
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
@@ -144,13 +146,15 @@ src/app/
     model/            #   ModelLayer machinery + one file per model layer (temperature, wind, …); future kinds get sibling folders
     polygons/         #   PolygonsLayer (+ EVENT_APPEARANCES record + SECTORS) + one file per forecast-event kind
     coordinates/      #   Coordinates readout layer (no looks; hover-only + persisted format control)
-  objects/            # runtime data classes built from DAOs (e.g. Grid)
+  objects/            # runtime data classes built from DAOs (e.g. Grid, MeteogramData)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
                       #   units.ts = the Units module (§4.3 — every rendered value flows through it)
                       #   geo.ts = the Geo module (§4.4 — formatCoordinates decimal/DMS/MGRS) + mercator/bounds math
                       #   settings.ts = setting() persistent signals + registerLayers (localStorage; keys derive from registry key + LookKind + field)
                       #   controls.ts = the Control vocabulary (options/percent/color) — setting-signals with UI metadata attached
+                      #   interpolation.ts = fractionalIndex + bilinearAt over a flat Float32Array (Grid + MeteogramData share it)
+                      #   contours.ts = the isoline tracer + levelsEvery level pickers; pointer.ts = pointerFraction(event)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
                       #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
@@ -163,7 +167,9 @@ public/               # static assets (Angular 22 convention; served from /)
 ```
 
 Future domain folders (e.g. geo) are added when their feature arrives, following the same hybrid
-rule. Adding a layer of an existing render style = exactly one new file in `layers/`.
+rule. **Where a service lives** (lead, 2026-09-24): shared across domains → `services/` or its
+domain's folder (`engine/`, `layers/`); owned by one feature's UI → that feature's folder
+(`pages/home/meteogram/meteogram-service.ts`, `pages/home/time-bar/time-bar-service.ts`). Adding a layer of an existing render style = exactly one new file in `layers/`.
 
 ---
 
@@ -205,6 +211,11 @@ rule. Adding a layer of an existing render style = exactly one new file in `laye
   tuning-knobs block at the top of that file (2026-07-30).
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
+- **Generic pure functions live in `utils/`, even with a single user** (lead, 2026-09-24): a
+  helper nothing about which is feature-specific (array/interpolation math, pointer geometry,
+  contour level pickers) goes to the matching `utils/` file so the next person can find it
+  instead of writing a second copy — "lives with its user" above is for constants and tuning
+  values, not for reusable functions. Feature-specific logic stays in its class.
 - **Colors are authored as hex, never RGBA number arrays** (lead, 2026-08-24): every authored
   color literal goes through `rgba('#94a3b8', 140)` (`utils/color-scale`); a bare
   `[148, 163, 184, 140]` hides the color from the reader. Component math derived from an existing
@@ -583,6 +594,110 @@ showing the resolved config value (needs a Control-vocabulary extension — the 
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
 
+**Meteogram v1 — מטאוגרמה (2026-09-23, lead-specced in one session; Hebrew name lead-corrected):** not a classic line meteogram — a
+**time-height section** per tab: x = time, y = **0–45 kft** (`MeteogramService.topFt`), clicked
+point fixed. Flow (lead): a plain map click opens a **chooser menu** at the click (spartan
+context-menu opened programmatically — a hidden `[hlmContextMenuTrigger]` span, `open({x,y})`, so
+right-click stays native; `pages/home/point-menu/`, one item מטאוגרמה, room for raw values/Skew-T);
+picking it drops a **pin** (a `#pin` element declared in the meteogram template — visuals live in templates, lead review — handed to the generic `MapService.showMarker(element, point)`/`hideMarker(element)`; the click seam is
+`MapService.clicks`, an RxJS Observable fed by a private `Subject` — **events are Observables, state is signals** (lead 2026-09-24: a signal+effect "event" was rejected in review as unconventional; it replays on re-creation), `PointMenu` subscribes with `takeUntilDestroyed`; maplibre stays in engine/) and opens the sheet; **while open, a map click
+moves the point directly** (no menu). **Placement — a drawer rising out of the time bar (lead, 2026-09-24, after ~8 rendered mockup
+rounds on the live app):** `<app-meteogram>` is projected (`<ng-content/>`) into the time bar's
+**track column**, above the track — so the drawer is exactly the track's width by construction
+(chart day lines meet the bar's ticks, the chart's white map-time line continues the handle), it
+**never takes the menu column** (lead: "the right side shouldn't expand"; the menu keeps its
+`bottom-14.5` and is stacked **after** the time bar in the page so the grown bar never paints
+over it — lead caught the menu losing its lower part; the step buttons went `self-end`), and the time chip + loop pill, anchored
+`bottom-full` of the column/bar, float above the drawer for free. The time bar itself stays
+unchanged underneath (buttons, bands, handle). Opening **rises from the bottom**: `animate-rise` /
+`animate-sink` tokens (height keyframes, 0.22 s / 0.18 s) on the fixed-height (`h-72`) drawer;
+the drawer is `h-96` (lead: "higher" than the first `h-72`); the map shrinks in step because `--time-bar-height` is measured (ResizeObserver on the time bar)
+and drives the map well + legend bottoms. Drawer anatomy (mockup "3 as is", lead-picked): a
+**title block** (bold מטאוגרמה over a pin-iconed coordinates line in the settings format), a
+divider, **browser-style tabs** with icons (thermometer/wind/cloud) whose active tab is
+`bg-secondary` and joins a 2px `secondary` band along the chart's top — the `browser` variant of
+our spartan tabs copy (`hlm-tabs-list variant="browser"`, trigger styles keyed off
+`group-data-[variant=browser]/tabs-list`; the unused paginated list was dropped from the copy) —
+a **legend** (lead 2026-09-24: "reuse the legend data of the original layers") — each tab row
+in `Meteogram.tabNames` holds its legend directly (lead review: no lookup through layer looks;
+tab names hardcoded too): `gradientLegend(TEMPERATURE_PALETTE | WIND_SPEED_PALETTE, quantity,
+unit)`, re-evaluated in a computed so unit switches apply, and the exported `POLYGONS_LEGEND`, shown horizontally in the header's middle (gradient strip + evenly spaced labels, or
+swatch dots) — and ✕ at the far end — the legend is **pinned beside ✕** (lead: it must not move between tabs;
+it first sat centered in the free space). **One continuous background** (lead: the tab strip may not be a darker
+band). The **height axis is a strip** on the chart's end edge (`bg-card/80`, labels every 5k ft) —
+labels over the colormap were "not very visible". **Heights are linear** (`ft / topFt`; a
+pressure-scaled axis was built for the low clouds and reverted the same day — lead: "consistent
+distances"); `MeteogramFrame.topFt` (default 45k) is per tab — **the clouds tab sets it dynamically**
+to the tallest event in its data rounded up to 5k (min 10k; lead's idea), and its block text is
+10px so thin layers still fit — every block shows the polygons' own `style().text` verbatim
+(lines joined; lead review: a chart-side `textOf` re-deriving cover/precip was "too specific" — the
+original chip text wins, base–top prime heights included). Arrow rows sit every 30 px of screen height. Rejected along the way: a side
+column under the step buttons (cramped), a replacement panel with its own time labels (felt like
+a different element — `TimeAxis` extracted then reverted), a floating card (no time alignment),
+folder tabs over the map, chip/underline/segmented tab styles, gridline axis. **One zoom (lead: "line them up"):** the time bar's view moved from TimeBar into
+a display-state **`TimeBarService`** (`pages/home/time-bar/`, lead review: display helpers do not
+belong in the domain `TimeService`, and "timeline" is reserved for a future feature) — `view` (+ `zoomView(anchorFraction, wheelDelta)` / `shiftView(wheelDelta)` and the
+keep-displayTime-in-view effect, + `panView(from, spanFraction)` shared by both drags, + `positionInView(time)` / `timeInView(fraction)` — **the one home for view math**, used by the time bar, chart frame, section image and clouds blocks); wheel over
+the chart zooms both, shift+wheel pans, **dragging the chart pans the time bar too** (lead; the
+track's 4px pending→pan threshold, click-without-move = jump). The chart sits on the time bar's
+card color — **no background shift, no past dimming** (lead disliked both; the time bar already
+marks past/future). Shared `MeteogramFrame` (`meteogram/meteogram-frame/`, content-projected drawing + an optional `[lanes]` slot under the height area — pan/zoom/jump and the now/map-time lines span it; hovering a lane calls the tab's `hoverText` with **`heightFt = NaN`** — the Units module's "no value" (the chip's height reads —), so the one `(time, heightFt)` contract serves both areas; owns the one `size` signal (the height area's) its children read — `MeteogramColormap` via `inject(MeteogramFrame)`, `CloudsChart` via `viewChild`): emerald now line,
+white map-time line, hover **crosshair + chip** (day lines were tried and removed — lead)
+(time · height via new `Quantity.Height` = kilofeet prime · the tab's `hoverText(time, heightFt)`
+value), **click = `time.jumpTo`** (lead: both hover and jump). **Tabs** (lead: each its own tab,
+**loads on request**): `@switch` renders only the open tab's component, whose `httpResource` lives
+and dies with it (switching back refetches — accepted for v1). **Temperature**: interpolated
+colormap canvas (`meteogram-colormap/`: per-pixel `MeteogramData.valueAt` → the map's `TEMPERATURE_PALETTE`,
+rendered at 0.5 resolution and CSS-upscaled, colors cached per 0.1 value step — d3's per-pixel
+string parse cost 30 ms/draw, cached ≈5 ms) — **palette
+extended to −60 °C for map and meteogram** (lead: "both"; stand-in stops −45 `#a21caf`, −60
+`#f5d0fe`; aloft reaches ~−65 °C). **Wind**: speed colormap (`WIND_SPEED_PALETTE`, `hypot`
+section) + arrows pointing downwind drawn by **`WindChart` itself** on its own dpr-true canvas
+projected into the frame (lead review: arrows are wind-specific, so they stay out of the shared
+`MeteogramColormap`, which is colormap + contour lines only) — **anchored to the data's own hours** (local-clock multiples of a
+1/3/6/12/24 h step picked so arrows sit ≥ 40 px apart, rows every 5,000 ft), so they travel with
+pan/zoom and thin out when zoomed out (lead: screen-fixed arrows that "don't move" on zoom were
+wrong; the first cut's 288 DOM icons with drop-shadow filters also made the tab "super laggy");
+**contours like the old app**, declared per tab as a `MeteogramContours` config (field named
+`contours` in both tabs — lead: not isotachs/isotherms)
+(`{ faintStep, marked: { level, color }[] }`) that `MeteogramColormap` traces itself — wind: (lead's photo of the old wind section, 2026-09-24): faint dark lines
+every 1 m/s plus two **marked isotachs — white 25 kt and gray 45 kt** — values inferred by
+sampling the photo's pixels against its own color legend (gray ±1 kt, white ±3 kt; confirm with
+the old app's config), authored in knots and converted through the new
+`convertBetween(value, from, to)` in the Units module (`convert` now delegates to it) so they
+stay physical when the display unit is m/s (display-unit literals are the map isotachs' known
+caveat). Traced once per data load by the house tracer (`contourLines(data, width, height,
+bounds, levels)` — plain positional args, lead rejected a named `ContourField` type as too
+specific; `MeteogramColormap` passes the section's data with (time, height) bounds whose "north" is
+the lowest height, since the tracer maps row 0 to bounds[3]) and only re-projected on zoom,
+drawn on `MeteogramColormap`'s overlay canvas under the arrows (~2 ms per redraw). Temperature (lead: "the isotherms and everything there too"): faint isotherms every 5 °C
+(the map's spacing) + a marked white 0 °C freezing line; **direction is always computed from interpolated u/v at the sample** (`metDirection`,
+extracted from wind.ts) — never interpolate an angle field (wrap at 360° → garbage). **Clouds**
+(the polygons' events at the point) — **deliberately flat (lead: "the cloud tab can be
+simplified")**: one block per event at its real base–top, identical consecutive frames merged,
+filled with the polygons' own `EVENT_APPEARANCES[type].style().fill` (map-identical color and
+cover-opacity) — **no hatch patterns, no label backgrounds, no outlines/rain stripes, no collision
+placement** (all built, all cut); the style's text rides the block as plain white shadowed text
+**only when it fits** the block (measured width, ≥ 11 px tall) — zoom in to read thin layers,
+hover lists the clouds under the cursor (over the lanes: the fog/haze in force at that time). **Fog/haze ride lanes, not heights** (lead: no invented
+heights — they have none on the wire): one 16 px row per kind present in the data, under the
+height area, time-aligned blocks in the map color with the visibility band as text, labeled in
+the strip column by the new **`EventAppearance.name(event)`** (ערפל / אובך קרקעי / אובך גבוה —
+also the head of each kind's `hoverText`, one source); lanes sort by name, so kinds absent from
+the range take no space; the height axis holds clouds only. **Data (ASSUMED — confirm with the backend lead):**
+`/api/meteogram?parameter&lat&lon&model&start&end` → `MeteogramWrap { times, heights, values[height][time] }`
+→ `MeteogramData` (`objects/meteogram-data.ts`: fractional-index bilinear via `utils/interpolation.ts`, which
+Grid now shares); `/api/polygons/point?lat&lon&start&end` → `PointForecast[]
+{ startTime, endTime, forecastEvents }` — **the backend resolves the sector** from the point
+(lead: the frontend declares no sector for point queries); outside every sector → empty →
+אין תופעות. Range = the temperature layer's own 24/96 window around the hour-floored
+now; model local/wide by `contains(LOCAL_COVERAGE, point)` (exported from model-layer). Fixture:
+`SyntheticWeather.section()` evaluates the same fields the map uses (−2 °C/1,000 ft lapse etc.);
+`syntheticPointForecasts` point-in-polygons the sector scenes. spartan **tabs** + **context-menu**
+vendored (tabs' helm selectors translated to brain 1.0.4's `data-state`/`data-orientation`, the
+switch precedent). Rejected same session: Zulu/Local (local only), level persistence, per-knob
+quality settings (a single low-quality toggle instead — plan row).
+
 **Settings panel v1 (2026-08-26, lead-iterated to rest):** a gear button in the top bar opens a
 frosted popover (the floating-window recipe, `align="end"` — a centered popover overflows at the
 corner) with one יחידות list: **רוח kt/m·s⁻¹**, **גובה גיאופוטנציאלי m/ft**, and **קואורדינטות
@@ -604,8 +719,8 @@ re-evaluate on unit switch; an explicit `options.legend` stays a static signal),
 `ObservationParameter.legend` became `Signal<Legend>` (wind = `computed`, fixed-unit params =
 `signal(...)`). Unit switches re-render hover/legends/labels live through the provider/draw
 reactive chain. Fixed-by-lead: temp/visibility/rain/direction/altitude/cloud-base stay
-single-unit. **Recorded for the future זמן section (lead-approved spec, not built): Zulu/Local
-applies EVERYWHERE times display, format `14:00Z`.** Caveats standing: isotach levels stay
+single-unit. Zulu/Local was dropped 2026-09-23 (lead: local only, no toggle — the recorded
+`14:00Z` spec is void). Caveats standing: isotach levels stay
 kt-authored and geopotential's 20 m contour spacing shows non-round ft numbers (both wait for
 the switchable-conventions rework); perf + gear buttons carry no tooltips (a corner button's
 bottom tooltip falls back sideways across its neighbors — the palette keeps its). Adding a

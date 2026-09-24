@@ -6,10 +6,12 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { from } from 'rxjs';
+import { SECTORS } from '../../layers/polygons/polygons-layer';
 import { Sector } from '../../types/polygons';
 import { Bounds } from '../../types/wrap';
+import { contains } from '../../utils/geo';
 import { hoursToMs, msToHours } from '../../utils/time';
-import { syntheticPolygons } from './synthetic-polygons';
+import { syntheticPointForecasts, syntheticPolygons } from './synthetic-polygons';
 import { radarTimes, syntheticRadarWrap } from './synthetic-radar';
 import { syntheticObservations } from './synthetic-observations';
 import { SATELLITE_SECTORS, satelliteHours, syntheticSatelliteImage } from './synthetic-satellite';
@@ -95,6 +97,44 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
       .map((hours) => RUN_TIME + hoursToMs(hours))
       .filter((time) => time >= start && time <= end);
     return new HttpResponse({ status: 200, body: times });
+  }
+  if (request.url === '/api/polygons/point') {
+    const lon = Number(request.params.get('lon'));
+    const lat = Number(request.params.get('lat'));
+    const start = Number(request.params.get('start'));
+    const end = Number(request.params.get('end'));
+    const sector = (Object.keys(SECTORS) as Sector[]).find((candidate) =>
+      contains(SECTORS[candidate], lon, lat),
+    );
+    if (!sector) return new HttpResponse({ status: 200, body: [] });
+    const frames = POLYGON_HOURS[sector].filter((hours) => {
+      const time = RUN_TIME + hoursToMs(hours);
+      return time >= start && time <= end;
+    });
+    const forecasts = syntheticPointForecasts(sector, lon, lat, frames, RUN_TIME);
+    return new HttpResponse({ status: 200, body: forecasts });
+  }
+  if (request.url === '/api/meteogram') {
+    const start = Number(request.params.get('start'));
+    const end = Number(request.params.get('end'));
+    const times: number[] = [];
+    for (
+      let time = Math.ceil(start / hoursToMs(1)) * hoursToMs(1);
+      time <= end;
+      time += hoursToMs(1)
+    ) {
+      times.push(time);
+    }
+    const heights = Array.from({ length: 46 }, (_, index) => index * 1000);
+    const weather = await loadWeather();
+    const values = weather.section(
+      request.params.get('parameter') ?? '',
+      Number(request.params.get('lat')),
+      Number(request.params.get('lon')),
+      times.map(frameHours),
+      heights,
+    );
+    return new HttpResponse({ status: 200, body: { times, heights, values } });
   }
   if (request.url === '/api/polygons') {
     const sector = (request.params.get('sector') ?? '') as Sector;

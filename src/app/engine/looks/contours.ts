@@ -4,7 +4,7 @@ import { rgb } from 'd3-color';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { rgba } from '../../utils/color-scale';
-import { ContourLine, contourLines } from '../../utils/contours';
+import { ContourLine, LevelPicker, contourLines } from '../../utils/contours';
 import { Control, color as colorControl } from '../../utils/controls';
 import { LabelIcon, Look, LookKind } from '../base/look';
 
@@ -12,17 +12,6 @@ interface ContourLabel {
   position: [number, number];
   text: string;
   angle: number;
-}
-
-export type LevelPicker = (min: number, max: number) => number[];
-
-export function levelsEvery(interval: number): LevelPicker {
-  return (min, max) => {
-    const levels: number[] = [];
-    let level = Math.ceil(min / interval) * interval;
-    for (; level <= max; level += interval) levels.push(level);
-    return levels;
-  };
 }
 
 export class Contours extends Look<Grid> {
@@ -47,7 +36,7 @@ export class Contours extends Look<Grid> {
 
   deckLayer(id: string, grid: Grid): DeckLayer[] {
     const line = rgb(this.color);
-    const lines = contourLines(grid, this.levels(grid));
+    const lines = contourLines(grid.data, grid.width, grid.height, grid.bounds, this.levels(grid));
     const labels: ContourLabel[] = [];
     for (const { level, path } of lines) {
       const text = this.label(level);

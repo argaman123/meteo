@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, inject, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideActivity, lucidePalette } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -16,6 +16,8 @@ import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { LegendBar } from './legend-bar/legend-bar';
 import { LevelBar } from './level-bar/level-bar';
+import { Meteogram } from './meteogram/meteogram';
+import { PointMenu } from './point-menu/point-menu';
 import { SettingsPanel } from './settings-panel/settings-panel';
 import { TimeBar } from './time-bar/time-bar';
 import { layers } from '../../layers/registry';
@@ -35,6 +37,8 @@ import { layers } from '../../layers/registry';
     LayerBar,
     LegendBar,
     LevelBar,
+    Meteogram,
+    PointMenu,
     SettingsPanel,
     TimeBar,
   ],
@@ -46,13 +50,20 @@ export class HomePage implements AfterViewInit, OnDestroy {
   protected map = inject(MapService);
   private layers = inject(LayersService);
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
+  private timeBar = viewChild.required(TimeBar, { read: ElementRef });
   protected perfHud = viewChild(PerfHud);
+  protected timeBarHeight = signal('3.625rem');
+  private timeBarObserver = new ResizeObserver(([entry]) =>
+    this.timeBarHeight.set(`${entry.borderBoxSize[0].blockSize}px`),
+  );
 
   ngAfterViewInit(): void {
+    this.timeBarObserver.observe(this.timeBar().nativeElement);
     void this.start();
   }
 
   ngOnDestroy(): void {
+    this.timeBarObserver.disconnect();
     this.map.destroy();
   }
 

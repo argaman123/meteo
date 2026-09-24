@@ -48,3 +48,9 @@ export interface PolygonsWrap {
   sector: Sector;
   polygons: ForecastPolygon[];
 }
+
+export interface PointForecast {
+  startTime: number;
+  endTime: number;
+  forecastEvents: ForecastEvent[];
+}

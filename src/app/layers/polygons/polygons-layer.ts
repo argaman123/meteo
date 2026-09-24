@@ -15,6 +15,7 @@ import { Fog } from './fog';
 import { Haze } from './haze';
 
 export interface EventAppearance<E extends ForecastEvent> {
+  name(event: E): string;
   style(event: E): PolygonStyle;
   hoverText(event: E): string;
 }
@@ -30,7 +31,7 @@ export const SECTORS: Record<Sector, Bounds> = {
   [Sector.North]: [33, 31.5, 37.5, 35.5],
 };
 
-const LEGEND: SwatchesLegend = {
+export const POLYGONS_LEGEND: SwatchesLegend = {
   type: LegendType.Swatches,
   stops: [
     { color: '#535353', label: 'עננות נמוכה' },
@@ -53,7 +54,7 @@ export class PolygonsLayer extends Layer<PolygonMap> {
   private on!: Inputs;
   readonly looks = [
     {
-      look: new Polygons(new Provider((map: PolygonMap) => this.createView(map)), LEGEND),
+      look: new Polygons(new Provider((map: PolygonMap) => this.createView(map)), POLYGONS_LEGEND),
       name: 'פוליגונים',
       checked: true,
     },

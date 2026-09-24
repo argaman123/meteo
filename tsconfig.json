@@ -19,7 +19,9 @@
       "@spartan-ng/helm/popover": ["./src/spartan/popover/src/index.ts"],
       "@spartan-ng/helm/dropdown-menu": ["./src/spartan/dropdown-menu/src/index.ts"],
       "@spartan-ng/helm/switch": ["./src/spartan/switch/src/index.ts"],
-      "@spartan-ng/helm/tooltip": ["./src/spartan/tooltip/src/index.ts"]
+      "@spartan-ng/helm/tooltip": ["./src/spartan/tooltip/src/index.ts"],
+      "@spartan-ng/helm/tabs": ["./src/spartan/tabs/src/index.ts"],
+      "@spartan-ng/helm/context-menu": ["./src/spartan/context-menu/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

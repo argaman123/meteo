@@ -5,6 +5,10 @@ import { EventAppearance } from './polygons-layer';
 import { visibilityPosition, visibilityText } from './visibility';
 
 export class Haze implements EventAppearance<HazeEvent> {
+  name(event: HazeEvent): string {
+    return event.height === 'surface' ? 'אובך קרקעי' : 'אובך גבוה';
+  }
+
   style(event: HazeEvent): PolygonStyle {
     const surface = event.height === 'surface';
     const [thin, thick] = surface ? [0.5, 0.95] : [0.1, 0.5];
@@ -17,6 +21,6 @@ export class Haze implements EventAppearance<HazeEvent> {
   }
 
   hoverText(event: HazeEvent): string {
-    return `אובך ${event.height === 'surface' ? 'קרקעי' : 'גבוה'} · ${visibilityText(event)}`;
+    return `${this.name(event)} · ${visibilityText(event)}`;
   }
 }

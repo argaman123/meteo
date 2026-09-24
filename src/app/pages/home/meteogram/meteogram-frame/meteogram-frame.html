@@ -1,0 +1,77 @@
+<div
+  dir="ltr"
+  class="relative flex h-full cursor-crosshair flex-col overflow-hidden rounded-lg select-none active:cursor-grabbing"
+  (wheel)="onWheel($event)"
+  (pointerdown)="onPointerDown($event)"
+  (pointermove)="onPointerMove($event)"
+  (pointerup)="onPointerUp($event)"
+  (pointercancel)="onPointerUp($event)"
+>
+  <div
+    #chart
+    class="relative min-h-0 flex-1"
+    (pointermove)="onPointerHover($event)"
+    (pointerleave)="onPointerLeave()"
+  >
+    <ng-content />
+    <div
+      class="pointer-events-none absolute inset-y-0 end-0 z-10 w-[38px] border-s bg-card/80 text-[11px] leading-none tabular-nums"
+    >
+      @for (label of heightLabels(); track label.text) {
+        <span
+          class="absolute end-[7px]"
+          [style.bottom.%]="label.fraction * 100"
+          [style.translate]="label.offset"
+        >
+          {{ label.text }}
+        </span>
+      }
+    </div>
+    @if (loading()) {
+      <div
+        class="pointer-events-none absolute inset-0 grid animate-pulse place-items-center text-sm text-muted-foreground"
+      >
+        טוען…
+      </div>
+    } @else if (message(); as text) {
+      <div
+        class="pointer-events-none absolute inset-0 grid place-items-center text-sm text-muted-foreground"
+      >
+        {{ text }}
+      </div>
+    }
+    @if (hover(); as at) {
+      <div
+        class="pointer-events-none absolute inset-y-0 w-px bg-foreground/50"
+        [style.left.%]="at.left"
+      ></div>
+      <div
+        class="pointer-events-none absolute inset-x-0 h-px bg-foreground/50"
+        [style.top.%]="at.top"
+      ></div>
+      <div
+        dir="rtl"
+        class="pointer-events-none absolute z-10 flex flex-col gap-0.5 rounded-xl border bg-background/70 px-2 py-1 text-xs font-medium whitespace-nowrap shadow-[0_0_8px_rgb(0_0_0/0.45)] backdrop-blur-lg"
+        [style.left.%]="at.left"
+        [style.top.%]="at.top"
+        [style.translate]="at.offset"
+      >
+        <span class="text-muted-foreground tabular-nums">
+          {{ at.time }} · <span dir="ltr">{{ at.height }}</span>
+        </span>
+        <span dir="auto" class="tabular-nums whitespace-pre-line">{{ at.value }}</span>
+      </div>
+    }
+  </div>
+  <div (pointermove)="onLanesHover($event)" (pointerleave)="onPointerLeave()">
+    <ng-content select="[lanes]" />
+  </div>
+  <div
+    class="pointer-events-none absolute inset-y-0 w-px bg-emerald-400 shadow-[0_0_6px_rgb(52_211_153/0.7)]"
+    [style.left.%]="nowPosition()"
+  ></div>
+  <div
+    class="pointer-events-none absolute inset-y-0 w-0.5 -translate-x-1/2 bg-primary shadow-[0_0_6px_rgb(0_0_0/0.6)]"
+    [style.left.%]="mapTimePosition()"
+  ></div>
+</div>
