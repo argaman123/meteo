@@ -740,8 +740,11 @@ marks past/future). Shared `MeteogramFrame` (`meteogram/meteogram-frame/`, conte
 white map-time line, hover **crosshair + chip** (day lines were tried and removed — lead)
 (time · height via new `Quantity.Height` = kilofeet prime · the tab's `hoverText(time, heightFt)`
 value), **click = `time.jumpTo`** (lead: both hover and jump). **Tabs** (lead: each its own tab,
-**loads on request**): `@switch` renders only the open tab's component, whose `httpResource` lives
-and dies with it (switching back refetches — accepted for v1). **Temperature**: interpolated
+**loads on request**): `@switch` renders only the open tab's component, but the data lives in
+`MeteogramService` (lead 2026-09-28) — one `httpResource` per tab, requested only once that tab
+has been opened at this point (`openedTabs`, a `linkedSignal` reset by every point change; closing
+the meteogram nulls the point, so all data is released), so switching back is instant and moving
+the point refetches only the tab on screen. **Temperature**: interpolated
 colormap canvas (`meteogram-colormap/`: per-pixel `MeteogramData.valueAt` → the map's `TEMPERATURE_PALETTE`,
 rendered at 0.5 resolution and CSS-upscaled, colors cached per 0.1 value step — d3's per-pixel
 string parse cost 30 ms/draw, cached ≈5 ms) — **palette

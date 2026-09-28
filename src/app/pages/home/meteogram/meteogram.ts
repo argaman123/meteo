@@ -78,7 +78,7 @@ export class Meteogram {
   });
 
   protected selectTab(tab: string): void {
-    this.meteogram.tab.set(tab as MeteogramTab);
+    this.meteogram.showTab(tab as MeteogramTab);
   }
 
   protected gradientBackground(legend: GradientLegend): string {

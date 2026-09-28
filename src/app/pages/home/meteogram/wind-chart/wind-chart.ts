@@ -1,4 +1,3 @@
-import { httpResource } from '@angular/common/http';
 import {
   Component,
   ElementRef,
@@ -9,8 +8,6 @@ import {
 } from '@angular/core';
 import { WIND_SPEED_PALETTE } from '../../../../layers/model/wind';
 import { MeteogramData } from '../../../../objects/meteogram-data';
-import { Parameter } from '../../../../types/parameter';
-import { MeteogramWrap } from '../../../../types/wrap';
 import { colorScale } from '../../../../utils/color-scale';
 import { msToHours } from '../../../../utils/time';
 import { Quantity, Unit, convertBetween, format } from '../../../../utils/units';
@@ -44,12 +41,8 @@ export class WindChart {
     ],
   };
 
-  protected u = httpResource(() => this.meteogram.modelRequest(Parameter.U), {
-    parse: (wrap) => MeteogramData.fromWrap(wrap as MeteogramWrap),
-  });
-  protected v = httpResource(() => this.meteogram.modelRequest(Parameter.V), {
-    parse: (wrap) => MeteogramData.fromWrap(wrap as MeteogramWrap),
-  });
+  protected u = this.meteogram.u;
+  protected v = this.meteogram.v;
   protected colorScale = colorScale(WIND_SPEED_PALETTE, 'smooth');
 
   protected speed = computed(() =>

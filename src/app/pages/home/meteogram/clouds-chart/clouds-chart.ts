@@ -1,8 +1,7 @@
-import { httpResource } from '@angular/common/http';
 import { Component, computed, inject, viewChild } from '@angular/core';
 import { PolygonStyle } from '../../../../engine/looks/polygons';
 import { EVENT_APPEARANCES } from '../../../../layers/polygons/polygons-layer';
-import { CloudEvent, ForecastEvent, PointForecast } from '../../../../types/polygons';
+import { CloudEvent, ForecastEvent } from '../../../../types/polygons';
 import { MeteogramFrame } from '../meteogram-frame/meteogram-frame';
 import { MeteogramService } from '../meteogram-service';
 import { TimeBarService } from '../../time-bar/time-bar-service';
@@ -34,7 +33,7 @@ export class CloudsChart {
   private textMeasure = new OffscreenCanvas(1, 1).getContext('2d')!;
   private frame = viewChild(MeteogramFrame);
 
-  protected forecasts = httpResource<PointForecast[]>(() => this.meteogram.cloudsRequest());
+  protected forecasts = this.meteogram.clouds;
 
   constructor() {
     this.textMeasure.font = "500 10px 'Source Sans 3', 'Heebo', sans-serif";
