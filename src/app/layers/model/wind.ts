@@ -1,11 +1,13 @@
 import { Colormap } from '../../engine/looks/colormap';
 import { Contours } from '../../engine/looks/contours';
+import { WindBarbs } from '../../engine/looks/wind-barbs';
 import { WindField, WindParticles } from '../../engine/looks/wind-particles';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, convert, format } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
+import { metDirection } from '../../utils/wind';
 import { ModelLayer } from './model-layer';
 
 export const WIND_SPEED_PALETTE: ColorStop[] = [
@@ -23,10 +25,6 @@ export const WIND_SPEED_PALETTE: ColorStop[] = [
   { value: 21, color: '#754a93' },
   { value: 24, color: '#6d61a3' },
 ];
-
-export function metDirection(u: number, v: number): number {
-  return 270 - (Math.atan2(v, u) * 180) / Math.PI;
-}
 
 export class Wind extends ModelLayer {
   readonly name = 'רוח';
@@ -55,6 +53,13 @@ export class Wind extends ModelLayer {
             convert(Math.hypot(u, v), Quantity.WindSpeed, Unit.MetersPerSecond),),),
         () => [10, 20, 30, 40, 50], String, '#a855f7',),
       name: 'קונטורים',
+      checked: false,
+    },
+    {
+      look: new WindBarbs(
+        new Provider((grids: Grid[]): WindField => ({ u: grids[0], v: grids[1] })),
+      ),
+      name: 'דגלונים',
       checked: false,
     },
   ];

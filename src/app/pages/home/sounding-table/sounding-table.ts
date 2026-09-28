@@ -19,7 +19,6 @@ import {
 import { matTerrainRound } from '@ng-icons/material-icons/round';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TEMPERATURE_PALETTE } from '../../../layers/model/temperature';
-import { metDirection } from '../../../layers/model/wind';
 import { Sounding } from '../../../objects/sounding';
 import { SoundingLevel, SoundingWrap } from '../../../types/sounding';
 import { colorScale } from '../../../utils/color-scale';
@@ -35,6 +34,7 @@ import {
   formatSignedNumber,
   unitLabel,
 } from '../../../utils/units';
+import { metDirection } from '../../../utils/wind';
 import { PointService, PointView } from '../point-menu/point-service';
 import { coordinateFormat } from '../settings-panel/settings-controls';
 import { SoundingTableService } from './sounding-table-service';

@@ -158,6 +158,7 @@ src/app/
                       #   interpolation.ts = fractionalIndex + bilinearAt over a flat Float32Array (Grid + MeteogramData share it)
                       #   contours.ts = the isoline tracer + levelsEvery level pickers; pointer.ts = pointerFraction(event)
                       #   thermodynamics.ts = standard atmosphere (feetAtPressure) + humidity formulas
+                      #   wind.ts = metDirection (u/v → met "from" degrees) + windBarbPath (the barb glyph)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
                       #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
@@ -596,6 +597,20 @@ dots/colors, crosshair cursor while coordinates active, "עכשיו" now-line la
 showing the resolved config value (needs a Control-vocabulary extension — the lead passed), zoom
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
+
+**Wind barbs look — דגלונים (2026-09-28):** a fourth wind look (off by default), `WindBarbs`
+(`engine/looks/wind-barbs.ts`, `LookKind.Icons`'s first use) over the particles' `WindField`.
+Lead's placement (flagged against the thin-to-screen convention, he chose it): **barbs sit on the
+data's own grid points — every 2nd cell — sized to that 2×2 block**, fitted to the SHORTER on-screen
+side (mercator-corrected cell height; sizing by width alone collided vertically on the fixture's
+wide-view grid), staff ≈85% of it, glyph centered on the point; size therefore scales with zoom on
+real fixed-resolution data (the fixture's 70-cells-per-view grid keeps them ~14 px at any zoom).
+Glyph = `windBarbPath` (moved from the parked `skew-t` branch into `utils/wind.ts` beside
+`metDirection`, which left `layers/model/wind.ts` because engine may not import layers), always
+knots by convention, calm (<5 kt) = a small dot (the double ring read "weird"), feathers flip side
+south of the equator; adaptive ink (white / `#212429` on bright basemaps); canvas sprite per 5-kt
+step cached until `release()`. Tuning literals inline: stride 2, size factor 1.1 — stride 3 is the
+lever for bigger barbs.
 
 **Sounding table v1 — סונדה בדקירה (2026-09-27, lead-named):** "as if someone released a real
 radiosonde at that point" — a second item in the point chooser opening a **side drawer on the

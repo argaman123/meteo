@@ -7,13 +7,14 @@ import {
   inject,
   viewChild,
 } from '@angular/core';
-import { WIND_SPEED_PALETTE, metDirection } from '../../../../layers/model/wind';
+import { WIND_SPEED_PALETTE } from '../../../../layers/model/wind';
 import { MeteogramData } from '../../../../objects/meteogram-data';
 import { Parameter } from '../../../../types/parameter';
 import { MeteogramWrap } from '../../../../types/wrap';
 import { colorScale } from '../../../../utils/color-scale';
 import { msToHours } from '../../../../utils/time';
 import { Quantity, Unit, convertBetween, format } from '../../../../utils/units';
+import { metDirection } from '../../../../utils/wind';
 import { MeteogramFrame } from '../meteogram-frame/meteogram-frame';
 import { MeteogramService } from '../meteogram-service';
 import { MeteogramColormap, MeteogramContours } from '../meteogram-colormap/meteogram-colormap';
