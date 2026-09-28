@@ -1,0 +1,190 @@
+@if (active()) {
+  <div
+    class="h-full w-md overflow-hidden"
+    animate.enter="animate-widen"
+    animate.leave="animate-narrow"
+  >
+    <div class="flex h-full w-md flex-col bg-card">
+      <div class="flex h-12 shrink-0 items-center gap-3.5 border-b px-3">
+        <div class="flex flex-col">
+          <span class="text-sm leading-[18px] font-bold">סונדה בדקירה</span>
+          <span class="flex items-center gap-1 text-[11px] leading-3.5 text-muted-foreground">
+            <ng-icon name="lucideMapPin" size="12" />
+            <span dir="ltr" class="tabular-nums">{{ coordinates() }}</span>
+            @if (time()) {
+              <span class="tabular-nums" [class.animate-pulse]="response.isLoading()">
+                · {{ time() }}
+              </span>
+            }
+          </span>
+        </div>
+        <button
+          hlmBtn
+          variant="ghost"
+          size="sm"
+          class="ms-auto size-8 px-0"
+          aria-label="סגירת סונדה בדקירה"
+          (click)="points.hideView()"
+        >
+          <ng-icon name="lucideX" />
+        </button>
+      </div>
+      <div
+        #scroller
+        class="relative min-h-0 flex-1 overflow-y-auto overscroll-contain [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-transparent [&::-webkit-scrollbar-track]:bg-transparent [&:hover::-webkit-scrollbar-thumb]:bg-secondary"
+      >
+        @if (rows().length) {
+          <table class="w-full text-xs tabular-nums">
+            <colgroup>
+              <col />
+              <col />
+              <col />
+              <col />
+              <col />
+              <col class="w-px" />
+              <col />
+            </colgroup>
+            <thead class="sticky top-0 z-10 bg-card text-[11px] text-muted-foreground">
+              <tr class="border-b">
+                <th class="px-0.5 py-0.5 text-start font-medium whitespace-nowrap">
+                  <button
+                    hlmBtn
+                    variant="ghost"
+                    size="sm"
+                    class="-ms-px h-7 gap-1 px-1.5 text-[11px] font-medium"
+                    [attr.aria-label]="highestFirst() ? 'גובה, מהגבוה לנמוך' : 'גובה, מהנמוך לגבוה'"
+                    (click)="toggleHeightOrder()"
+                  >
+                    גובה
+                    <ng-icon
+                      [name]="highestFirst() ? 'lucideArrowDown10' : 'lucideArrowDown01'"
+                      size="13"
+                    />
+                  </button>
+                </th>
+                <th class="bg-foreground/4 px-2 py-1.5 text-start font-medium">לחץ</th>
+                <th class="px-2 py-1.5 text-start font-medium">תיקון</th>
+                <th class="bg-foreground/4 px-2 py-1.5 text-start font-medium">טמפ׳</th>
+                <th class="px-2 py-1.5 text-start font-medium">טל</th>
+                <th class="bg-foreground/4 px-2 py-1.5 text-start font-medium">לחות</th>
+                <th class="px-2 py-1.5 text-start font-medium">רוח</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track $index) {
+                <tr class="border-b border-border/40 hover:bg-secondary/40">
+                  <td class="px-2 py-1 align-baseline">
+                    <span dir="ltr" class="whitespace-nowrap">
+                      @if (row.surface) {
+                        <ng-icon name="matTerrainRound" size="14" class="me-1 align-[-0.2em]!" />
+                      }
+                      <span class="inline-flex items-baseline gap-0.5">
+                        <span>{{ row.height }}</span>
+                        <span class="text-[10px] text-muted-foreground/70">{{
+                          units().height
+                        }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td
+                    class="bg-foreground/4 px-2 py-1 align-baseline text-[11px] text-muted-foreground"
+                  >
+                    <span dir="ltr" class="whitespace-nowrap">
+                      <span class="inline-flex items-baseline gap-0.5">
+                        <span>{{ row.pressure }}</span>
+                        <span class="text-[10px] text-muted-foreground/70">{{
+                          units().pressure
+                        }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td class="px-2 py-1 align-baseline text-[11px] text-muted-foreground">
+                    <span dir="ltr" class="whitespace-nowrap">
+                      <span class="inline-flex items-baseline gap-0.5">
+                        <span>{{ row.correction }}</span>
+                        <span class="text-[10px] text-muted-foreground/70">{{
+                          units().height
+                        }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td
+                    class="bg-foreground/4 px-2 py-1 align-baseline"
+                    [style.--temperature]="row.temperatureColor"
+                  >
+                    <span dir="ltr" class="whitespace-nowrap">
+                      <span class="inline-flex items-baseline gap-0.5">
+                        <span
+                          class="text-[color:color-mix(in_oklab,var(--temperature)_50%,var(--foreground))]"
+                          >{{ row.temperature }}</span
+                        >
+                        <span class="text-[10px] font-normal text-muted-foreground/70">{{
+                          units().temperature
+                        }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td class="px-2 py-1 align-baseline text-muted-foreground">
+                    <span dir="ltr" class="whitespace-nowrap">
+                      <span class="inline-flex items-baseline gap-0.5">
+                        <span>{{ row.dewpoint }}</span>
+                        <span class="text-[10px] font-normal text-muted-foreground/70">{{
+                          units().temperature
+                        }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td class="bg-foreground/4 px-2 py-1 align-baseline text-muted-foreground">
+                    <span dir="ltr" class="whitespace-nowrap">
+                      <span
+                        class="me-1.5 inline-block h-1.5 w-5 overflow-hidden rounded-full bg-secondary align-[0.1em]"
+                      >
+                        <span
+                          class="block h-full bg-sky-400/75"
+                          [style.width.%]="row.humidityFraction"
+                        ></span>
+                      </span>
+                      <span class="inline-flex w-8 items-baseline justify-end gap-0.5">
+                        <span>{{ row.humidity }}</span>
+                        <span class="text-[10px] font-normal text-muted-foreground/70">{{
+                          units().humidity
+                        }}</span>
+                      </span>
+                    </span>
+                  </td>
+                  <td class="px-2 py-1 align-baseline">
+                    <span dir="ltr" class="whitespace-nowrap">
+                      <span class="inline-flex items-baseline gap-0.5">
+                        <span>{{ row.windSpeed }}</span>
+                        <span class="text-[10px] font-normal text-muted-foreground/70">{{
+                          units().windSpeed
+                        }}</span>
+                      </span>
+                      <ng-icon
+                        name="lucideArrowUp"
+                        size="14"
+                        class="ms-1 align-[-0.2em]!"
+                        [style.rotate.deg]="row.downwindDegrees"
+                        [attr.aria-label]="row.windDirection"
+                      />
+                    </span>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else if (response.isLoading()) {
+          <div
+            class="absolute inset-0 grid animate-pulse place-items-center text-sm text-muted-foreground"
+          >
+            טוען…
+          </div>
+        } @else if (response.error()) {
+          <div class="absolute inset-0 grid place-items-center text-sm text-muted-foreground">
+            אין נתונים
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

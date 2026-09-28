@@ -1,9 +1,18 @@
+<div
+  #pin
+  class="size-4 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"
+  [class.hidden]="!points.point()"
+></div>
 <span class="hidden" [hlmContextMenuTrigger]="menu"></span>
 <ng-template #menu>
   <hlm-dropdown-menu class="w-40">
-    <button hlmDropdownMenuItem (triggered)="showMeteogram()">
+    <button hlmDropdownMenuItem (triggered)="showView(views.Meteogram)">
       <ng-icon name="lucideChartArea" />
       מטאוגרמה
+    </button>
+    <button hlmDropdownMenuItem (triggered)="showView(views.SoundingTable)">
+      <ng-icon name="lucideTable2" />
+      סונדה בדקירה
     </button>
   </hlm-dropdown-menu>
 </ng-template>

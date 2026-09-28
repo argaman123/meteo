@@ -1,11 +1,4 @@
-import {
-  Component,
-  ElementRef,
-  afterRenderEffect,
-  computed,
-  inject,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideCloud,
@@ -17,12 +10,12 @@ import {
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmTabs, HlmTabsList, HlmTabsTrigger } from '@spartan-ng/helm/tabs';
 import { GradientLegend, LegendType, gradientLegend } from '../../../engine/base/look';
-import { MapService } from '../../../engine/map-service';
 import { TEMPERATURE_PALETTE } from '../../../layers/model/temperature';
 import { WIND_SPEED_PALETTE } from '../../../layers/model/wind';
 import { POLYGONS_LEGEND } from '../../../layers/polygons/polygons-layer';
 import { formatCoordinates } from '../../../utils/geo';
 import { Quantity, Unit } from '../../../utils/units';
+import { PointService, PointView } from '../point-menu/point-service';
 import { coordinateFormat } from '../settings-panel/settings-controls';
 import { CloudsChart } from './clouds-chart/clouds-chart';
 import { MeteogramService, MeteogramTab } from './meteogram-service';
@@ -49,8 +42,7 @@ import { WindChart } from './wind-chart/wind-chart';
 })
 export class Meteogram {
   protected meteogram = inject(MeteogramService);
-  private map = inject(MapService);
-  private pin = viewChild.required<ElementRef<HTMLElement>>('pin');
+  protected points = inject(PointService);
   protected readonly tabs = MeteogramTab;
   protected readonly LegendType = LegendType;
   protected readonly tabNames = [
@@ -74,21 +66,14 @@ export class Meteogram {
     },
   ];
 
-  constructor() {
-    afterRenderEffect(() => {
-      const point = this.meteogram.point();
-      const pin = this.pin().nativeElement;
-      if (point) this.map.showMarker(pin, point);
-      else this.map.hideMarker(pin);
-    });
-  }
+  protected active = computed(() => this.points.view() === PointView.Meteogram);
 
   protected legend = computed(() =>
     this.tabNames.find((entry) => entry.tab === this.meteogram.tab())!.legend(),
   );
 
   protected coordinates = computed(() => {
-    const point = this.meteogram.point();
+    const point = this.points.point();
     return point ? formatCoordinates(point[0], point[1], coordinateFormat()) : '';
   });
 

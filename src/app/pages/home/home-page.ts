@@ -19,6 +19,7 @@ import { LevelBar } from './level-bar/level-bar';
 import { Meteogram } from './meteogram/meteogram';
 import { PointMenu } from './point-menu/point-menu';
 import { SettingsPanel } from './settings-panel/settings-panel';
+import { SoundingTable } from './sounding-table/sounding-table';
 import { TimeBar } from './time-bar/time-bar';
 import { layers } from '../../layers/registry';
 
@@ -40,6 +41,7 @@ import { layers } from '../../layers/registry';
     Meteogram,
     PointMenu,
     SettingsPanel,
+    SoundingTable,
     TimeBar,
   ],
   viewProviders: [provideIcons({ lucideActivity, lucidePalette })],
@@ -56,14 +58,21 @@ export class HomePage implements AfterViewInit, OnDestroy {
   private timeBarObserver = new ResizeObserver(([entry]) =>
     this.timeBarHeight.set(`${entry.borderBoxSize[0].blockSize}px`),
   );
+  private soundingTable = viewChild.required(SoundingTable, { read: ElementRef });
+  protected soundingTableWidth = signal('0px');
+  private soundingTableObserver = new ResizeObserver(([entry]) =>
+    this.soundingTableWidth.set(`${entry.borderBoxSize[0].inlineSize}px`),
+  );
 
   ngAfterViewInit(): void {
     this.timeBarObserver.observe(this.timeBar().nativeElement);
+    this.soundingTableObserver.observe(this.soundingTable().nativeElement);
     void this.start();
   }
 
   ngOnDestroy(): void {
     this.timeBarObserver.disconnect();
+    this.soundingTableObserver.disconnect();
     this.map.destroy();
   }
 

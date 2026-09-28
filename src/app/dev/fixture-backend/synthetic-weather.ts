@@ -1,4 +1,6 @@
+import { SoundingLevel } from '../../types/sounding';
 import { Bounds, Wrap } from '../../types/wrap';
+import { feetAtPressure } from '../../utils/thermodynamics';
 import { hoursToMs } from '../../utils/time';
 
 interface Model {
@@ -70,8 +72,7 @@ export class SyntheticWeather {
     const north = Math.min(bounds[3], model.north);
     if (west >= east || south >= north) return null;
     const maskWaves = isWave(parameter);
-    const effectiveFeet =
-      pressureMb === null ? (heightFeet ?? 0) : 145366 * (1 - Math.pow(pressureMb / 1013.25, 0.1903));
+    const effectiveFeet = pressureMb === null ? (heightFeet ?? 0) : feetAtPressure(pressureMb);
     const values: (number | null)[][] = [];
     for (let r = 0; r < RESPONSE_SIZE; r++) {
       const lat = north + ((south - north) * r) / (RESPONSE_SIZE - 1);
@@ -115,6 +116,23 @@ export class SyntheticWeather {
     );
   }
 
+  sounding(lat: number, lon: number, hours: number, pressures: number[]): SoundingLevel[] {
+    const surfacePressure = round1(pressureAt(lat, lon, hours));
+    const below = pressures.filter((pressure) => pressure < surfacePressure);
+    return [surfacePressure, ...below].map((pressure) => {
+      const feet = feetAtPressure(pressure);
+      const value = (parameter: string) => this.field(lat, lon, hours, parameter, feet, pressure);
+      return {
+        pressure,
+        height: pressure === surfacePressure ? 0 : value('hgt'),
+        temperature: value('temperature'),
+        dewpoint: value('dewpoint'),
+        u: value('u'),
+        v: value('v'),
+      };
+    });
+  }
+
   private field(
     lat: number,
     lon: number,
@@ -127,9 +145,17 @@ export class SyntheticWeather {
     if (parameter === 'temperature') {
       return round1(temperatureAt(lat, lon, hours) - heightFeet * 0.002);
     }
+    if (parameter === 'dewpoint') {
+      return round1(
+        temperatureAt(lat, lon, hours) -
+          heightFeet * 0.002 -
+          dewpointDepressionAt(lat, lon, hours, heightFeet),
+      );
+    }
     if (parameter === 'hgt') {
       if (pressureMb === null) return round1(8 * (pressureAt(lat, lon, hours) - 1000));
-      return round1(heightFeet * 0.3048 + 8 * (pressureAt(lat, lon, hours) - 1013));
+      const thickness = 1 + (temperatureAt(lat, lon, hours) - 15) / 288;
+      return round1(heightFeet * 0.3048 * thickness + 8 * (pressureAt(lat, lon, hours) - 1013));
     }
     const wind = this.windAt(lat, lon, hours);
     const speedKnots = wind.speedKnots * (1 + (heightFeet / 10000) * 0.6);
@@ -202,6 +228,15 @@ function temperatureAt(lat: number, lon: number, hours: number): number {
   const regionalTexture = 1.5 * Math.sin(lon / 6 + 1) * Math.cos(lat / 4.5);
   const diurnal = 2 * Math.sin(((hours - 3) / 24) * 2 * Math.PI);
   return latitudinal + baroclinic + regionalTexture + diurnal;
+}
+
+function dewpointDepressionAt(lat: number, lon: number, hours: number, heightFeet: number): number {
+  const surface = 6 + 5 * Math.sin(lon / 5 + hours / 10) * Math.cos(lat / 4);
+  const moistLayer =
+    8 *
+    Math.exp(-(((heightFeet - 14000) / 5000) ** 2)) *
+    (0.5 + 0.5 * Math.sin(lat / 3 - hours / 8));
+  return Math.max(0.5, surface + heightFeet * 0.0004 - moistLayer);
 }
 
 function waveHeightAt(lat: number, lon: number, hours: number): number {

@@ -132,7 +132,9 @@ src/app/
   pages/              # one subfolder per page of the site
     home/             # the front page: top bar + map view (layer-bar, time-bar, legend-bar, hover-readout)
       meteogram/      #   MeteogramService + the sheet + one folder per chart (meteogram-frame, meteogram-colormap, tabs)
-      point-menu/     #   the map-click chooser (מטאוגרם; later raw values / Skew-T)
+      point-menu/     #   the map-click chooser (מטאוגרמה / סונדה בדקירה; later raw values) + the pin +
+                      #     PointService (THE clicked point + which PointView is open)
+      sounding-table/ #   SoundingTableService + the end-edge drawer with the radiosonde-style table
   services/           # domain services with no natural feature folder (TimeService)
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
@@ -155,6 +157,7 @@ src/app/
                       #   controls.ts = the Control vocabulary (options/percent/color) — setting-signals with UI metadata attached
                       #   interpolation.ts = fractionalIndex + bilinearAt over a flat Float32Array (Grid + MeteogramData share it)
                       #   contours.ts = the isoline tracer + levelsEvery level pickers; pointer.ts = pointerFraction(event)
+                      #   thermodynamics.ts = standard atmosphere (feetAtPressure) + humidity formulas
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
                       #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
@@ -593,6 +596,83 @@ dots/colors, crosshair cursor while coordinates active, "עכשיו" now-line la
 showing the resolved config value (needs a Control-vocabulary extension — the lead passed), zoom
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
+
+**Sounding table v1 — סונדה בדקירה (2026-09-27, lead-named):** "as if someone released a real
+radiosonde at that point" — a second item in the point chooser opening a **side drawer on the
+map's END edge** (lead loved the slide-in; built first for a Skew-T, which is **parked on branch
+`skew-t`** until a professional reviews it — see plan.md). **One shared point for every point
+view** (lead picked it over a per-view pin component and a views list, after calling the menu's
+`meteogram.point() ?? soundingTable.point()` pin line "too specific"): `PointService`
+(`point-menu/point-service.ts`) holds the clicked `point` and the open `view` (`PointView` enum)
+— `showView(view, point)` / `movePoint(point)` / `hideView()`. The chooser opens only while no
+view is open, a click while one is open moves the point, the pin (in `point-menu/`) shows at
+`point()`, and each drawer renders on its own `active = view() === PointView.X`. The views'
+services keep no point of their own: the meteogram's requests read the shared point (its charts
+only exist while it's active), and the always-mounted sounding table's `request()` returns
+undefined unless its view is open. Views are therefore exclusive by the state's shape. Drawer: `<app-sounding-table>` sits `end-0` between top bar and time bar, `w-md`,
+solid `bg-card`; its measured width drives `--sounding-table-width` (the `--time-bar-height`
+idiom, a HomePage ResizeObserver), which insets the map well, the legend and the perf HUD; opening
+animates width (`animate-widen` / `animate-narrow` tokens) around a fixed-width inner so content
+never reflows. **Time = the map's `displayTime`**; the drawer keeps the last sounding while the
+next loads (`linkedSignal` over `hasValue()`/`isLoading()` — `resource.value()` otherwise resets
+to undefined on every request change, the map's keep-the-last-frame rule). **Rows (lead delegated
+"emulate a radiosonde every 1k ft"): TRUE geopotential heights every 1,000 ft, as high as the data
+goes, above a surface row (terrain icon) — highest on top by default** (lead 2026-09-27, after a
+surface-first cut), each interpolated from the wire's pressure
+levels by height (`Sounding.levelAtHeight` — linear in height, log-linear in pressure). Columns:
+גובה (the m/ft setting — lead: "follow the m ft but show every 1k ft", so rows read 305 m, 610 m…
+under meters), לחץ (mb), **תיקון = true height − what a 1013-set altimeter reads there**
+(`feetAtPressure(p)`, the D-value: positive means you are higher than indicated), טמפ׳, טל, לחות
+(RH from T/Td, `relativeHumidity`), רוח (**an arrow pointing downwind** — lucide arrow rotated by
+direction + 180, the meteogram's arrow convention; the degrees ride on its `aria-label` — plus the
+speed in the settings unit). An ISA-deviation column was built and removed the same day (lead: "no
+need for ISA"; the numeric wind direction also gave way to the arrow at his ask). **Sorting**: the גובה header is a
+ghost `hlmBtn` (the shadcn data-table sort idiom) toggling `highestFirst` (session-only, default
+highest on top); the table **always starts from the top** (lead: opens at the top row in either order,
+and a sort flip scrolls back to the top; time steps keep the reader's scroll position) — a
+`flex-col-reverse` open-at-the-surface trick was built first and dropped. **Look (lead-picked over three live-mockup rounds — "a mix of
+6 and 8", then option 4 of a column-separation round because "its hard to see the differences
+between the columns")**: **every value carries its unit inside the cell** (a small dimmed 10px
+suffix; each value is an `inline-flex items-baseline gap-0.5` number/unit pair, so source
+whitespace never changes the gap) and **every other column is banded** (`bg-foreground/4` on
+לחץ/טמפ׳/לחות, header included); headers are plain names. **לחץ and תיקון are their own
+columns** (small muted 11px) — they were folded into the height column as a tiny pressure-over-
+correction stack under a `colspan` header for one round (lead picked it from three merge
+mockups), then the lead went back to separate columns: "i prefer the older way". Every cell is
+`align-baseline`; a `<colgroup>` shrinks the humidity column to fit (`w-px`). **One font weight for
+every value** (lead: mixed bold "too much") — hierarchy comes from size/mutedness and the
+temperature tint only. Humidity bar is short (`w-5`) (lead: the bar was "too spacious for
+what it is"). Temperature carries a SOFT tint
+(`color-mix(in oklab, <TEMPERATURE_PALETTE color> 50%, var(--foreground))` via a `--temperature`
+CSS var — the map's palette, lightened), dewpoint muted, humidity = a thin sky bar + number, wind =
+speed + downwind arrow; faint row lines only (a stronger line every 5,000 ft was built and
+removed — lead: "no need for that line"). Rejected in the rounds: saturated
+colored text everywhere ("a bit too much"), tinted-cell heatmap, two-line grouped cells (beautiful
+but ragged; its hierarchy survived as columns), units only in headers (columns blurred together),
+hairline column dividers, and every way of merging לחץ/תיקון into the height column (two-line
+cells, one-line slots, the mini stack — the stack shipped briefly, then reverted). **Alignment is measured, not eyeballed** (lead:
+"make sure everything is aligned properly before showing it"): every column's content edge equals
+its header label's edge (0 px), one baseline per row, bars/arrows in fixed-width slots, icon and bar
+centers within 0.5 px of the digits. Landmine: ng-icon's own component CSS sets
+`vertical-align: initial` and unlayered component CSS beats Tailwind's layered utilities (the
+maplibre-container lesson again) — **aligning an ng-icon needs the important modifier**
+(`align-[-0.2em]!`); margins are unaffected. **Units module grew a number/label split** so a table
+can style the unit apart from the number: `formatNumber(value, Quantity, from)` (display-unit number, the same
+rounding rules), `unitLabel(Quantity)` (the display unit's suffix, reactive to settings),
+`formatSignedNumber` (+ for positive deltas); `format` is now `formatNumber` + `unitLabel` joined
+tight or spaced per unit (`unitsWrittenTight`) — output byte-identical to before, verified over 120
+cases by a temporary check, then deleted. New Units pieces: `Quantity.Pressure`/
+`Unit.Millibars` and `Quantity.RelativeHumidity`/`Unit.Percent`. `modelAtPoint(lon, lat)` joined
+model-layer (the meteogram's inline copy uses it); `feetAtPressure` is now shared by LevelService
+and the fixture. **Wire (ASSUMED — confirm with the backend lead):** `/api/sounding?lat&lon&model&time`
+→ `SoundingWrap { time, levels: { pressure, height (geopotential m), temperature, dewpoint, u, v }[] }`
+(`types/sounding.ts`)
+(surface level first; RH is computed, not sent). Fixture: `SyntheticWeather.sounding()` = a surface
+level at the sea-level pressure (height 0 — no terrain) + the standard levels above it up to 100 mb,
+sampled from the same fields as the map/meteogram plus a new synthetic `dewpoint` field; the
+pressure-level `hgt` formula gained a warm-air thickness factor `1 + (T_sfc − 15)/288` so D-values
+grow with height (this also gives the map's pressure-level geopotential a realistic north–south
+gradient). No tropopause in the fixture's temperature field, so the top rows run very cold.
 
 **Meteogram v1 — מטאוגרמה (2026-09-23, lead-specced in one session; Hebrew name lead-corrected):** not a classic line meteogram — a
 **time-height section** per tab: x = time, y = **0–45 kft** (`MeteogramService.topFt`), clicked

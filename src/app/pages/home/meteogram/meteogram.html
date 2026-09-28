@@ -1,9 +1,4 @@
-<div
-  #pin
-  class="size-4 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"
-  [class.hidden]="!meteogram.point()"
-></div>
-@if (meteogram.point()) {
+@if (active()) {
   <div
     class="flex h-96 flex-col overflow-hidden bg-card"
     animate.enter="animate-rise"
@@ -61,7 +56,7 @@
           size="sm"
           class="size-8 px-0"
           aria-label="סגירת מטאוגרמה"
-          (click)="meteogram.hideMeteogram()"
+          (click)="points.hideView()"
         >
           <ng-icon name="lucideX" />
         </button>

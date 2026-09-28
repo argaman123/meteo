@@ -51,6 +51,8 @@
   --animate-pop-out: pop-out 0.12s ease-in both;
   --animate-rise: rise 0.22s ease-out;
   --animate-sink: sink 0.18s ease-in both;
+  --animate-widen: widen 0.22s ease-out;
+  --animate-narrow: narrow 0.18s ease-in both;
 
   @keyframes unfold {
     from {
@@ -108,6 +110,16 @@
   @keyframes sink {
     to {
       height: 0;
+    }
+  }
+  @keyframes widen {
+    from {
+      width: 0;
+    }
+  }
+  @keyframes narrow {
+    to {
+      width: 0;
     }
   }
 }

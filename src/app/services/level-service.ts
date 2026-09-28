@@ -1,4 +1,5 @@
 import { Service, computed, signal } from '@angular/core';
+import { feetAtPressure } from '../utils/thermodynamics';
 
 export type Level = number | string;
 export type LevelKind = 'heights' | 'pressures';
@@ -52,6 +53,6 @@ export class LevelService {
   feetOf(level: Level | null): number {
     if (level === null) return 0;
     if (typeof level === 'number') return level;
-    return 145366 * (1 - Math.pow(Number(level) / 1013.25, 0.1903));
+    return feetAtPressure(Number(level));
   }
 }

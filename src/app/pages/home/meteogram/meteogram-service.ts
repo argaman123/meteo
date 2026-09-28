@@ -1,11 +1,11 @@
 import { HttpResourceRequest } from '@angular/common/http';
 import { Service, computed, inject, signal } from '@angular/core';
-import { LOCAL_COVERAGE } from '../../../layers/model/model-layer';
+import { modelAtPoint } from '../../../layers/model/model-layer';
 import { layers } from '../../../layers/registry';
 import { TimeRange, TimeService } from '../../../services/time-service';
 import { Parameter } from '../../../types/parameter';
-import { contains } from '../../../utils/geo';
 import { hoursToMs } from '../../../utils/time';
+import { PointService } from '../point-menu/point-service';
 
 export enum MeteogramTab {
   Temperature = 'temperature',
@@ -16,9 +16,9 @@ export enum MeteogramTab {
 @Service()
 export class MeteogramService {
   private time = inject(TimeService);
+  private points = inject(PointService);
 
   readonly topFt = 45_000;
-  readonly point = signal<[number, number] | null>(null);
   readonly tab = signal(MeteogramTab.Temperature);
 
   readonly range = computed<TimeRange>(
@@ -30,16 +30,8 @@ export class MeteogramService {
     { equal: (a, b) => a.start === b.start && a.end === b.end },
   );
 
-  showMeteogram(point: [number, number]): void {
-    this.point.set(point);
-  }
-
-  hideMeteogram(): void {
-    this.point.set(null);
-  }
-
   modelRequest(parameter: Parameter): HttpResourceRequest | undefined {
-    const point = this.point();
+    const point = this.points.point();
     if (!point) return undefined;
     const [lon, lat] = point;
     const { start, end } = this.range();
@@ -49,7 +41,7 @@ export class MeteogramService {
         parameter,
         lat,
         lon,
-        model: contains(LOCAL_COVERAGE, lon, lat) ? 'local' : 'wide',
+        model: modelAtPoint(lon, lat),
         start,
         end,
       },
@@ -57,7 +49,7 @@ export class MeteogramService {
   }
 
   cloudsRequest(): HttpResourceRequest | undefined {
-    const point = this.point();
+    const point = this.points.point();
     if (!point) return undefined;
     const [lon, lat] = point;
     const { start, end } = this.range();

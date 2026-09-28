@@ -4,11 +4,15 @@ import { Grid } from '../../objects/grid';
 import { TimeRange } from '../../services/time-service';
 import { Parameter } from '../../types/parameter';
 import { Bounds, Wrap } from '../../types/wrap';
-import { containsBounds } from '../../utils/geo';
+import { contains, containsBounds } from '../../utils/geo';
 import { hoursToMs } from '../../utils/time';
 import { Inputs, Layer } from '../base/layer';
 
 export const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
+
+export function modelAtPoint(lon: number, lat: number): string {
+  return contains(LOCAL_COVERAGE, lon, lat) ? 'local' : 'wide';
+}
 
 export abstract class ModelLayer extends Layer<Grid[]> {
   abstract readonly parameters: Parameter[];

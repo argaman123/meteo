@@ -11,6 +11,8 @@ export enum Unit {
   Eighths = 'eighths',
   Feet = 'feet',
   Kilofeet = 'kilofeet',
+  Millibars = 'millibars',
+  Percent = 'percent',
 }
 
 export enum Quantity {
@@ -24,6 +26,8 @@ export enum Quantity {
   CloudBase = 'cloud-base',
   Altitude = 'altitude',
   Height = 'height',
+  Pressure = 'pressure',
+  RelativeHumidity = 'relative-humidity',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -37,6 +41,8 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.CloudBase]: Unit.Kilofeet,
   [Quantity.Altitude]: Unit.Feet,
   [Quantity.Height]: Unit.Kilofeet,
+  [Quantity.Pressure]: Unit.Millibars,
+  [Quantity.RelativeHumidity]: Unit.Percent,
 };
 
 function displayUnitOf(quantity: Quantity): Unit {
@@ -61,30 +67,68 @@ export function convertBetween(value: number, from: Unit, to: Unit): number {
   throw new Error(`no conversion from ${from} to ${to}`);
 }
 
+const unitsWrittenTight = new Set([
+  Unit.Celsius,
+  Unit.MetDegrees,
+  Unit.Kilometers,
+  Unit.Eighths,
+  Unit.Kilofeet,
+  Unit.Millibars,
+  Unit.Percent,
+]);
+
 export function format(value: number, quantity: Quantity, from: Unit): string {
+  const number = formatNumber(value, quantity, from);
+  if (Number.isNaN(value)) return number;
+  const separator = unitsWrittenTight.has(displayUnitOf(quantity)) ? '' : ' ';
+  return `${number}${separator}${unitLabel(quantity)}`;
+}
+
+export function formatNumber(value: number, quantity: Quantity, from: Unit): string {
   if (Number.isNaN(value)) return '—';
   const converted = convert(value, quantity, from);
-  const rounded = Math.round(converted);
+  switch (displayUnitOf(quantity)) {
+    case Unit.Kilometers:
+    case Unit.MillimetersPerHour:
+    case Unit.Kilofeet:
+      return `${Number(converted.toFixed(1))}`;
+    case Unit.MetDegrees:
+      return `${(Math.round(converted) + 360) % 360}`;
+    default:
+      return `${Math.round(converted)}`;
+  }
+}
+
+export function formatSignedNumber(value: number, quantity: Quantity, from: Unit): string {
+  const number = formatNumber(value, quantity, from);
+  return convert(value, quantity, from) >= 0.5 ? `+${number}` : number;
+}
+
+export function unitLabel(quantity: Quantity): string {
   switch (displayUnitOf(quantity)) {
     case Unit.Celsius:
-      return `${rounded}°C`;
+      return '°C';
     case Unit.Knots:
-      return `${rounded} kt`;
+      return 'kt';
     case Unit.MetersPerSecond:
-      return `${rounded} m/s`;
+      return 'm/s';
     case Unit.MetDegrees:
-      return `${(rounded + 360) % 360}°`;
+      return '°';
     case Unit.Meters:
-      return `${rounded} m`;
+      return 'm';
     case Unit.Kilometers:
-      return `${Number(converted.toFixed(1))}km`;
+      return 'km';
     case Unit.MillimetersPerHour:
-      return `${Number(converted.toFixed(1))} mm/h`;
+      return 'mm/h';
     case Unit.Eighths:
-      return `${rounded}/8`;
+      return '/8';
     case Unit.Feet:
-      return quantity === Quantity.Altitude ? `${rounded} רגל מעפ״י` : `${rounded} ft`;
+      return quantity === Quantity.Altitude ? 'רגל מעפ״י' : 'ft';
     case Unit.Kilofeet:
-      return `${Number(converted.toFixed(1))}'`;
+      return "'";
+    case Unit.Millibars:
+      return 'mb';
+    case Unit.Percent:
+      return '%';
   }
 }

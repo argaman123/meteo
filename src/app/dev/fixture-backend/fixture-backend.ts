@@ -136,6 +136,20 @@ async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEv
     );
     return new HttpResponse({ status: 200, body: { times, heights, values } });
   }
+  if (request.url === '/api/sounding') {
+    const time = Number(request.params.get('time'));
+    const weather = await loadWeather();
+    const levels = weather.sounding(
+      Number(request.params.get('lat')),
+      Number(request.params.get('lon')),
+      frameHours(time),
+      [
+        1000, 975, 950, 925, 900, 875, 850, 800, 750, 700, 650, 600, 550, 500, 450, 400, 350, 300,
+        250, 200, 150, 125, 100,
+      ],
+    );
+    return new HttpResponse({ status: 200, body: { time, levels } });
+  }
   if (request.url === '/api/polygons') {
     const sector = (request.params.get('sector') ?? '') as Sector;
     const time = Number(request.params.get('time'));

@@ -1,5 +1,11 @@
-<div class="relative h-full bg-card" [style.--time-bar-height]="timeBarHeight()">
-  <div class="absolute top-12 bottom-(--time-bar-height) start-48 end-0 overflow-hidden rounded-xl">
+<div
+  class="relative h-full bg-card"
+  [style.--time-bar-height]="timeBarHeight()"
+  [style.--sounding-table-width]="soundingTableWidth()"
+>
+  <div
+    class="absolute top-12 bottom-(--time-bar-height) start-48 end-(--sounding-table-width) overflow-hidden rounded-xl"
+  >
     <div #mapContainer class="h-full w-full"></div>
     <div
       class="pointer-events-none absolute inset-0 rounded-xl border border-white/10 shadow-[inset_0_0_12px_rgb(0_0_0/0.35)]"
@@ -59,12 +65,15 @@
       <ng-icon name="lucideActivity" />
     </button>
   </header>
-  <app-legend-bar class="absolute bottom-[calc(var(--time-bar-height)+0.875rem)] end-3" />
+  <app-legend-bar
+    class="absolute end-[calc(var(--sounding-table-width)+0.75rem)] bottom-[calc(var(--time-bar-height)+0.875rem)]"
+  />
   <app-level-bar class="absolute start-51 top-15" />
   <app-time-bar #timeBar class="absolute inset-x-0 bottom-0">
     <app-meteogram />
   </app-time-bar>
   <app-layer-bar class="absolute start-0 top-12 bottom-14.5" />
+  <app-sounding-table class="absolute end-0 top-12 bottom-(--time-bar-height)" />
   <app-point-menu />
   <app-hover-readout />
   <app-perf-hud />
