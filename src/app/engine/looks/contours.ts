@@ -1,6 +1,7 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { IconLayer, PathLayer } from '@deck.gl/layers';
 import { rgb } from 'd3-color';
+import { interpolateRgb } from 'd3-interpolate';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { rgba } from '../../utils/color-scale';
@@ -37,32 +38,22 @@ export class Contours extends Look<Grid> {
   deckLayer(id: string, grid: Grid): DeckLayer[] {
     const line = rgb(this.color);
     const lines = contourLines(grid.data, grid.width, grid.height, grid.bounds, this.levels(grid));
-    const labels: ContourLabel[] = [];
-    for (const { level, path } of lines) {
-      const text = this.label(level);
-      for (const anchor of this.anchors(path)) {
-        labels.push({
-          position: path[anchor],
-          text,
-          angle: directionAt(path, anchor),
-        });
-      }
-    }
+    const labels = this.placeLabels(lines, grid.bounds[2] - grid.bounds[0]);
     return [
       new PathLayer<ContourLine>({
         id: `${id}-casing`,
         data: lines,
         getPath: (line) => line.path,
-        getColor: rgba('#0f172a', 140),
-        getWidth: 4,
+        getColor: rgba('#0f172a', 200),
+        getWidth: 3.5,
         widthUnits: 'pixels',
       }),
       new PathLayer<ContourLine>({
         id: `${id}-lines`,
         data: lines,
         getPath: (line) => line.path,
-        getColor: [line.r, line.g, line.b, 230],
-        getWidth: 2,
+        getColor: [line.r, line.g, line.b, 255],
+        getWidth: 1.5,
         widthUnits: 'pixels',
       }),
       new IconLayer<ContourLabel>({
@@ -71,7 +62,7 @@ export class Contours extends Look<Grid> {
         getPosition: (label) => label.position,
         getIcon: (label) => this.icon(label.text),
         getAngle: (label) => label.angle,
-        getSize: 16,
+        getSize: 18,
       }),
     ];
   }
@@ -80,27 +71,22 @@ export class Contours extends Look<Grid> {
     const cached = this.labelIcons.get(text);
     if (cached) return cached;
     const scale = 2;
-    const height = 16 * scale;
+    const height = 18 * scale;
     const canvas = document.createElement('canvas');
     canvas.height = height;
     const context = canvas.getContext('2d')!;
-    const font = `400 ${11 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
+    const font = `700 ${12 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
     context.font = font;
-    const width = Math.ceil(context.measureText(text).width + 12 * scale);
+    const width = Math.ceil(context.measureText(text).width + 8 * scale);
     canvas.width = width;
     context.font = font;
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    const pill = rgb(this.color);
-    context.fillStyle = `rgb(${pill.r} ${pill.g} ${pill.b} / 92%)`;
-    context.beginPath();
-    context.roundRect(scale / 2, scale / 2, width - scale, height - scale, (height - scale) / 2);
-    context.fill();
-    context.strokeStyle = 'rgb(15 23 42 / 55%)';
-    context.lineWidth = scale;
-    context.stroke();
-    const luminance = 0.299 * pill.r + 0.587 * pill.g + 0.114 * pill.b;
-    context.fillStyle = luminance > 150 ? '#0f172a' : '#ffffff';
+    context.lineJoin = 'round';
+    context.strokeStyle = '#0f172a';
+    context.lineWidth = 4 * scale;
+    context.strokeText(text, width / 2, height / 2 + scale * 0.5);
+    context.fillStyle = interpolateRgb(this.color, '#ffffff')(0.5);
     context.fillText(text, width / 2, height / 2 + scale * 0.5);
     const icon = {
       url: canvas.toDataURL(),
@@ -126,48 +112,35 @@ export class Contours extends Look<Grid> {
 
   // TODO: UNVERIFIED CODE BELOW
 
-  private anchors(path: [number, number][]): number[] {
-    if (path.length < 64) return [];
-    const count = Math.max(1, Math.round(path.length / 1000));
-    const anchors: number[] = [];
-    for (let slot = 0; slot < count; slot++) {
-      const start = Math.floor((slot * path.length) / count);
-      const end = Math.floor(((slot + 1) * path.length) / count);
-      anchors.push(bestAnchorIn(path, start, end));
+  private placeLabels(lines: ContourLine[], viewWidth: number): ContourLabel[] {
+    const labels: ContourLabel[] = [];
+    for (const { level, path } of lines) {
+      let sinceLabel = Infinity;
+      let sinceCandidate = 0;
+      for (let index = 1; index < path.length; index++) {
+        const step = screenDistance(path[index - 1], path[index]);
+        sinceLabel += step;
+        sinceCandidate += step;
+        if (sinceCandidate < 0.05 * viewWidth) continue;
+        sinceCandidate = 0;
+        const position = path[index];
+        const crowded = labels.some(
+          (label) => screenDistance(label.position, position) < 0.05 * viewWidth,
+        );
+        if (sinceLabel < 0.5 * viewWidth || crowded) continue;
+        labels.push({ position, text: this.label(level), angle: directionAt(path, index) });
+        sinceLabel = 0;
+      }
     }
-    return anchors;
+    return labels;
   }
 }
 
 const REACH = 14;
 
-function bestAnchorIn(path: [number, number][], start: number, end: number): number {
-  const lo = Math.max(REACH, start);
-  const hi = Math.min(path.length - 1 - REACH, end);
-  const middle = Math.floor((start + end) / 2);
-  let best = Math.min(Math.max(middle, REACH), path.length - 1 - REACH);
-  let bestScore = Infinity;
-  for (let index = lo; index <= hi; index += 4) {
-    const tilt = Math.abs(directionAt(path, index));
-    const bend = (bendAt(path, index) * 180) / Math.PI;
-    const score = 1.5 * tilt + bend;
-    if (score < bestScore) {
-      bestScore = score;
-      best = index;
-    }
-  }
-  return best;
-}
-
-function bendAt(path: [number, number][], index: number): number {
-  const before = path[index - REACH];
-  const at = path[index];
-  const after = path[index + REACH];
-  const inbound = Math.atan2(at[1] - before[1], at[0] - before[0]);
-  const outbound = Math.atan2(after[1] - at[1], after[0] - at[0]);
-  let difference = Math.abs(outbound - inbound);
-  if (difference > Math.PI) difference = 2 * Math.PI - difference;
-  return difference;
+function screenDistance(from: [number, number], to: [number, number]): number {
+  const stretch = Math.cos((from[1] * Math.PI) / 180);
+  return Math.hypot(to[0] - from[0], (to[1] - from[1]) / stretch);
 }
 
 function directionAt(path: [number, number][], index: number): number {

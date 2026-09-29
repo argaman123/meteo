@@ -307,7 +307,7 @@ MagenS Java only for what Python lacks) — the invented `/api/*` contract is go
 fixture answers the real paths (`BACKEND_PATHS` + a `ROUTES` regex table in
 `dev/fixture-backend/fixture-backend.ts`), so cutover = delete the interceptor + proxy the paths.
 **Full route/shape map: [`docs/backend.md`](docs/backend.md); what we asked the backend team for:
-[`docs/backend-asks.md`](docs/backend-asks.md)** (3 asks — U/V wind, point events, nearest air column; one-liners,
+[`docs/backend-asks.md`](docs/backend-asks.md)** (4 asks — U/V wind, point events, nearest air column, full-resolution map grids; one-liners,
 lead: "its humans"; the fixture serves each asked shape). **`/api` is never the right request**
 (lead). Rules (lead): each backend-vs-us
 difference is decided case by case; asks are written in the backend's own idiom. **Wire types
@@ -643,6 +643,32 @@ showing the resolved config value (needs a Control-vocabulary extension — the 
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
 
+**Sea-level pressure — לחץ מפלס ים (2026-09-29):** `SeaLevelPressure` (`layers/model/`), wire
+`SLP` on the ordinary surface request (height 0 → the backend's script pins MSL, hPa) — overrides
+`staticLevel = true`, so the level bar hides for it. Two looks: isobars every 2 mb (`Contours`,
+stand-in `#e5e7eb`) and **מרכזים** — H/L center chips on the generic `Labels` look (the old tool's colors, lead
+2026-09-29 from photos: L blue / H red; value = the RAW grid at the center through Units). Layer control **פירוט מפורט/כללי** (Table, lead:
+full detail by default — 4 mb was tried and read "too low res" — but "less sensitive to small
+changes" must be one click away): כללי feeds both looks
+`grid.smoothed(16)` (the contour tracer's own `blurred`, now exported); hover always reads raw.
+**Centers are always found on the smoothed field**, in both modes (the old tool's photos: the same
+two L's in raw and smooth views, none on the terrain rings). **Full resolution** (lead, from photos
+of the old tool's raw/smooth ECMWF maps — "way more detailed" than our 70×70): SLP overrides
+`ModelLayer.reduction = 1` (sent as `reduction` — backend ask 4, assumed to exist for this map;
+null on every other model layer), so מפורט draws the native grid; כללי and the centers work on
+`grid.resampled(70, 70).smoothed(16)` — the old 70×70 look, independent of native size. Fixture:
+each model carries a stand-in `resolutionDeg` (ECMWF 0.1°, BIG_ECMWF 0.25°) served when `reduction`
+is asked, and SLP gained **terrain noise only over mountains** (a hand-authored `MOUNTAIN_RANGES`
+list of rotated Gaussian ellipses — Zagros, Alborz, Taurus, E-Anatolia, Caucasus, Alps, Atlas,
+Hejaz, Dinarides, Lebanon — times two quintic value-noise octaves, 0.9° ×3 + 0.45° ×1.5 hPa), so
+מפורט = the smooth map plus closed rings over terrain, like the photos. Noise over all land was
+tried first and rejected (lead: "wiggly lines... looks bad" — flat deserts never wiggle). Measured: ~30 ms redraw, ~75 ms per time
+step incl. synthesis. Centers = `Grid.extrema(6)` over the pure `localExtrema` (`utils/contours.ts`): strict window
+max/min with a scan-order tie-break (the fixture's 0.1 rounding made plateau peaks tie — no
+labels until then), 2-cell edge margin. Catalog-only: SLP never replaces hgt in מזג אוויר (lead);
+RH will later be mixed with it. **↑/↓ step the level** while the level bar shows
+(`LevelService.stepUp`/`stepDown`, the time bar's `(window:keydown)` host idiom).
+
 **Wind barbs look — דגלונים (2026-09-28):** a fourth wind look (off by default), `WindBarbs`
 (`engine/looks/wind-barbs.ts`, `LookKind.Icons`'s first use) over the particles' `WindField`.
 Lead's placement (flagged against the thin-to-screen convention, he chose it): **barbs sit on the
@@ -952,16 +978,27 @@ linger when scrubbed outside coverage.
 
 **Contours look (2026-07-08, lead-verified):** `utils/contours.ts` traces labeled isolines from a
 `Grid`: NaN-aware 3×3 blur ×2 (kills staircases from value quantization — real backend data rounds
-too) → 3× bilinear upsample → marching squares (edge-id segment stitching into open polylines that
-stop at data edges; saddles disambiguated by cell center) → Chaikin ×2. Hand-rolled over d3-contour
-deliberately: d3 returns closed polygons, meaning border-frame segments and NaN-hole outlines that
-cost more to strip than the tracer itself. `engine/looks/contours.ts` renders two `PathLayer`s (dark casing
-under a colored core — readable on any background) plus windy-style label sprites: each unique
-level text is canvas-rendered once (stadium pill in the look's color, luminance-picked white/black
-text, dark outline matching the casing, cached per look) and drawn via `IconLayer` at fixed pixel
-size — constant at every zoom, chip and text inseparable — rotated to the line's local direction
-(mercator-corrected, never upside down) and anchored on each label-span's flattest stretch (score
-`1.5·|tilt| + bend`). Constructor `(provider, LevelPicker, label, color)` — each contour set
+too) → **`@turf/isolines`** (2026-09-29, lead: the hand-rolled tracer was "over engineered"; it
+replaced ~140 lines of 3× upsample + marching squares + segment stitching; Turf is already the geo
+library, pinned to our 7.3.5) → `splitAtGaps` cuts lines at NaN cells (Turf routes around gaps as
+if they were low values — the meteogram's section has NaN rows below/above the model levels) →
+Chaikin ×3 (was ×2 — lead: lines looked "stiff" on tight curves). The grid is fed to Turf in index space (`point([col, row])`) and mapped to lon/lat
+after, so the gap check stays a plain index lookup. Verified: open at grid edges, closed rings,
+~20 ms per SLP redraw (was ~30). d3-contour stays rejected (closed polygons incl. border frames). `engine/looks/contours.ts` renders two `PathLayer`s (a
+3.5 px dark casing at alpha 200 under a 1.5 px opaque colored core — 2026-09-29: thinned from 4/2 px
+("too busy" on the 2 mb SLP map), then a 2.5/1.25 px faint-casing step proved unreadable over the
+temperature colormap, settling here) plus label sprites: each unique level text is canvas-rendered
+once as **bold 12 px numbers in the look's color mixed halfway to white (`interpolateRgb(color,
+'#ffffff')(0.5)` — lead: brighter for contrast, hue kept) with a thick (4 px) opaque dark halo** (the old
+tool's style — lead picked it over the former stadium pills, a dark chip, and white numbers, which
+read best but got confused with other layers' outlines; cached per look) and drawn via `IconLayer` at fixed pixel size, rotated to the line's local direction
+(mercator-corrected, never upside down). **Placement is screen-relative** (the grid's bounds ≈ the
+view, since model grids are bbox-windowed) and deliberately plain (simplified 2026-09-29 with the
+Turf swap): walk each line, a candidate every 5% of the view width; take it if it is ≥ half a view
+width past this line's previous label and ≥ 5% of the view width from every placed label — so
+every line gets a label wherever a free spot exists and **stays unlabeled if every spot is taken**
+(lead: labels on all lines, never overlapping). The former flattest-stretch scoring (tilt + bend)
+was dropped: labels may now sit steep or on a bend — the accepted price of ~60 fewer lines. Constructor `(provider, LevelPicker, label, color)` — each contour set
 carries a fixed identity color (lead 2026-07-08, the classic-synoptic model; simultaneous sets are
 told apart by color, never made exclusive): temperature adds rose isotherms via `levelsEvery(5)`,
 wind adds violet isotachs via a fixed kt array (provider converts m/s→kt through the Units module —

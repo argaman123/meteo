@@ -10,11 +10,12 @@ interface Model {
   west: number;
   south: number;
   east: number;
+  resolutionDeg: number;
 }
 
 const MODELS: Model[] = [
-  { name: 'BIG_ECMWF', archiveName: 'ECMWF03', north: 60, west: -10, south: 20, east: 60 },
-  { name: 'ECMWF', archiveName: 'ECMWF01', north: 52, west: 0, south: 24, east: 50 },
+  { name: 'BIG_ECMWF', archiveName: 'ECMWF03', north: 60, west: -10, south: 20, east: 60, resolutionDeg: 0.25 },
+  { name: 'ECMWF', archiveName: 'ECMWF01', north: 52, west: 0, south: 24, east: 50, resolutionDeg: 0.1 },
 ];
 
 const FIELDS: Record<string, string> = {
@@ -23,6 +24,7 @@ const FIELDS: Record<string, string> = {
   U: 'u',
   V: 'v',
   HGT: 'hgt',
+  SLP: 'pressure',
 };
 
 const RESPONSE_SIZE = 70;
@@ -72,6 +74,7 @@ export class SyntheticWeather {
     runTime: number,
     heightFeet: number | null = null,
     pressureMb: number | null = null,
+    reduction: number | null = null,
   ): Wrap<ModelWrapInfo> | null {
     const model = MODELS.find((candidate) => candidate.name === modelName);
     const parameter = FIELDS[wireParameter];
@@ -83,12 +86,18 @@ export class SyntheticWeather {
     if (west >= east || south >= north) return null;
     const maskWaves = isWave(parameter);
     const effectiveFeet = pressureMb === null ? (heightFeet ?? 0) : feetAtPressure(pressureMb);
+    const rx =
+      reduction === null ? (east - west) / (RESPONSE_SIZE - 1) : model.resolutionDeg * reduction;
+    const ry =
+      reduction === null ? (north - south) / (RESPONSE_SIZE - 1) : model.resolutionDeg * reduction;
+    const columns = reduction === null ? RESPONSE_SIZE : Math.floor((east - west) / rx) + 1;
+    const rows = reduction === null ? RESPONSE_SIZE : Math.floor((north - south) / ry) + 1;
     const values: (number | null)[][] = [];
-    for (let r = 0; r < RESPONSE_SIZE; r++) {
-      const lat = south + ((north - south) * r) / (RESPONSE_SIZE - 1);
+    for (let r = 0; r < rows; r++) {
+      const lat = south + ry * r;
       const row: (number | null)[] = [];
-      for (let c = 0; c < RESPONSE_SIZE; c++) {
-        const lon = west + ((east - west) * c) / (RESPONSE_SIZE - 1);
+      for (let c = 0; c < columns; c++) {
+        const lon = west + rx * c;
         row.push(
           maskWaves && isLand(this.land, lat, lon)
             ? null
@@ -98,8 +107,8 @@ export class SyntheticWeather {
       values.push(row);
     }
     return {
-      rx: (east - west) / (RESPONSE_SIZE - 1),
-      ry: (north - south) / (RESPONSE_SIZE - 1),
+      rx,
+      ry,
       start_x: west,
       start_y: south,
       wrap_info: {
@@ -148,6 +157,9 @@ export class SyntheticWeather {
     pressureMb: number | null,
   ): number {
     if (parameter === 'waveHeight') return round1(waveHeightAt(lat, lon, hours));
+    if (parameter === 'pressure') {
+      return round1(pressureAt(lat, lon, hours) + terrainNoiseAt(lat, lon));
+    }
     if (parameter === 'temperature') {
       return round1(temperatureAt(lat, lon, hours) - heightFeet * 0.002);
     }
@@ -204,6 +216,61 @@ export class SyntheticWeather {
     };
   }
 
+}
+
+interface MountainRange {
+  lon: number;
+  lat: number;
+  lengthDeg: number;
+  widthDeg: number;
+  angleDeg: number;
+}
+
+const MOUNTAIN_RANGES: MountainRange[] = [
+  { lon: 51.2, lat: 31.2, lengthDeg: 7, widthDeg: 1.6, angleDeg: -36 },
+  { lon: 53, lat: 36.4, lengthDeg: 4, widthDeg: 0.8, angleDeg: -5 },
+  { lon: 35, lat: 37.5, lengthDeg: 5, widthDeg: 1.2, angleDeg: 6 },
+  { lon: 41, lat: 39.5, lengthDeg: 4, widthDeg: 2, angleDeg: 0 },
+  { lon: 44, lat: 42.7, lengthDeg: 4.5, widthDeg: 0.9, angleDeg: -17 },
+  { lon: 10, lat: 46.3, lengthDeg: 4, widthDeg: 1, angleDeg: 10 },
+  { lon: 0, lat: 33.5, lengthDeg: 8, widthDeg: 1.3, angleDeg: 16 },
+  { lon: 40, lat: 22.5, lengthDeg: 7, widthDeg: 1, angleDeg: -51 },
+  { lon: 18, lat: 43.3, lengthDeg: 4.2, widthDeg: 1.2, angleDeg: -33 },
+  { lon: 35.9, lat: 33.8, lengthDeg: 1.2, widthDeg: 0.4, angleDeg: 55 },
+];
+
+function terrainNoiseAt(lat: number, lon: number): number {
+  let roughness = 0;
+  for (const range of MOUNTAIN_RANGES) {
+    const angle = (range.angleDeg * Math.PI) / 180;
+    const dLon = lon - range.lon;
+    const dLat = lat - range.lat;
+    const along = (dLon * Math.cos(angle) + dLat * Math.sin(angle)) / range.lengthDeg;
+    const across = (dLat * Math.cos(angle) - dLon * Math.sin(angle)) / range.widthDeg;
+    roughness = Math.max(roughness, Math.exp(-(along * along + across * across)));
+  }
+  if (roughness < 0.01) return 0;
+  return roughness * (3 * valueNoise(lat / 0.9, lon / 0.9) + 1.5 * valueNoise(lat / 0.45, lon / 0.45));
+}
+
+function valueNoise(x: number, y: number): number {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const sx = fade(x - x0);
+  const sy = fade(y - y0);
+  const top = latticeValue(x0, y0) + (latticeValue(x0 + 1, y0) - latticeValue(x0, y0)) * sx;
+  const bottom =
+    latticeValue(x0, y0 + 1) + (latticeValue(x0 + 1, y0 + 1) - latticeValue(x0, y0 + 1)) * sx;
+  return top + (bottom - top) * sy;
+}
+
+function fade(t: number): number {
+  return t * t * t * (t * (t * 6 - 15) + 10);
+}
+
+function latticeValue(x: number, y: number): number {
+  const hash = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return 2 * (hash - Math.floor(hash)) - 1;
 }
 
 function isWave(parameter: string): boolean {

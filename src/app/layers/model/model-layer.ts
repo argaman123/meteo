@@ -19,6 +19,7 @@ export abstract class ModelLayer extends Layer<Grid<ModelWrapInfo>[]> {
   abstract readonly parameters: Parameter[];
   override readonly staticLevel: boolean = false;
   override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
+  protected readonly reduction: number | null = null;
   private readonly pressureStepHours = 3;
   private readonly surfaceParameters: Partial<Record<Parameter, Parameter>> = {
     [Parameter.Temperature]: Parameter.SurfaceTemperature,
@@ -63,7 +64,13 @@ export abstract class ModelLayer extends Layer<Grid<ModelWrapInfo>[]> {
         typeof level === 'string'
           ? `/model/data-limited/${model}/MB${level}/${wireParameter}/${modelTime}/params`
           : `/model/data_with_flat_heights_with_limit/${model}/${level ?? 0}/${wireParameter}/${on.displayTime()}/params`,
-      params: { min_lon: west, min_lat: south, max_lon: east, max_lat: north },
+      params: {
+        min_lon: west,
+        min_lat: south,
+        max_lon: east,
+        max_lat: north,
+        ...(this.reduction === null ? {} : { reduction: this.reduction }),
+      },
     };
   }
 }

@@ -33,6 +33,18 @@ export class LevelService {
     this.activeLevel.set(level);
   }
 
+  stepUp(): void {
+    const levels = this.levels();
+    const next = levels.indexOf(this.activeLevel()) + 1;
+    if (next < levels.length) this.setLevel(levels[next]);
+  }
+
+  stepDown(): void {
+    const levels = this.levels();
+    const previous = levels.indexOf(this.activeLevel()) - 1;
+    if (previous >= 0) this.setLevel(levels[previous]);
+  }
+
   setKind(kind: LevelKind): void {
     if (kind === this.kind()) return;
     this.kind.set(kind);

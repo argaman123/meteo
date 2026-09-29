@@ -11,6 +11,10 @@ import { Quantity, Unit, format } from '../../../utils/units';
   imports: [HlmTooltip, NgIcon],
   viewProviders: [provideIcons({ matTerrainRound })],
   templateUrl: './level-bar.html',
+  host: {
+    '(window:keydown.arrowup)': 'onArrow($event, 1)',
+    '(window:keydown.arrowdown)': 'onArrow($event, -1)',
+  },
 })
 export class LevelBar {
   protected readonly level = inject(LevelService);
@@ -53,6 +57,13 @@ export class LevelBar {
   protected isTick(level: Level | null): boolean {
     if (level === null || level === this.maxLevel()) return false;
     return typeof level === 'string' || level % 10000 === 0;
+  }
+
+  protected onArrow(event: Event, direction: 1 | -1): void {
+    if (!this.visible()) return;
+    event.preventDefault();
+    if (direction === 1) this.level.stepUp();
+    else this.level.stepDown();
   }
 
   protected onPointerDown(event: PointerEvent): void {

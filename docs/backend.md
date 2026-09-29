@@ -40,7 +40,7 @@ each one onto the real routes and lists the gaps. Nothing here is migrated yet.
   **No u/v served.**
 - **Levels:** pressure = enum names `SFC`, `MB1000`…`MB10`, `MSL`, `TWO_ML`, `TEN_ML`; height = int ft
   (0 = SFC).
-- **Map grid** — two routes, both bbox-cropped and **resampled to ~70×70** (`models/service.py:18`),
+- **Map grid** — two routes, both bbox-cropped and **resampled to ~70×70** (`models/service.py:18`; `LimitedData.reduction`/`zoom` are declared but unused — backend ask 4),
   gzip Wrap:
   - pressure: `GET /model/data-limited/{model}/{alt}/{param}/{forecast}/params?min_lon&min_lat&max_lon&max_lat[&base_time][&scale_method]`
     — `forecast` must be an **exact model time** (no time interpolation; missing → 500).

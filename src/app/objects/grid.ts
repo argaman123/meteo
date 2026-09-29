@@ -1,4 +1,5 @@
 import { Bounds, Wrap } from '../types/wrap';
+import { Extremum, blurred, localExtrema } from '../utils/contours';
 import { bilinearAt } from '../utils/interpolation';
 
 export class Grid<I = unknown> {
@@ -40,6 +41,33 @@ export class Grid<I = unknown> {
       data[i] = values.some((value) => Number.isNaN(value)) ? NaN : fn(...values);
     }
     return new Grid(base.info, base.bounds, base.width, base.height, data);
+  }
+
+  resampled(width: number, height: number): Grid<I> {
+    const data = new Float32Array(width * height);
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        data[row * width + col] = this.bilinear(
+          (col / (width - 1)) * (this.width - 1),
+          (row / (height - 1)) * (this.height - 1),
+        );
+      }
+    }
+    return new Grid(this.info, this.bounds, width, height, data);
+  }
+
+  smoothed(passes: number): Grid<I> {
+    const data = blurred(this.data, this.width, this.height, passes);
+    return new Grid(this.info, this.bounds, this.width, this.height, data);
+  }
+
+  extrema(radius: number): { lon: number; lat: number; kind: Extremum['kind'] }[] {
+    const [west, south, east, north] = this.bounds;
+    return localExtrema(this.data, this.width, this.height, radius).map(({ index, kind }) => ({
+      lon: west + ((index % this.width) / (this.width - 1)) * (east - west),
+      lat: north - (Math.floor(index / this.width) / (this.height - 1)) * (north - south),
+      kind,
+    }));
   }
 
   valueAt(lon: number, lat: number, interpolation: 'bilinear' | 'nearest'): number {

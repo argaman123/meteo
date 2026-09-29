@@ -1,3 +1,5 @@
+import { featureCollection, point } from '@turf/helpers';
+import { isolines } from '@turf/isolines';
 import { Bounds } from '../types/wrap';
 
 export type LevelPicker = (min: number, max: number) => number[];
@@ -26,15 +28,41 @@ export function contourLines(
   levels: number[],
 ): ContourLine[] {
   const values = blurred(data, width, height, 2);
-  const lattice = upsample(values, width, height, bounds, 3);
-  const lines: ContourLine[] = [];
-  for (const level of levels) {
-    for (const path of trace(lattice, level)) lines.push({ level, path: smoothed(path, 2) });
+  const points = [];
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      points.push(point([col, row], { value: values[row * width + col] }));
+    }
   }
-  return lines;
+  const [west, south, east, north] = bounds;
+  const toGeo = ([col, row]: number[]): [number, number] => [
+    west + (col / (width - 1)) * (east - west),
+    north - (row / (height - 1)) * (north - south),
+  ];
+  return isolines(featureCollection(points), levels, { zProperty: 'value' }).features.flatMap(
+    (feature) =>
+      feature.geometry.coordinates
+        .flatMap((path) => splitAtGaps(path, values, width))
+        .map((path) => ({
+          level: feature.properties!['value'],
+          path: smoothed(path.map(toGeo), 3),
+        })),
+  );
 }
 
-function blurred(values: Float32Array, width: number, height: number, passes: number): Float32Array {
+function splitAtGaps(path: number[][], values: Float32Array, width: number): number[][][] {
+  const pieces: number[][][] = [[]];
+  for (const [col, row] of path) {
+    const touchesGap =
+      Number.isNaN(values[Math.floor(row) * width + Math.floor(col)]) ||
+      Number.isNaN(values[Math.ceil(row) * width + Math.ceil(col)]);
+    if (touchesGap) pieces.push([]);
+    else pieces[pieces.length - 1].push([col, row]);
+  }
+  return pieces.filter((piece) => piece.length > 1);
+}
+
+export function blurred(values: Float32Array, width: number, height: number, passes: number): Float32Array {
   let current = values;
   for (let pass = 0; pass < passes; pass++) {
     const next = new Float32Array(current.length);
@@ -85,139 +113,38 @@ function smoothed(path: [number, number][], rounds: number): [number, number][] 
   return points;
 }
 
-interface Lattice {
-  width: number;
-  height: number;
-  values: Float32Array;
-  west: number;
-  south: number;
-  east: number;
-  north: number;
+export interface Extremum {
+  index: number;
+  kind: 'maximum' | 'minimum';
 }
 
-function upsample(
-  field: Float32Array,
-  coarseWidth: number,
-  coarseHeight: number,
-  bounds: Bounds,
-  factor: number,
-): Lattice {
-  const width = (coarseWidth - 1) * factor + 1;
-  const height = (coarseHeight - 1) * factor + 1;
-  const [west, south, east, north] = bounds;
-  const values = new Float32Array(width * height);
-  for (let row = 0; row < height; row++) {
-    const y = row / factor;
-    const r0 = Math.min(Math.floor(y), coarseHeight - 2);
-    const fr = y - r0;
-    for (let col = 0; col < width; col++) {
-      const x = col / factor;
-      const c0 = Math.min(Math.floor(x), coarseWidth - 2);
-      const fc = x - c0;
-      values[row * width + col] =
-        field[r0 * coarseWidth + c0] * (1 - fr) * (1 - fc) +
-        field[r0 * coarseWidth + c0 + 1] * (1 - fr) * fc +
-        field[(r0 + 1) * coarseWidth + c0] * fr * (1 - fc) +
-        field[(r0 + 1) * coarseWidth + c0 + 1] * fr * fc;
-    }
-  }
-  return { width, height, values, west, south, east, north };
-}
-
-function trace(lattice: Lattice, level: number): [number, number][][] {
-  const { width, height, values } = lattice;
-  const segments: [number, number][] = [];
-  const touching = new Map<number, number[]>();
-
-  const addSegment = (edgeA: number, edgeB: number): void => {
-    const index = segments.length;
-    segments.push([edgeA, edgeB]);
-    for (const edge of [edgeA, edgeB]) {
-      const list = touching.get(edge);
-      if (list) list.push(index);
-      else touching.set(edge, [index]);
-    }
-  };
-
-  for (let row = 0; row < height - 1; row++) {
-    for (let col = 0; col < width - 1; col++) {
-      const topLeft = values[row * width + col];
-      const topRight = values[row * width + col + 1];
-      const bottomLeft = values[(row + 1) * width + col];
-      const bottomRight = values[(row + 1) * width + col + 1];
-      if (
-        Number.isNaN(topLeft) ||
-        Number.isNaN(topRight) ||
-        Number.isNaN(bottomLeft) ||
-        Number.isNaN(bottomRight)
-      ) {
-        continue;
-      }
-      const caseIndex =
-        (topLeft >= level ? 8 : 0) |
-        (topRight >= level ? 4 : 0) |
-        (bottomRight >= level ? 2 : 0) |
-        (bottomLeft >= level ? 1 : 0);
-      if (caseIndex === 0 || caseIndex === 15) continue;
-      const top = (row * width + col) * 2;
-      const bottom = ((row + 1) * width + col) * 2;
-      const left = (row * width + col) * 2 + 1;
-      const right = (row * width + col + 1) * 2 + 1;
-      if (caseIndex === 5 || caseIndex === 10) {
-        const centerHigh = (topLeft + topRight + bottomLeft + bottomRight) / 4 >= level;
-        const cornersAlone = caseIndex === 5 ? centerHigh : !centerHigh;
-        if (cornersAlone) {
-          addSegment(top, left);
-          addSegment(bottom, right);
-        } else {
-          addSegment(top, right);
-          addSegment(left, bottom);
+export function localExtrema(
+  data: Float32Array,
+  width: number,
+  height: number,
+  radius: number,
+): Extremum[] {
+  const extrema: Extremum[] = [];
+  for (let row = 2; row < height - 2; row++) {
+    for (let col = 2; col < width - 2; col++) {
+      const center = row * width + col;
+      const value = data[center];
+      if (Number.isNaN(value)) continue;
+      let isMaximum = true;
+      let isMinimum = true;
+      for (let r = Math.max(0, row - radius); r <= Math.min(height - 1, row + radius); r++) {
+        for (let c = Math.max(0, col - radius); c <= Math.min(width - 1, col + radius); c++) {
+          const index = r * width + c;
+          if (index === center) continue;
+          const neighbor = data[index];
+          const before = index < center;
+          if (before ? neighbor >= value : neighbor > value) isMaximum = false;
+          if (before ? neighbor <= value : neighbor < value) isMinimum = false;
         }
-      } else if (caseIndex === 1 || caseIndex === 14) addSegment(left, bottom);
-      else if (caseIndex === 2 || caseIndex === 13) addSegment(bottom, right);
-      else if (caseIndex === 3 || caseIndex === 12) addSegment(left, right);
-      else if (caseIndex === 4 || caseIndex === 11) addSegment(top, right);
-      else if (caseIndex === 6 || caseIndex === 9) addSegment(top, bottom);
-      else addSegment(top, left);
+      }
+      if (isMaximum) extrema.push({ index: center, kind: 'maximum' });
+      if (isMinimum) extrema.push({ index: center, kind: 'minimum' });
     }
   }
-
-  const pointOn = (edge: number): [number, number] => {
-    const cell = edge >> 1;
-    const row = Math.floor(cell / width);
-    const col = cell % width;
-    const start = values[row * width + col];
-    const end = edge & 1 ? values[(row + 1) * width + col] : values[row * width + col + 1];
-    const along = (level - start) / (end - start);
-    const x = edge & 1 ? col : col + along;
-    const y = edge & 1 ? row + along : row;
-    return [
-      lattice.west + ((lattice.east - lattice.west) * x) / (width - 1),
-      lattice.north - ((lattice.north - lattice.south) * y) / (height - 1),
-    ];
-  };
-
-  const visited = new Array<boolean>(segments.length).fill(false);
-  const lines: [number, number][][] = [];
-
-  const walk = (startEdge: number): [number, number][] => {
-    const path: [number, number][] = [pointOn(startEdge)];
-    let edge = startEdge;
-    for (;;) {
-      const next = touching.get(edge)?.find((index) => !visited[index]);
-      if (next === undefined) return path;
-      visited[next] = true;
-      const [edgeA, edgeB] = segments[next];
-      edge = edge === edgeA ? edgeB : edgeA;
-      path.push(pointOn(edge));
-    }
-  };
-
-  for (const [edge, indices] of touching) {
-    if (indices.length === 1 && !visited[indices[0]]) lines.push(walk(edge));
-  }
-  for (let index = 0; index < segments.length; index++) {
-    if (!visited[index]) lines.push(walk(segments[index][0]));
-  }
-  return lines;
+  return extrema;
 }

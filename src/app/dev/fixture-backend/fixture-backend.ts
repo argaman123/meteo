@@ -59,6 +59,7 @@ const ROUTES: Route[] = [
         RUN_TIME,
         null,
         Number(pressure),
+        reductionOf(request),
       ) ?? undefined,
   },
   {
@@ -72,6 +73,7 @@ const ROUTES: Route[] = [
         RUN_TIME,
         Number(height),
         null,
+        reductionOf(request),
       ) ?? undefined,
   },
   {
@@ -236,6 +238,10 @@ function boundsOf(request: HttpRequest<unknown>): Bounds {
     Number(request.params.get('max_lon')),
     Number(request.params.get('max_lat')),
   ];
+}
+
+function reductionOf(request: HttpRequest<unknown>): number | null {
+  return request.params.has('reduction') ? Number(request.params.get('reduction')) : null;
 }
 
 function frameHours(unixTime: number): number {

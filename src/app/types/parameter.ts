@@ -4,6 +4,7 @@ export enum Parameter {
   U = 'U',
   V = 'V',
   GeopotentialHeight = 'HGT',
+  SeaLevelPressure = 'SLP',
 }
 
 export enum Model {

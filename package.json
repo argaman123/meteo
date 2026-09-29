@@ -36,6 +36,7 @@
     "@turf/buffer": "^7.3.5",
     "@turf/center-of-mass": "^7.3.5",
     "@turf/helpers": "^7.3.5",
+    "@turf/isolines": "^7.3.5",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "d3-color": "^3.1.0",

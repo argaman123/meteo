@@ -4,6 +4,7 @@ import { Coordinates } from './general/coordinates';
 import { Geopotential } from './model/geopotential';
 import { RadarLayer } from './radar/radar-layer';
 import { SatelliteLayer } from './satellite/satellite-layer';
+import { SeaLevelPressure } from './model/sea-level-pressure';
 import { Shortcut } from './base/shortcut';
 import { Temperature } from './model/temperature';
 import { Wind } from './model/wind';
@@ -14,6 +15,7 @@ export const layers = registerLayers({
   temperature: new Temperature(),
   wind: new Wind(),
   geopotential: new Geopotential(),
+  seaLevelPressure: new SeaLevelPressure(),
   satellite: new SatelliteLayer(),
   radar: new RadarLayer(),
   polygons: new PolygonsLayer(),
@@ -25,6 +27,7 @@ export const menuLayers = [
   layers.temperature,
   layers.wind,
   layers.geopotential,
+  layers.seaLevelPressure,
   layers.satellite,
   layers.radar,
   layers.polygons,
