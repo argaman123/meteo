@@ -28,3 +28,19 @@ export function equalize(image: ImageData): ImageData {
   }
   return new ImageData(data, image.width, image.height);
 }
+
+export async function decodeEqualizedImage(
+  blob: Blob,
+  keepGrays: boolean,
+): Promise<{ display: ImageBitmap; grays?: Uint8ClampedArray }> {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const context = canvas.getContext('2d')!;
+  context.drawImage(bitmap, 0, 0);
+  const received = context.getImageData(0, 0, bitmap.width, bitmap.height);
+  context.putImageData(equalize(received), 0, 0);
+  return {
+    display: canvas.transferToImageBitmap(),
+    grays: keepGrays ? grayChannel(received) : undefined,
+  };
+}

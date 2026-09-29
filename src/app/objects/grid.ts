@@ -1,52 +1,38 @@
 import { Bounds, Wrap } from '../types/wrap';
 import { bilinearAt } from '../utils/interpolation';
 
-interface GridInfo {
-  param: string;
-  baseTime: number;
-  forecastTime: number;
-  model: string;
-  pressure: string | null;
-  heightFt: string | null;
-}
-
-export class Grid {
+export class Grid<I = unknown> {
   private constructor(
-    readonly info: GridInfo,
+    readonly info: I,
     readonly bounds: Bounds,
     readonly width: number,
     readonly height: number,
     readonly data: Float32Array,
   ) {}
 
-  static fromWrap(wrap: Wrap): Grid {
+  static fromWrap<I>(wrap: Wrap<I>): Grid<I> {
     const height = wrap.values.length;
     const width = height > 0 ? wrap.values[0].length : 0;
+    const southFirst = wrap.ry > 0;
     const data = new Float32Array(width * height);
     for (let r = 0; r < height; r++) {
+      const sourceRow = wrap.values[southFirst ? height - 1 - r : r];
       for (let c = 0; c < width; c++) {
-        const value = wrap.values[r][c];
+        const value = sourceRow[c];
         data[r * width + c] = value === null ? NaN : value;
       }
     }
-    const info: GridInfo = {
-      param: wrap.wrap_info.param,
-      baseTime: wrap.wrap_info.base_time,
-      forecastTime: wrap.wrap_info.forecast_time,
-      model: wrap.wrap_info.model,
-      pressure: wrap.wrap_info.pressure,
-      heightFt: wrap.wrap_info.height,
-    };
+    const lastRowLat = wrap.start_y + wrap.ry * (height - 1);
     const bounds: Bounds = [
       wrap.start_x,
-      wrap.start_y + wrap.ry * (height - 1),
+      Math.min(wrap.start_y, lastRowLat),
       wrap.start_x + wrap.rx * (width - 1),
-      wrap.start_y,
+      Math.max(wrap.start_y, lastRowLat),
     ];
-    return new Grid(info, bounds, width, height, data);
+    return new Grid(wrap.wrap_info, bounds, width, height, data);
   }
 
-  static combine(grids: Grid[], fn: (...values: number[]) => number): Grid {
+  static combine<I>(grids: Grid<I>[], fn: (...values: number[]) => number): Grid<I> {
     const base = grids[0];
     const data = new Float32Array(base.width * base.height);
     for (let i = 0; i < data.length; i++) {

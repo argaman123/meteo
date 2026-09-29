@@ -1,6 +1,12 @@
 export enum Parameter {
-  Temperature = 'temperature',
-  U = 'u',
-  V = 'v',
-  GeopotentialHeight = 'hgt',
+  Temperature = 'TMP',
+  SurfaceTemperature = 'SURFACE_TMP',
+  U = 'U',
+  V = 'V',
+  GeopotentialHeight = 'HGT',
+}
+
+export enum Model {
+  Local = 'ECMWF',
+  Wide = 'BIG_ECMWF',
 }

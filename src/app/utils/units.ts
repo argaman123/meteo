@@ -8,6 +8,7 @@ export enum Unit {
   Meters = 'meters',
   Kilometers = 'kilometers',
   MillimetersPerHour = 'millimeters-per-hour',
+  Millimeters = 'millimeters',
   Eighths = 'eighths',
   Feet = 'feet',
   Kilofeet = 'kilofeet',
@@ -22,6 +23,7 @@ export enum Quantity {
   GeopotentialHeight = 'geopotential-height',
   Visibility = 'visibility',
   Rain = 'rain',
+  Precipitation = 'precipitation',
   CloudCover = 'cloud-cover',
   CloudBase = 'cloud-base',
   Altitude = 'altitude',
@@ -37,6 +39,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.GeopotentialHeight]: Unit.Meters,
   [Quantity.Visibility]: Unit.Kilometers,
   [Quantity.Rain]: Unit.MillimetersPerHour,
+  [Quantity.Precipitation]: Unit.Millimeters,
   [Quantity.CloudCover]: Unit.Eighths,
   [Quantity.CloudBase]: Unit.Kilofeet,
   [Quantity.Altitude]: Unit.Feet,
@@ -64,6 +67,7 @@ export function convertBetween(value: number, from: Unit, to: Unit): number {
   if (from === Unit.Kilofeet && to === Unit.Feet) return value * 1000;
   if (from === Unit.Meters && to === Unit.Feet) return value * feetPerMeter;
   if (from === Unit.Feet && to === Unit.Meters) return value / feetPerMeter;
+  if (from === Unit.Meters && to === Unit.Kilofeet) return (value * feetPerMeter) / 1000;
   throw new Error(`no conversion from ${from} to ${to}`);
 }
 
@@ -90,6 +94,7 @@ export function formatNumber(value: number, quantity: Quantity, from: Unit): str
   switch (displayUnitOf(quantity)) {
     case Unit.Kilometers:
     case Unit.MillimetersPerHour:
+    case Unit.Millimeters:
     case Unit.Kilofeet:
       return `${Number(converted.toFixed(1))}`;
     case Unit.MetDegrees:
@@ -120,6 +125,8 @@ export function unitLabel(quantity: Quantity): string {
       return 'km';
     case Unit.MillimetersPerHour:
       return 'mm/h';
+    case Unit.Millimeters:
+      return 'mm';
     case Unit.Eighths:
       return '/8';
     case Unit.Feet:

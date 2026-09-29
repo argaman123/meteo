@@ -11,9 +11,9 @@
           <span class="flex items-center gap-1 text-[11px] leading-3.5 text-muted-foreground">
             <ng-icon name="lucideMapPin" size="12" />
             <span dir="ltr" class="tabular-nums">{{ coordinates() }}</span>
-            @if (time()) {
+            @if (soundingTime()) {
               <span class="tabular-nums" [class.animate-pulse]="response.isLoading()">
-                · {{ time() }}
+                · {{ soundingTime() }}
               </span>
             }
           </span>
@@ -75,9 +75,6 @@
                 <tr class="border-b border-border/40 hover:bg-secondary/40">
                   <td class="px-2 py-1 align-baseline">
                     <span dir="ltr" class="whitespace-nowrap">
-                      @if (row.surface) {
-                        <ng-icon name="matTerrainRound" size="14" class="me-1 align-[-0.2em]!" />
-                      }
                       <span class="inline-flex items-baseline gap-0.5">
                         <span>{{ row.height }}</span>
                         <span class="text-[10px] text-muted-foreground/70">{{

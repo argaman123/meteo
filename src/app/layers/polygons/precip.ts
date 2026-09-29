@@ -1,16 +1,28 @@
 import type { Color } from '@deck.gl/core';
 import { PolygonStyle } from '../../engine/looks/polygons';
-import { PrecipEvent } from '../../types/polygons';
+import { PrecipitationEvent, PrecipType } from '../../types/polygons';
 import { rgba } from '../../utils/color-scale';
-import { applyCb } from './cb';
 
 const RAMP = ['#d85283', '#e12d5d', '#e40e0e', '#c30000', '#800000'];
 
-function precipSeverity(precip: PrecipEvent): number {
-  return (Math.min(4, Math.max(1, precip.level)) - 1) / 3;
+const RAIN_TYPES: { type: PrecipType; name: string }[] = [
+  { type: 'VIRGOT', name: 'וירגה' },
+  { type: 'DRIPPING', name: 'טפטוף' },
+  { type: 'DRIPPING_MEDIUM_RAIN', name: 'טפטוף עד גשם בינוני' },
+  { type: 'MEDIUM_RAIN', name: 'גשם בינוני' },
+  { type: 'MEDIUM_HIGH_RAIN', name: 'גשם בינוני עד חזק' },
+  { type: 'HEAVY_RAIN', name: 'גשם חזק' },
+];
+
+function rainIndex(precip: PrecipitationEvent): number {
+  return RAIN_TYPES.findIndex((rain) => rain.type === precip.parameters.precip_type);
 }
 
-function precipColor(precip: PrecipEvent): Color {
+function precipSeverity(precip: PrecipitationEvent): number {
+  return rainIndex(precip) / (RAIN_TYPES.length - 1);
+}
+
+function precipColor(precip: PrecipitationEvent): Color {
   const position = precipSeverity(precip) * (RAMP.length - 1);
   const below = rgba(RAMP[Math.floor(position)]);
   const above = rgba(RAMP[Math.ceil(position)]);
@@ -23,12 +35,11 @@ function precipColor(precip: PrecipEvent): Color {
   ];
 }
 
-export function applyPrecip(style: PolygonStyle, precip: PrecipEvent): void {
+export function applyPrecip(style: PolygonStyle, precip: PrecipitationEvent): void {
   style.outline = precipColor(precip);
   style.outlineWidth = 3 + 5 * precipSeverity(precip);
-  if (precip.cb) applyCb(style, precip.cb);
 }
 
-export function precipHover(precip: PrecipEvent): string {
-  return `גשם · רמה ${precip.level} · ${precip.probability}%`;
+export function precipHover(precip: PrecipitationEvent): string {
+  return `${RAIN_TYPES[rainIndex(precip)].name} · ${precip.parameters.precip_prob}%`;
 }

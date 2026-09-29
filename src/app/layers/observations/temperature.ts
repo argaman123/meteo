@@ -2,7 +2,7 @@ import { signal } from '@angular/core';
 import { ColorStop, colorScale } from '../../utils/color-scale';
 import { Quantity, Unit, format } from '../../utils/units';
 import { gradientLegend } from '../../engine/base/look';
-import { ObservationParameter } from './observations-layer';
+import { ObservationParameter, paramValue } from './observations-layer';
 
 const STOPS: ColorStop[] = [
   { value: -30, color: '#818cf8' },
@@ -15,9 +15,10 @@ const STOPS: ColorStop[] = [
 ];
 
 export const TEMPERATURE: ObservationParameter = {
-  parameter: 'temperature',
+  parameter: 'TMP',
   label: 'טמפרטורה',
   colorScale: colorScale(STOPS, 'smooth'),
   legend: signal(gradientLegend(STOPS, Quantity.Temperature, Unit.Celsius)),
-  textOf: (point) => format(point.value, Quantity.Temperature, Unit.Celsius),
+  valueOf: (point) => paramValue(point, 'temperature'),
+  textOf: (point) => format(paramValue(point, 'temperature'), Quantity.Temperature, Unit.Celsius),
 };

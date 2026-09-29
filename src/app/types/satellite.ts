@@ -1,9 +1,42 @@
-import { Bounds } from './wrap';
-
-export interface SatelliteConfiguration {
-  satelliteId: string;
-  channel: string;
-  sector: string;
+export enum SatelliteChannel {
+  IR10_8 = 'IR10.8',
+  FLC = 'FLC',
 }
 
-export type SatelliteBoundsMap = Record<string, Record<string, Bounds>>;
+export interface LimitedSatConf {
+  channel: string;
+  startDateTime: number;
+  endDateTime: number;
+  startHour: number;
+  endHour: number;
+  satellite: number;
+}
+
+export interface SatImage {
+  imgTime: number;
+  satelliteType: string;
+  satelliteId: number;
+  satelliteSector: string;
+  satelliteSource: string;
+  fileName: string;
+  channel_number: number;
+  current_channel: number;
+}
+
+export interface SectorCoords {
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
+
+export interface SatelliteSectorEntry {
+  date: string;
+  coords: SectorCoords;
+}
+
+export type SatelliteSector = 'modeq' | 'noaeq' | 'naseq' | 'srneq';
+
+export type SatelliteSectors = { id: string } & Partial<
+  Record<SatelliteSector, SatelliteSectorEntry[]>
+>;

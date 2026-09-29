@@ -159,6 +159,8 @@ src/app/
                       #   contours.ts = the isoline tracer + levelsEvery level pickers; pointer.ts = pointerFraction(event)
                       #   thermodynamics.ts = standard atmosphere (feetAtPressure) + humidity formulas
                       #   wind.ts = metDirection (u/v → met "from" degrees) + windBarbPath (the barb glyph)
+                      #   time.ts = ms/seconds unit helpers, snapping, findNearestTime/findNearestByTime (every loop's frame pick)
+                      #   image.ts = equalize + decodeEqualizedImage (blob → equalized bitmap + optional IR grays)
   dev/                # QUARANTINE: spike/demo/diagnostics — never imported by product code
 src/spartan/          # spartan/ui look layer: Helm components copied in by the spartan CLI
                       #   (one folder per component; imported as @spartan-ng/helm/*; vendored-ish —
@@ -192,12 +194,14 @@ domain's folder (`engine/`, `layers/`); owned by one feature's UI → that featu
   must never import from `dev/`; only page templates may mount dev widgets. (One recorded
   exception: `environment.development.ts` registers the dev fixture-backend interceptor; prod
   builds swap the file out via `fileReplacements`, so no mock ships.)
-- **Unix times are ms, end to end** (lead, 2026-08-06): the backend sends unix ms and the whole
-  platform holds ms — `Date.now()` raw, `new Date(unixTime)` direct, duration math through the
-  unit helpers in `utils/time.ts` (`hoursToMs`/`minutesToMs`/`daysToMs` + `msToHours`/`msToDays`,
-  lead 2026-08-09 — TimeUnit-style, no naked `3_600_000`s). No seconds anywhere; identifiers say
-  `Ms` (`stepMs`), never spelled out. Human-facing durations stay hours/minutes fields
-  (`TimeWindow.backHours`, `stepMinutes`) converted at use.
+- **Unix times are ms, end to end** (lead, 2026-08-06): the whole platform holds ms —
+  `Date.now()` raw, `new Date(unixTime)` direct, duration math through the unit helpers in
+  `utils/time.ts` (`hoursToMs`/`minutesToMs`/`daysToMs` + `msToHours`/`msToDays`, lead 2026-08-09 —
+  TimeUnit-style, no naked `3_600_000`s). Identifiers say `Ms` (`stepMs`), never spelled out.
+  Human-facing durations stay hours/minutes fields (`TimeWindow.backHours`, `stepMinutes`)
+  converted at use. **Seconds exist only on the wire** (lead 2026-09-28): the real backend's
+  satellite/radar routes speak epoch seconds, so those requests/parses convert at the edge through
+  `msToSeconds`/`secondsToMs` — nothing past the parse holds seconds.
 - **Naming:** descriptive, no abbreviations a junior wouldn't know. One concept = one name everywhere.
   Methods are verb+noun with the noun explicit (`showLayer`, `hideLook`, `toggleGroup` — never a bare
   `show()`/`activate()`); **state** uses the "active" adjective (`activeLayers`, `isLookActive`,
@@ -296,6 +300,47 @@ carrying a rough **dynamic** priority (Claude adjusts it as the app evolves, or 
 no predefined steps — those proved too rigid). The lead picks the next task by moment and mood —
 priorities are never inferred silently. Each task: questions first, built small, verified
 interactively with the lead, committed on his approval.
+
+**Real backend contract (2026-09-28, lead: "take a look at the backend"):** every request now
+calls the **real hzy-liba routes** (Python FastAPI at `~/Desktop/code/hzy-liba`, the standard;
+MagenS Java only for what Python lacks) — the invented `/api/*` contract is gone, and the dev
+fixture answers the real paths (`BACKEND_PATHS` + a `ROUTES` regex table in
+`dev/fixture-backend/fixture-backend.ts`), so cutover = delete the interceptor + proxy the paths.
+**Full route/shape map: [`docs/backend.md`](docs/backend.md); what we asked the backend team for:
+[`docs/backend-asks.md`](docs/backend-asks.md)** (3 asks — U/V wind, point events, nearest air column; one-liners,
+lead: "its humans"; the fixture serves each asked shape). **`/api` is never the right request**
+(lead). Rules (lead): each backend-vs-us
+difference is decided case by case; asks are written in the backend's own idiom. **Wire types
+mirror the wire** (`types/`: `Wrap<I>` + `ModelWrapInfo`/`RadarWrapInfo`, polygon events as
+`{ type, parameters, events }`, `AirLevelData`, `SatImage`, `RadarEntity`, obs
+`{ coords, params }`); `Grid<I>` keeps `wrap_info` verbatim as `info` and reads geometry by the
+wire's formula (`lat = start_y + ry·row`, rows flipped when `ry > 0` — the backend is south-first).
+Per area: **models** `Model.Local = ECMWF` / `Model.Wide = BIG_ECMWF` (coverage box still the
+placeholder), params `TMP`/`SURFACE_TMP` (surface asks the SURFACE_ variant, the backend's own
+rule)/`U`/`V`/`HGT`, heights → `/model/data_with_flat_heights_with_limit/…`, pressures →
+`/model/data-limited/…/MB500/…` at the nearest 3 h model time (lead: no time interpolation there,
+snap), bbox as `min_lon…max_lat`; **meteogram** one `/model/air_column_in_between` request feeds
+both the temperature and wind tabs (`MeteogramService.column`; `MeteogramData.fromAirColumns`
+interpolates each model time's pressure levels onto the 1,000-ft ladder by `modelHeight`);
+**sounding** `/model/air_column_nearest?forecasttime` (backend ask 3 — lead: the backend picks the
+nearest model time, never us), its `time` shown in the header (surface row dropped,
+wind radians+kt converted to u/v on receive for interpolation, RH from the wire); **polygons** sectors
+`SECTOR-DEV` מקומי / `SECTOR-BIG` אזורי (bounds from MagenS), `get_maps_times` filtered to
+DISTRIBUTED, `drawnEvents` flattens fog out of clouds and drops unknown/obsolete types,
+`mapValidity(startTime)` (−1h/+2h) is the one validity rule for map + meteogram blocks, eights
+ranges ("2-4/8", opacity by middle), rain types linear on the ramp (one `RAIN_TYPES` list: type + Hebrew name), haze surface =
+base 0; **satellite** אוטו channel = the `/satellite/getConfiguration` schedule entry active at the
+image time (MagenS's getConfigurationNativ logic, ported; IR10.8 otherwise), picker IR / FLC (FLC is
+an ordinary `source`), **one satellite at a time** (lead: satellites never mix — the schedule
+entry's `satellite`, else 8; the other only when the first returns no images), `filterBy?sat_id` →
+`getImageBy` raw PNG, loop bounds from `/satellite-sectors/get-all`,
+IR calibration = the backend's `gray // 2 − 80`; the schedule pick + sector-bounds reading live in
+`layers/satellite/satellite-configuration.ts` (split 2026-09-29, lead: the layer hit 300 lines); **radar** `get_time_range_to_live_radars`
+(flattened, deduped by fileName) → `POST /radar/get_wrap_for_entities` per frame, negatives are
+flagged noise — hidden unless the look's **רעש** toggle draws them as |value|; **observations**
+`getDataByParam` (ms, `cache=false`, window `[frame − 60 min, frame)`),
+clouds show every layer. **Never code around local dev state** (lead 2026-09-29): the site is not in
+production and never assume it is — no migrations/self-heals for stale localStorage; clear it instead.
 
 **The product today:** 2D map (globe/3D deferred — the 2026-07-23 spike found deck's interleaved
 overlay renders our looks broken on maplibre's globe; details on the plan.md row), self-hosted

@@ -4,16 +4,22 @@ import { modelAtPoint } from '../../../layers/model/model-layer';
 import { layers } from '../../../layers/registry';
 import { MeteogramData } from '../../../objects/meteogram-data';
 import { TimeRange, TimeService } from '../../../services/time-service';
-import { Parameter } from '../../../types/parameter';
-import { PointForecast } from '../../../types/polygons';
-import { MeteogramWrap } from '../../../types/wrap';
+import { PointEvents } from '../../../types/polygons';
+import { AirColumnTime, AirLevelData } from '../../../types/sounding';
 import { hoursToMs } from '../../../utils/time';
+import { Unit, convertBetween } from '../../../utils/units';
 import { PointService } from '../point-menu/point-service';
 
 export enum MeteogramTab {
   Temperature = 'temperature',
   Wind = 'wind',
   Clouds = 'clouds',
+}
+
+export interface MeteogramColumn {
+  temperature: MeteogramData;
+  u: MeteogramData;
+  v: MeteogramData;
 }
 
 @Service()
@@ -37,38 +43,40 @@ export class MeteogramService {
     { equal: (a, b) => a.start === b.start && a.end === b.end },
   );
 
-  readonly temperature = httpResource(
-    () => this.modelRequest(MeteogramTab.Temperature, Parameter.Temperature),
-    { parse: (wrap) => MeteogramData.fromWrap(wrap as MeteogramWrap) },
-  );
-  readonly u = httpResource(() => this.modelRequest(MeteogramTab.Wind, Parameter.U), {
-    parse: (wrap) => MeteogramData.fromWrap(wrap as MeteogramWrap),
+  readonly column = httpResource(() => this.columnRequest(), {
+    parse: (columns) => this.columnOf(columns as AirColumnTime[]),
   });
-  readonly v = httpResource(() => this.modelRequest(MeteogramTab.Wind, Parameter.V), {
-    parse: (wrap) => MeteogramData.fromWrap(wrap as MeteogramWrap),
-  });
-  readonly clouds = httpResource<PointForecast[]>(() => this.cloudsRequest());
+  readonly clouds = httpResource<PointEvents[]>(() => this.cloudsRequest());
 
   showTab(tab: MeteogramTab): void {
     this.tab.set(tab);
     this.openedTabs.update((tabs) => (tabs.includes(tab) ? tabs : [...tabs, tab]));
   }
 
-  private modelRequest(tab: MeteogramTab, parameter: Parameter): HttpResourceRequest | undefined {
+  private columnRequest(): HttpResourceRequest | undefined {
     const point = this.points.point();
-    if (!point || !this.openedTabs().includes(tab)) return undefined;
+    const opened = this.openedTabs();
+    if (!point || !(opened.includes(MeteogramTab.Temperature) || opened.includes(MeteogramTab.Wind))) {
+      return undefined;
+    }
     const [lon, lat] = point;
     const { start, end } = this.range();
     return {
-      url: '/api/meteogram',
-      params: {
-        parameter,
-        lat,
-        lon,
-        model: modelAtPoint(lon, lat),
-        start,
-        end,
-      },
+      url: '/model/air_column_in_between',
+      params: { model: modelAtPoint(lon, lat), lat, lon, start, end },
+    };
+  }
+
+  private columnOf(columns: AirColumnTime[]): MeteogramColumn {
+    const heightsFt = Array.from({ length: this.topFt / 1000 + 1 }, (_, index) => index * 1000);
+    const section = (valueOf: (level: AirLevelData) => number) =>
+      MeteogramData.fromAirColumns(columns, heightsFt, valueOf);
+    const windMs = (level: AirLevelData) =>
+      convertBetween(level.windStr, Unit.Knots, Unit.MetersPerSecond);
+    return {
+      temperature: section((level) => level.temperature),
+      u: section((level) => windMs(level) * Math.cos(level.windDir)),
+      v: section((level) => windMs(level) * Math.sin(level.windDir)),
     };
   }
 
@@ -78,8 +86,8 @@ export class MeteogramService {
     const [lon, lat] = point;
     const { start, end } = this.range();
     return {
-      url: '/api/polygons/point',
-      params: { lat, lon, start, end },
+      url: '/polygon/get_point_events_between_times',
+      params: { lat, lon, start_time: start, end_time: end },
     };
   }
 }

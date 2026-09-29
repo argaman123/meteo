@@ -14,7 +14,8 @@ export class Radar extends Look<Grid[]> {
   readonly kind = LookKind.Radar;
   readonly opacity: PercentControl = percent(0.85);
   readonly circle = toggle(true, 'עיגול');
-  override readonly controls: Control[] = [this.opacity, this.circle];
+  readonly noise = toggle(false, 'רעש');
+  override readonly controls: Control[] = [this.opacity, this.circle, this.noise];
   private readonly bands = [
     { value: 0.1, color: '#60a5fa', label: 'גשם קל' },
     { value: 1, color: '#22c55e', label: 'גשם' },
@@ -23,9 +24,12 @@ export class Radar extends Look<Grid[]> {
   ];
   override readonly legend: Signal<Legend> = signal({ type: LegendType.Swatches, stops: this.bands });
   private readonly colorScale: ColorScale = colorScale(this.bands, 'stepped');
+  private readonly noiseColorScale: ColorScale = (value) => this.colorScale(Math.abs(value));
   private readonly filterValue: (value: number) => boolean;
+  private readonly noiseFilterValue: (value: number) => boolean;
   private readonly blur: boolean;
   private images = new Map<Grid, ImageData>();
+  private imagesShowNoise = false;
 
   constructor(
     provider: Provider<Grid[]>,
@@ -34,6 +38,7 @@ export class Radar extends Look<Grid[]> {
   ) {
     super(provider);
     this.filterValue = (value) => value >= minimumValue;
+    this.noiseFilterValue = (value) => Math.abs(value) >= minimumValue;
     this.blur = options.blur ?? true;
   }
 
@@ -42,11 +47,22 @@ export class Radar extends Look<Grid[]> {
   }
 
   deckLayer(id: string, grids: Grid[]): DeckLayer | DeckLayer[] {
+    const showNoise = this.noise();
+    if (showNoise !== this.imagesShowNoise) {
+      this.images.clear();
+      this.imagesShowNoise = showNoise;
+    }
     const cache = new Map<Grid, ImageData>();
     const layers: DeckLayer[] = grids.map((grid, index) => {
       const image =
         this.images.get(grid) ??
-        buildImage(grid, this.colorScale, 'nearest', this.filterValue, this.blur);
+        buildImage(
+          grid,
+          showNoise ? this.noiseColorScale : this.colorScale,
+          'nearest',
+          showNoise ? this.noiseFilterValue : this.filterValue,
+          this.blur,
+        );
       cache.set(grid, image);
       return new BitmapLayer({
         id: `${id}-${index}`,

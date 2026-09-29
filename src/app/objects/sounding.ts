@@ -1,5 +1,15 @@
-import { SoundingLevel, SoundingWrap } from '../types/sounding';
+import { AirColumnTime } from '../types/sounding';
 import { fractionalIndex } from '../utils/interpolation';
+
+export interface SoundingLevel {
+  pressure: number;
+  height: number;
+  temperature: number;
+  dewpoint: number;
+  humidity: number;
+  u: number;
+  v: number;
+}
 
 export class Sounding {
   private readonly heights: number[];
@@ -11,11 +21,19 @@ export class Sounding {
     this.heights = levels.map((level) => level.height);
   }
 
-  static fromWrap(wrap: SoundingWrap): Sounding {
-    return new Sounding(
-      wrap.time,
-      [...wrap.levels].sort((a, b) => b.pressure - a.pressure),
-    );
+  static fromAirColumn(column: AirColumnTime): Sounding {
+    const levels = column.airLevelDataList
+      .map((level) => ({
+        pressure: level.pressure,
+        height: level.modelHeight,
+        temperature: level.temperature,
+        dewpoint: level.dewPoint,
+        humidity: level.rh,
+        u: level.windStr * Math.cos(level.windDir),
+        v: level.windStr * Math.sin(level.windDir),
+      }))
+      .sort((a, b) => b.pressure - a.pressure);
+    return new Sounding(column.time, levels);
   }
 
   levelAtHeight(height: number): SoundingLevel | null {
@@ -30,6 +48,7 @@ export class Sounding {
       height,
       temperature: mix(lower.temperature, upper.temperature),
       dewpoint: mix(lower.dewpoint, upper.dewpoint),
+      humidity: mix(lower.humidity, upper.humidity),
       u: mix(lower.u, upper.u),
       v: mix(lower.v, upper.v),
     };

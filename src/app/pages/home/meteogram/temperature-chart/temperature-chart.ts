@@ -15,7 +15,7 @@ import { MeteogramColormap, MeteogramContours } from '../meteogram-colormap/mete
 export class TemperatureChart {
   private meteogram = inject(MeteogramService);
 
-  protected temperature = this.meteogram.temperature;
+  protected column = this.meteogram.column;
   protected colorScale = colorScale(TEMPERATURE_PALETTE, 'smooth');
   protected readonly contours: MeteogramContours = {
     faintStep: 5,
@@ -23,8 +23,8 @@ export class TemperatureChart {
   };
 
   protected hoverText = (time: number, heightFt: number): string => {
-    const value = this.temperature.hasValue()
-      ? this.temperature.value().valueAt(time, heightFt)
+    const value = this.column.hasValue()
+      ? this.column.value().temperature.valueAt(time, heightFt)
       : NaN;
     return format(value, Quantity.Temperature, Unit.Celsius);
   };

@@ -1,13 +1,16 @@
-export interface SoundingLevel {
+export interface AirLevelData {
   pressure: number;
-  height: number;
+  modelHeight: number;
+  standardHeight: number;
   temperature: number;
-  dewpoint: number;
-  u: number;
-  v: number;
+  windDir: number;
+  windStr: number;
+  dewPoint: number;
+  rh: number;
+  ws: number;
 }
 
-export interface SoundingWrap {
+export interface AirColumnTime {
   time: number;
-  levels: SoundingLevel[];
+  airLevelDataList: AirLevelData[];
 }

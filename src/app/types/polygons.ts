@@ -1,56 +1,98 @@
 export enum Sector {
-  Center = 'center',
-  North = 'north',
+  Dev = 'SECTOR-DEV',
+  Big = 'SECTOR-BIG',
 }
+
+export enum PolygonsStatus {
+  Saved = 'SAVED',
+  Distributed = 'DISTRIBUTED',
+}
+
+export type Eights = 'E0' | 'E02' | 'E13' | 'E24' | 'E35' | 'E46' | 'E57' | 'E68' | 'E8';
+
+export type PrecipType =
+  | 'VIRGOT'
+  | 'DRIPPING'
+  | 'DRIPPING_MEDIUM_RAIN'
+  | 'MEDIUM_RAIN'
+  | 'MEDIUM_HIGH_RAIN'
+  | 'HEAVY_RAIN';
 
 export interface CloudEvent {
-  type: 'cloud';
-  baseFt: number;
-  topFt: number;
-  eights: number;
-  precip?: PrecipEvent;
+  type: 'CLOUD';
+  parameters: {
+    cloudBase: number;
+    cloudTop: number;
+    cloud_eights: Eights;
+    cloud_prob?: number;
+  };
+  events: (PrecipitationEvent | CbEvent | FogEvent)[];
 }
 
-export interface PrecipEvent {
-  level: number;
-  probability: number;
-  cb?: CbEvent;
+export interface PrecipitationEvent {
+  type: 'PRECIPITATION';
+  parameters: {
+    precip_type: PrecipType;
+    precip_prob: number;
+  };
+  events: CbEvent[];
 }
 
 export interface CbEvent {
-  cbType: 'scattered' | 'cb' | 'cloudy';
-  severity: number;
-}
-
-export interface HazeEvent {
-  type: 'haze';
-  height: 'surface' | 'high';
-  minVis: number;
-  maxVis: number;
+  type: 'CB';
+  parameters: {
+    cb_type: string;
+    cb_prob: number;
+  };
+  events: [];
 }
 
 export interface FogEvent {
-  type: 'fog';
-  minVis: number;
-  maxVis: number;
+  type: 'FOG';
+  parameters: {
+    fog_min_vis: number;
+    fog_max_vis: number;
+    fog_prob?: number;
+  };
+  events: [];
 }
 
-export type ForecastEvent = CloudEvent | HazeEvent | FogEvent;
+export interface HazeEvent {
+  type: 'HAZE';
+  parameters: {
+    haze_min_vis: number;
+    haze_max_vis: number;
+    haze_base?: number;
+    haze_top?: number;
+    haze_prob?: number;
+  };
+  events: [];
+}
+
+export type ForecastEvent = CloudEvent | HazeEvent;
 
 export interface ForecastPolygon {
   coordinates: [number, number][];
   forecastEvents: ForecastEvent[];
+  status: PolygonsStatus;
 }
 
-export interface PolygonsWrap {
+export interface PolygonsState {
   startTime: number;
   endTime: number;
   sector: Sector;
+  status: PolygonsStatus;
+  timeEdited: number;
   polygons: ForecastPolygon[];
 }
 
-export interface PointForecast {
+export interface MapTime {
   startTime: number;
-  endTime: number;
+  status: PolygonsStatus;
+  timeSaved: number;
+}
+
+export interface PointEvents {
+  startTime: number;
   forecastEvents: ForecastEvent[];
 }

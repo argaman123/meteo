@@ -6,21 +6,26 @@ import { visibilityPosition, visibilityText } from './visibility';
 
 export class Haze implements EventAppearance<HazeEvent> {
   name(event: HazeEvent): string {
-    return event.height === 'surface' ? 'אובך קרקעי' : 'אובך גבוה';
+    return this.isSurface(event) ? 'אובך קרקעי' : 'אובך גבוה';
   }
 
   style(event: HazeEvent): PolygonStyle {
-    const surface = event.height === 'surface';
+    const surface = this.isSurface(event);
+    const { haze_min_vis, haze_max_vis } = event.parameters;
     const [thin, thick] = surface ? [0.5, 0.95] : [0.1, 0.5];
-    const alpha = Math.round(255 * (thin + (thick - thin) * visibilityPosition(event)));
+    const alpha = Math.round(255 * (thin + (thick - thin) * visibilityPosition(haze_min_vis, haze_max_vis)));
     return {
       fill: rgba(surface ? '#ff9800' : '#ffe33f', alpha),
       pattern: PolygonPattern.Solid,
-      text: [`${event.minVis}-${event.maxVis} km`],
+      text: [`${haze_min_vis}-${haze_max_vis} km`],
     };
   }
 
   hoverText(event: HazeEvent): string {
-    return `${this.name(event)} · ${visibilityText(event)}`;
+    return `${this.name(event)} · ${visibilityText(event.parameters.haze_min_vis, event.parameters.haze_max_vis)}`;
+  }
+
+  private isSurface(event: HazeEvent): boolean {
+    return !event.parameters.haze_base;
   }
 }

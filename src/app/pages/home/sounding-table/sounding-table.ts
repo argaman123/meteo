@@ -16,14 +16,13 @@ import {
   lucideMapPin,
   lucideX,
 } from '@ng-icons/lucide';
-import { matTerrainRound } from '@ng-icons/material-icons/round';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { TEMPERATURE_PALETTE } from '../../../layers/model/temperature';
-import { Sounding } from '../../../objects/sounding';
-import { SoundingLevel, SoundingWrap } from '../../../types/sounding';
+import { Sounding, SoundingLevel } from '../../../objects/sounding';
+import { AirColumnTime } from '../../../types/sounding';
 import { colorScale } from '../../../utils/color-scale';
 import { formatCoordinates } from '../../../utils/geo';
-import { feetAtPressure, relativeHumidity } from '../../../utils/thermodynamics';
+import { feetAtPressure } from '../../../utils/thermodynamics';
 import { formatLocalTime } from '../../../utils/time';
 import {
   Quantity,
@@ -49,7 +48,6 @@ import { SoundingTableService } from './sounding-table-service';
       lucideArrowUp,
       lucideMapPin,
       lucideX,
-      matTerrainRound,
     }),
   ],
   templateUrl: './sounding-table.html',
@@ -65,7 +63,7 @@ export class SoundingTable {
   protected readonly highestFirst = signal(true);
 
   protected response = httpResource(() => this.soundingTable.request(), {
-    parse: (wrap) => Sounding.fromWrap(wrap as SoundingWrap),
+    parse: (column) => Sounding.fromAirColumn(column as AirColumnTime),
   });
 
   protected sounding = linkedSignal<Sounding | null, Sounding | null>({
@@ -89,7 +87,7 @@ export class SoundingTable {
     windSpeed: unitLabel(Quantity.WindSpeed),
   }));
 
-  protected time = computed(() => {
+  protected soundingTime = computed(() => {
     const sounding = this.sounding();
     return sounding ? formatLocalTime(sounding.time) : '';
   });
@@ -97,17 +95,16 @@ export class SoundingTable {
   protected rows = computed(() => {
     const sounding = this.sounding();
     if (!sounding) return [];
-    const surface = sounding.levels[0];
-    const rows = [this.rowOf(surface, true)];
-    const surfaceFeet = convertBetween(surface.height, Unit.Meters, Unit.Feet);
+    const rows = [];
+    const lowestFeet = convertBetween(sounding.levels[0].height, Unit.Meters, Unit.Feet);
     for (
-      let feet = (Math.floor(surfaceFeet / this.stepFeet) + 1) * this.stepFeet;
+      let feet = Math.ceil(lowestFeet / this.stepFeet) * this.stepFeet;
       ;
       feet += this.stepFeet
     ) {
       const level = sounding.levelAtHeight(convertBetween(feet, Unit.Feet, Unit.Meters));
       if (!level) break;
-      rows.push(this.rowOf(level, false));
+      rows.push(this.rowOf(level));
     }
     return this.highestFirst() ? rows.reverse() : rows;
   });
@@ -117,12 +114,10 @@ export class SoundingTable {
     this.scroller()?.nativeElement.scrollTo({ top: 0 });
   }
 
-  private rowOf(level: SoundingLevel, surface: boolean) {
+  private rowOf(level: SoundingLevel) {
     const heightFeet = convertBetween(level.height, Unit.Meters, Unit.Feet);
     const direction = metDirection(level.u, level.v);
-    const humidity = relativeHumidity(level.temperature, level.dewpoint);
     return {
-      surface,
       height: formatNumber(level.height, Quantity.GeopotentialHeight, Unit.Meters),
       pressure: formatNumber(level.pressure, Quantity.Pressure, Unit.Millibars),
       correction: formatSignedNumber(
@@ -133,15 +128,11 @@ export class SoundingTable {
       temperature: formatNumber(level.temperature, Quantity.Temperature, Unit.Celsius),
       temperatureColor: this.temperatureScale(level.temperature).formatHex(),
       dewpoint: formatNumber(level.dewpoint, Quantity.Temperature, Unit.Celsius),
-      humidity: formatNumber(humidity, Quantity.RelativeHumidity, Unit.Percent),
-      humidityFraction: Math.min(100, humidity),
+      humidity: formatNumber(level.humidity, Quantity.RelativeHumidity, Unit.Percent),
+      humidityFraction: Math.min(100, level.humidity),
       windDirection: format(direction, Quantity.Direction, Unit.MetDegrees),
       downwindDegrees: direction + 180,
-      windSpeed: formatNumber(
-        Math.hypot(level.u, level.v),
-        Quantity.WindSpeed,
-        Unit.MetersPerSecond,
-      ),
+      windSpeed: formatNumber(Math.hypot(level.u, level.v), Quantity.WindSpeed, Unit.Knots),
     };
   }
 }

@@ -5,30 +5,55 @@ import { PolygonStyle, Polygons, PolygonsView } from '../../engine/looks/polygon
 import { PolygonMap } from '../../objects/polygon-map';
 import { Provider } from '../../objects/provider';
 import { TimeRange } from '../../services/time-service';
-import { ForecastEvent, PolygonsWrap, Sector } from '../../types/polygons';
+import {
+  CloudEvent,
+  FogEvent,
+  ForecastEvent,
+  HazeEvent,
+  MapTime,
+  PolygonsState,
+  PolygonsStatus,
+  Sector,
+} from '../../types/polygons';
 import { Bounds } from '../../types/wrap';
 import { Control, options, OptionsPresentation } from '../../utils/controls';
-import { findNearestTime } from '../../utils/time';
+import { findNearestTime, hoursToMs } from '../../utils/time';
 import { Inputs, Layer } from '../base/layer';
 import { Cloud } from './cloud';
 import { Fog } from './fog';
 import { Haze } from './haze';
 
-export interface EventAppearance<E extends ForecastEvent> {
+export type DrawnEvent = CloudEvent | HazeEvent | FogEvent;
+
+export interface EventAppearance<E extends DrawnEvent> {
   name(event: E): string;
   style(event: E): PolygonStyle;
   hoverText(event: E): string;
 }
 
-export const EVENT_APPEARANCES: Record<ForecastEvent['type'], EventAppearance<ForecastEvent>> = {
-  cloud: new Cloud(),
-  haze: new Haze(),
-  fog: new Fog(),
+export const EVENT_APPEARANCES: Record<DrawnEvent['type'], EventAppearance<DrawnEvent>> = {
+  CLOUD: new Cloud(),
+  HAZE: new Haze(),
+  FOG: new Fog(),
 };
 
+export function drawnEvents(events: ForecastEvent[]): DrawnEvent[] {
+  return events
+    .filter((event) => event.type in EVENT_APPEARANCES)
+    .flatMap((event): DrawnEvent[] =>
+      event.type === 'CLOUD'
+        ? [event, ...event.events.filter((child): child is FogEvent => child.type === 'FOG')]
+        : [event],
+    );
+}
+
+export function mapValidity(startTime: number): TimeRange {
+  return { start: startTime - hoursToMs(1), end: startTime + hoursToMs(2) };
+}
+
 export const SECTORS: Record<Sector, Bounds> = {
-  [Sector.Center]: [32, 29.5, 36.5, 33.5],
-  [Sector.North]: [33, 31.5, 37.5, 35.5],
+  [Sector.Dev]: [33.3, 29.0, 37.3, 36.35],
+  [Sector.Big]: [33.3, 26.6, 56.4, 39.8],
 };
 
 export const POLYGONS_LEGEND: SwatchesLegend = {
@@ -46,9 +71,9 @@ export const POLYGONS_LEGEND: SwatchesLegend = {
 export class PolygonsLayer extends Layer<PolygonMap> {
   readonly name = 'עננות ותופעות';
   override readonly timeWindow = { backHours: 3, forwardHours: 96 };
-  readonly sector = options<Sector>(Sector.Center, [
-    { value: Sector.Center, label: 'מרכז' },
-    { value: Sector.North, label: 'צפון' },
+  readonly sector = options<Sector>(Sector.Dev, [
+    { value: Sector.Dev, label: 'מקומי' },
+    { value: Sector.Big, label: 'אזורי' },
   ], 'גזרה', OptionsPresentation.Table);
   override readonly controls: Control[] = [this.sector];
   private on!: Inputs;
@@ -68,7 +93,7 @@ export class PolygonsLayer extends Layer<PolygonMap> {
         .sort((a, b) =>
           this.displayOrder(a.forecastEvents[0]) - this.displayOrder(b.forecastEvents[0]))
         .flatMap((area) =>
-          area.forecastEvents.map((event) => ({
+          drawnEvents(area.forecastEvents).map((event) => ({
             coordinates: area.coordinates,
             ...EVENT_APPEARANCES[event.type].style(event),
           })),
@@ -77,24 +102,32 @@ export class PolygonsLayer extends Layer<PolygonMap> {
   }
 
   private displayOrder(event: ForecastEvent): number {
-    if (event.type == "cloud")
-      return event.baseFt
+    if (event.type == "CLOUD")
+      return event.parameters.cloudBase
     else
       return -1
   }
 
   hover(map: PolygonMap, lon: number, lat: number): string {
-    const lines = map.eventsAt(lon, lat).map((event) => EVENT_APPEARANCES[event.type].hoverText(event));
+    const lines = drawnEvents(map.eventsAt(lon, lat)).map((event) =>
+      EVENT_APPEARANCES[event.type].hoverText(event),
+    );
     return lines.length ? lines.join('\n') : '—';
   }
 
   relevanceOf(map: PolygonMap): TimeRange {
-    return { start: map.startTime, end: map.endTime };
+    return mapValidity(map.startTime);
   }
 
   fetch(on: Inputs, injector: Injector): Signal<PolygonMap | null | undefined> {
     this.on = on;
-    const hours = httpResource<number[]>(() => this.hoursRequest(on), { injector });
+    const hours = httpResource(() => this.hoursRequest(on), {
+      injector,
+      parse: (mapTimes) =>
+        (mapTimes as MapTime[])
+          .filter((mapTime) => mapTime.status === PolygonsStatus.Distributed)
+          .map((mapTime) => mapTime.startTime),
+    });
     this.forcedTimes = computed(() => (hours.hasValue() ? hours.value() : []));
     const mapTime = computed(() => {
       if (!hours.hasValue()) return undefined;
@@ -102,7 +135,8 @@ export class PolygonsLayer extends Layer<PolygonMap> {
     });
     const map = httpResource(() => this.mapRequest(mapTime()), {
       injector,
-      parse: (wrap) => PolygonMap.fromWrap(wrap as PolygonsWrap, SECTORS[this.sector()]),
+      parse: (state) =>
+        state === null ? null : PolygonMap.fromState(state as PolygonsState, SECTORS[this.sector()]),
     });
     return computed(() => {
       const currentMapTime = mapTime();
@@ -115,17 +149,16 @@ export class PolygonsLayer extends Layer<PolygonMap> {
   private hoursRequest(on: Inputs): HttpResourceRequest {
     const { start, end } = on.window();
     return {
-      url: '/api/polygons/hours',
-      params: {
-        sector: this.sector(),
-        start: String(start),
-        end: String(end),
-      },
+      url: '/polygon/get_maps_times',
+      params: { start_time: start, end_time: end, sector: this.sector() },
     };
   }
 
   private mapRequest(mapTime: number | null | undefined): HttpResourceRequest | undefined {
     if (mapTime === null || mapTime === undefined) return undefined;
-    return { url: '/api/polygons', params: { sector: this.sector(), time: String(mapTime) } };
+    return {
+      url: '/polygon/get_latest_polygons_by_time_sector_time_saved_status',
+      params: { time: mapTime, sector: this.sector(), status: PolygonsStatus.Distributed },
+    };
   }
 }

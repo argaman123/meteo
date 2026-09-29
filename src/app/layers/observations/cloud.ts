@@ -1,9 +1,9 @@
 import { signal } from '@angular/core';
 import { gradientLegend } from '../../engine/base/look';
-import { CloudPoint } from '../../types/observations';
+import { ObservationPoint } from '../../types/observations';
 import { ColorStop, colorScale } from '../../utils/color-scale';
 import { Quantity, Unit, format } from '../../utils/units';
-import { ObservationParameter } from './observations-layer';
+import { ObservationParameter, paramValue } from './observations-layer';
 
 const STOPS: ColorStop[] = [
   { value: 0, color: '#e2e8f0' },
@@ -14,14 +14,26 @@ const STOPS: ColorStop[] = [
 ];
 
 export const CLOUD: ObservationParameter = {
-  parameter: 'cloud',
+  parameter: 'CLOUD',
   label: 'עננות',
   colorScale: colorScale(STOPS, 'stepped'),
   legend: signal(gradientLegend(STOPS, Quantity.CloudCover, Unit.Eighths)),
-  textOf: (point) => {
-    const { value, base } = point as CloudPoint;
-    return base === undefined || value === 0
-      ? format(value, Quantity.CloudCover, Unit.Eighths)
-      : `${format(value, Quantity.CloudCover, Unit.Eighths)} ${format(base, Quantity.CloudBase, Unit.Feet)}`;
-  },
+  valueOf: (point) => Math.max(...cloudLayers(point).map((layer) => layer.cover)),
+  textOf: (point) =>
+    cloudLayers(point)
+      .map(({ cover, base }) =>
+        cover === 0 || Number.isNaN(base)
+          ? format(cover, Quantity.CloudCover, Unit.Eighths)
+          : `${format(cover, Quantity.CloudCover, Unit.Eighths)} ${format(base, Quantity.CloudBase, Unit.Meters)}`,
+      )
+      .join(' · '),
 };
+
+function cloudLayers(point: ObservationPoint): { cover: number; base: number }[] {
+  return [1, 2, 3, 4]
+    .map((layer) => ({
+      cover: paramValue(point, `cloud_cover_${layer}`),
+      base: paramValue(point, `cloud_base_${layer}`),
+    }))
+    .filter((layer) => !Number.isNaN(layer.cover));
+}

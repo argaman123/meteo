@@ -41,13 +41,12 @@ export class WindChart {
     ],
   };
 
-  protected u = this.meteogram.u;
-  protected v = this.meteogram.v;
+  protected column = this.meteogram.column;
   protected colorScale = colorScale(WIND_SPEED_PALETTE, 'smooth');
 
   protected speed = computed(() =>
-    this.u.hasValue() && this.v.hasValue()
-      ? MeteogramData.combine([this.u.value(), this.v.value()], Math.hypot)
+    this.column.hasValue()
+      ? MeteogramData.combine([this.column.value().u, this.column.value().v], Math.hypot)
       : null,
   );
 
@@ -63,11 +62,9 @@ export class WindChart {
   }
 
   private directionAt(time: number, heightFt: number): number {
-    if (!this.u.hasValue() || !this.v.hasValue()) return NaN;
-    return metDirection(
-      this.u.value().valueAt(time, heightFt),
-      this.v.value().valueAt(time, heightFt),
-    );
+    if (!this.column.hasValue()) return NaN;
+    const { u, v } = this.column.value();
+    return metDirection(u.valueAt(time, heightFt), v.valueAt(time, heightFt));
   }
 
   private drawArrows(): void {
@@ -81,15 +78,15 @@ export class WindChart {
     const stepHours = this.arrowStepsHours.find(
       (step) => step * pixelsPerHour >= this.arrowSpacingPx,
     );
-    if (!frame || !this.u.hasValue() || stepHours === undefined) return;
+    if (!frame || !this.column.hasValue() || stepHours === undefined) return;
     const context = canvas.getContext('2d')!;
     context.scale(devicePixelRatio, devicePixelRatio);
     context.lineCap = 'round';
     context.lineJoin = 'round';
     const topFt = frame.topFt();
-    const times = this.u
+    const times = this.column
       .value()
-      .times.filter(
+      .u.times.filter(
         (time) => time >= start && time <= end && new Date(time).getHours() % stepHours === 0,
       );
     for (const time of times) {

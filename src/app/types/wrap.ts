@@ -1,23 +1,28 @@
 export type Bounds = [number, number, number, number];
 
-export interface Wrap {
+export interface Wrap<I> {
   rx: number;
   ry: number;
   start_x: number;
   start_y: number;
-  wrap_info: {
-    base_time: number;
-    forecast_time: number;
-    model: string;
-    param: string;
-    pressure: string | null;
-    height: string | null;
-  };
+  wrap_info: I;
   values: (number | null)[][];
 }
 
-export interface MeteogramWrap {
-  times: number[];
-  heights: number[];
-  values: (number | null)[][];
+export interface ModelWrapInfo {
+  info_type: 'model';
+  base_time: number;
+  forecast_time: number;
+  model: string;
+  param: string;
+  pressure: string;
+  height: string | number;
+  direction_stack: boolean;
+}
+
+export interface RadarWrapInfo {
+  info_type: 'radar';
+  name: string;
+  time: number;
+  type: string;
 }

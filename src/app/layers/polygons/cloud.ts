@@ -1,53 +1,87 @@
 import { PolygonPattern, PolygonStyle } from '../../engine/looks/polygons';
-import { CloudEvent } from '../../types/polygons';
+import { CbEvent, CloudEvent, Eights, PrecipitationEvent } from '../../types/polygons';
 import { rgba } from '../../utils/color-scale';
 import { EventAppearance } from './polygons-layer';
-import { cbHover } from './cb';
+import { applyCb, cbHover } from './cb';
 import { applyPrecip, precipHover } from './precip';
 
 const LEVELS = [
-  { name: 'נמוכה', belowFt: 7000, pattern: PolygonPattern.Solid, color: '#535353', alphaRange: [0.5, 0.95] },
-  { name: 'בינונית', belowFt: 20000, pattern: PolygonPattern.Solid, color: '#2748a5', alphaRange: [0.3, 0.8] },
-  { name: 'גבוהה', belowFt: Infinity, pattern: PolygonPattern.Vertical, color: '#206ea3', alphaRange: [0.3, 0.8] },
+  { name: 'נמוכה', belowKft: 7, pattern: PolygonPattern.Solid, color: '#535353', alphaRange: [0.5, 0.95] },
+  { name: 'בינונית', belowKft: 20, pattern: PolygonPattern.Solid, color: '#2748a5', alphaRange: [0.3, 0.8] },
+  { name: 'גבוהה', belowKft: Infinity, pattern: PolygonPattern.Vertical, color: '#206ea3', alphaRange: [0.3, 0.8] },
 ];
 
 export class Cloud implements EventAppearance<CloudEvent> {
   name(event: CloudEvent): string {
-    return `עננות ${LEVELS.find((candidate) => event.baseFt < candidate.belowFt)!.name}`;
+    return `עננות ${this.level(event).name}`;
   }
 
   style(event: CloudEvent): PolygonStyle {
-    const level = LEVELS.find((candidate) => event.baseFt < candidate.belowFt)!;
+    const level = this.level(event);
     const [thin, thick] = level.alphaRange;
-    const cover = Math.min(8, Math.max(0, event.eights)) / 8;
+    const [fewest, most] = eightsRange(event.parameters.cloud_eights);
+    const cover = (fewest + most) / 2 / 8;
     const alpha = Math.round(255 * (thin + (thick - thin) * cover));
     const style: PolygonStyle = {
       fill: rgba(level.color, alpha),
       pattern: level.pattern,
       text: this.text(event),
     };
-    if (event.precip) applyPrecip(style, event.precip);
+    const precip = precipOf(event);
+    if (precip) applyPrecip(style, precip);
+    const cb = cbOf(event);
+    if (cb) applyCb(style, cb);
     return style;
   }
 
   hoverText(event: CloudEvent): string {
-    const lines = [`${this.name(event)} · ${event.eights}/8 · ${heightRange(event)}`];
-    if (event.precip) lines.push(precipHover(event.precip));
-    if (event.precip?.cb) lines.push(cbHover(event.precip.cb));
+    const lines = [`${this.name(event)} · ${eightsText(event.parameters.cloud_eights)} · ${heightRange(event)}`];
+    const precip = precipOf(event);
+    if (precip) lines.push(precipHover(precip));
+    const cb = cbOf(event);
+    if (cb) lines.push(cbHover(cb));
     return lines.join('\n');
   }
 
+  private level(event: CloudEvent) {
+    return LEVELS.find((candidate) => event.parameters.cloudBase < candidate.belowKft)!;
+  }
+
   private text(event: CloudEvent): string[] {
-    const lines = [`${event.eights}/8`, heightRange(event)];
-    if (event.precip) lines.push(`${event.precip.probability}%`);
-    return lines ;
+    const lines = [eightsText(event.parameters.cloud_eights), heightRange(event)];
+    const precip = precipOf(event);
+    if (precip) lines.push(`${precip.parameters.precip_prob}%`);
+    return lines;
   }
 }
 
-function heightRange(event: CloudEvent): string {
-  return `${thousands(event.baseFt)}-${thousands(event.topFt)}`;
+function precipOf(event: CloudEvent): PrecipitationEvent | undefined {
+  return event.events.find(
+    (child): child is PrecipitationEvent => child.type === 'PRECIPITATION',
+  );
 }
 
-function thousands(feet: number): string {
-  return `${Number((feet / 1000).toFixed(1))}'`;
+function cbOf(event: CloudEvent): CbEvent | undefined {
+  return (
+    event.events.find((child): child is CbEvent => child.type === 'CB') ??
+    precipOf(event)?.events.find((child) => child.type === 'CB')
+  );
+}
+
+function eightsRange(eights: Eights): [number, number] {
+  const digits = eights.slice(1);
+  return digits.length === 1 ? [Number(digits), Number(digits)] : [Number(digits[0]), Number(digits[1])];
+}
+
+function eightsText(eights: Eights): string {
+  const [fewest, most] = eightsRange(eights);
+  return fewest === most ? `${most}/8` : `${fewest}-${most}/8`;
+}
+
+function heightRange(event: CloudEvent): string {
+  return `${thousands(event.parameters.cloudBase)}-${thousands(event.parameters.cloudTop)}`;
+}
+
+function thousands(kilofeet: number): string {
+  return `${Number(kilofeet.toFixed(1))}'`;
 }

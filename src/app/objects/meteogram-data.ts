@@ -1,5 +1,6 @@
-import { MeteogramWrap } from '../types/wrap';
+import { AirColumnTime, AirLevelData } from '../types/sounding';
 import { bilinearAt, fractionalIndex } from '../utils/interpolation';
+import { Unit, convertBetween } from '../utils/units';
 
 export class MeteogramData {
   private constructor(
@@ -8,13 +9,26 @@ export class MeteogramData {
     readonly data: Float32Array,
   ) {}
 
-  static fromWrap(wrap: MeteogramWrap): MeteogramData {
-    const width = wrap.times.length;
-    const data = new Float32Array(width * wrap.heights.length);
-    wrap.values.forEach((row, r) =>
-      row.forEach((value, c) => (data[r * width + c] = value === null ? NaN : value)),
-    );
-    return new MeteogramData(wrap.times, wrap.heights, data);
+  static fromAirColumns(
+    columns: AirColumnTime[],
+    heightsFt: number[],
+    valueOf: (level: AirLevelData) => number,
+  ): MeteogramData {
+    const sorted = [...columns].sort((a, b) => a.time - b.time);
+    const times = sorted.map((column) => column.time);
+    const data = new Float32Array(times.length * heightsFt.length).fill(NaN);
+    sorted.forEach((column, col) => {
+      const levels = [...column.airLevelDataList].sort((a, b) => a.modelHeight - b.modelHeight);
+      const levelFeet = levels.map((level) => convertBetween(level.modelHeight, Unit.Meters, Unit.Feet));
+      heightsFt.forEach((heightFt, row) => {
+        const index = fractionalIndex(levelFeet, heightFt);
+        if (index === null) return;
+        const lower = valueOf(levels[Math.floor(index)]);
+        const upper = valueOf(levels[Math.ceil(index)]);
+        data[row * times.length + col] = lower + (upper - lower) * (index - Math.floor(index));
+      });
+    });
+    return new MeteogramData(times, heightsFt, data);
   }
 
   static combine(parts: MeteogramData[], fn: (...values: number[]) => number): MeteogramData {

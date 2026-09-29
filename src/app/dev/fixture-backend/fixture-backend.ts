@@ -7,195 +7,235 @@ import {
 } from '@angular/common/http';
 import { from } from 'rxjs';
 import { SECTORS } from '../../layers/polygons/polygons-layer';
-import { Sector } from '../../types/polygons';
+import { PolygonsStatus, Sector } from '../../types/polygons';
+import { RadarEntity } from '../../types/radar';
+import { SatelliteChannel } from '../../types/satellite';
 import { Bounds } from '../../types/wrap';
 import { contains } from '../../utils/geo';
-import { hoursToMs, msToHours } from '../../utils/time';
-import { syntheticPointForecasts, syntheticPolygons } from './synthetic-polygons';
-import { radarTimes, syntheticRadarWrap } from './synthetic-radar';
+import { daysToMs, hoursToMs, msToHours } from '../../utils/time';
+import { syntheticPointEvents, syntheticPolygons } from './synthetic-polygons';
+import { radarTimeRange, syntheticRadarWrap } from './synthetic-radar';
 import { syntheticObservations } from './synthetic-observations';
-import { SATELLITE_SECTORS, satelliteHours, syntheticSatelliteImage } from './synthetic-satellite';
+import { satImages, satelliteSectors, syntheticSatelliteImage } from './synthetic-satellite';
 import { SyntheticWeather } from './synthetic-weather';
 
 const ARTIFICIAL_LATENCY_MS = 150;
 const STEP_HOURS = 3;
 const BACK_HOURS = 24;
 const FORWARD_HOURS = 96;
+const BACKEND_PATHS = [
+  '/model/',
+  '/polygon/',
+  '/satellite/',
+  '/satellite-sectors/',
+  '/radar/',
+  '/observations/',
+];
+const AIR_COLUMN_PRESSURES = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100];
 
 const RUN_TIME =
   Math.floor(Date.now() / hoursToMs(STEP_HOURS)) * hoursToMs(STEP_HOURS);
 
 const POLYGON_HOURS: Record<Sector, number[]> = {
-  [Sector.Center]: Array.from({ length: 33 }, (_, index) => index * 3),
-  [Sector.North]: [0, 3, 12, 21, 45],
+  [Sector.Dev]: Array.from({ length: 33 }, (_, index) => index * 3),
+  [Sector.Big]: [0, 3, 12, 21, 45],
 };
+
+interface Route {
+  method?: 'GET' | 'POST';
+  path: RegExp;
+  answer: (request: HttpRequest<unknown>, match: RegExpMatchArray) => Promise<unknown>;
+}
+
+const ROUTES: Route[] = [
+  {
+    path: /^\/model\/data-limited\/([^/]+)\/MB(\d+)\/([^/]+)\/(\d+)\/params$/,
+    answer: async (request, [, model, pressure, parameter, forecast]) =>
+      (await loadWeather()).wrap(
+        model,
+        parameter,
+        boundsOf(request),
+        frameHours(Number(forecast)),
+        RUN_TIME,
+        null,
+        Number(pressure),
+      ) ?? undefined,
+  },
+  {
+    path: /^\/model\/data_with_flat_heights_with_limit\/([^/]+)\/(\d+)\/([^/]+)\/(\d+)\/params$/,
+    answer: async (request, [, model, height, parameter, forecast]) =>
+      (await loadWeather()).wrap(
+        model,
+        parameter,
+        boundsOf(request),
+        frameHours(Number(forecast)),
+        RUN_TIME,
+        Number(height),
+        null,
+      ) ?? undefined,
+  },
+  {
+    path: /^\/model\/air_column_nearest$/,
+    answer: async (request) => {
+      const step = hoursToMs(STEP_HOURS);
+      const time = Math.round(Number(request.params.get('forecasttime')) / step) * step;
+      return {
+        time,
+        airLevelDataList: (await loadWeather()).airColumn(
+          Number(request.params.get('lat')),
+          Number(request.params.get('lon')),
+          frameHours(time),
+          AIR_COLUMN_PRESSURES,
+        ),
+      };
+    },
+  },
+  {
+    path: /^\/model\/air_column_in_between$/,
+    answer: async (request) => {
+      const weather = await loadWeather();
+      const step = hoursToMs(STEP_HOURS);
+      const start = Number(request.params.get('start'));
+      const end = Number(request.params.get('end'));
+      const columns = [];
+      for (let time = Math.ceil(start / step) * step; time <= end; time += step) {
+        columns.push({
+          time,
+          airLevelDataList: weather.airColumn(
+            Number(request.params.get('lat')),
+            Number(request.params.get('lon')),
+            frameHours(time),
+            AIR_COLUMN_PRESSURES,
+          ),
+        });
+      }
+      return columns;
+    },
+  },
+  {
+    path: /^\/polygon\/get_maps_times$/,
+    answer: async (request) => {
+      const sector = request.params.get('sector') as Sector;
+      const start = Number(request.params.get('start_time'));
+      const end = Number(request.params.get('end_time'));
+      return (POLYGON_HOURS[sector] ?? [])
+        .map((hours) => RUN_TIME + hoursToMs(hours))
+        .filter((time) => time >= start && time <= end)
+        .map((startTime) => ({ startTime, status: PolygonsStatus.Distributed, timeSaved: RUN_TIME }));
+    },
+  },
+  {
+    path: /^\/polygon\/get_latest_polygons_by_time_sector_time_saved_status$/,
+    answer: async (request) => {
+      const sector = request.params.get('sector') as Sector;
+      const time = Number(request.params.get('time'));
+      const hours = Math.floor(msToHours(time - RUN_TIME));
+      return (POLYGON_HOURS[sector] ?? []).includes(hours)
+        ? syntheticPolygons(sector, hours, RUN_TIME)
+        : null;
+    },
+  },
+  {
+    path: /^\/polygon\/get_point_events_between_times$/,
+    answer: async (request) => {
+      const lon = Number(request.params.get('lon'));
+      const lat = Number(request.params.get('lat'));
+      const start = Number(request.params.get('start_time'));
+      const end = Number(request.params.get('end_time'));
+      const sector = [Sector.Dev, Sector.Big].find((candidate) =>
+        contains(SECTORS[candidate], lon, lat),
+      );
+      if (!sector) return [];
+      const frames = POLYGON_HOURS[sector].filter((hours) => {
+        const time = RUN_TIME + hoursToMs(hours);
+        return time >= start && time <= end;
+      });
+      return syntheticPointEvents(sector, lon, lat, frames, RUN_TIME);
+    },
+  },
+  {
+    path: /^\/satellite\/getConfiguration$/,
+    answer: async () => [
+      {
+        channel: SatelliteChannel.FLC,
+        startDateTime: Math.floor(RUN_TIME / daysToMs(1)) * daysToMs(1) - daysToMs(2),
+        endDateTime: Math.floor(RUN_TIME / daysToMs(1)) * daysToMs(1) + daysToMs(30),
+        startHour: hoursToMs(18),
+        endHour: hoursToMs(4),
+        satellite: 9,
+      },
+    ],
+  },
+  {
+    path: /^\/satellite-sectors\/get-all$/,
+    answer: async () => satelliteSectors(),
+  },
+  {
+    path: /^\/satellite\/filterBy$/,
+    answer: async (request) =>
+      satImages(
+        Number(request.params.get('start')),
+        Number(request.params.get('end')),
+        request.params.get('source') ?? '',
+        request.params.get('sector') ?? '',
+        Number(request.params.get('sat_id')),
+      ),
+  },
+  {
+    path: /^\/satellite\/getImageBy$/,
+    answer: async (request) => syntheticSatelliteImage(request.params.get('name') ?? ''),
+  },
+  {
+    path: /^\/radar\/get_time_range_to_live_radars$/,
+    answer: async (request) =>
+      radarTimeRange(Number(request.params.get('start')), Number(request.params.get('end'))),
+  },
+  {
+    method: 'POST',
+    path: /^\/radar\/get_wrap_for_entities$/,
+    answer: async (request) =>
+      (await syntheticRadarWrap((request.body as { entities: RadarEntity[] }).entities[0])) ??
+      undefined,
+  },
+  {
+    path: /^\/observations\/getDataByParam$/,
+    answer: async (request) =>
+      syntheticObservations(
+        request.params.get('param') ?? '',
+        Number(request.params.get('start')),
+        Number(request.params.get('end')),
+      ),
+  },
+];
 
 let weatherPromise: Promise<SyntheticWeather> | null = null;
 
 export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
-  if (!request.url.startsWith('/api/')) return next(request);
+  if (!BACKEND_PATHS.some((path) => request.url.startsWith(path))) return next(request);
   return from(answerFromFixtures(request));
 };
 
 async function answerFromFixtures(request: HttpRequest<unknown>): Promise<HttpEvent<unknown>> {
   await new Promise((resolve) => setTimeout(resolve, ARTIFICIAL_LATENCY_MS));
-  if (request.url === '/api/satellite/configuration') {
-    return new HttpResponse({
-      status: 200,
-      body: { satelliteId: 'sat-a', channel: 'ir', sector: 'near' },
-    });
-  }
-  if (request.url === '/api/satellite/bounds') {
-    const perSector = Object.fromEntries(
-      Object.entries(SATELLITE_SECTORS).map(([sector, { bounds }]) => [sector, bounds]),
-    );
-    return new HttpResponse({ status: 200, body: { 'sat-a': perSector, 'sat-b': perSector } });
-  }
-  if (request.url === '/api/satellite/hours') {
-    const sector = request.params.get('sector') ?? '';
-    const start = Number(request.params.get('start'));
-    const end = Number(request.params.get('end'));
-    return new HttpResponse({ status: 200, body: satelliteHours(sector, start, end) });
-  }
-  if (request.url === '/api/satellite/image') {
-    const sector = request.params.get('sector') ?? '';
-    const channel = request.params.get('channel') ?? '';
-    const time = Number(request.params.get('time'));
-    const blob = await syntheticSatelliteImage(sector, channel, time);
-    return new HttpResponse({ status: 200, body: blob });
-  }
-  if (request.url === '/api/radar/times') {
-    const start = Number(request.params.get('start'));
-    const end = Number(request.params.get('end'));
-    return new HttpResponse({ status: 200, body: radarTimes(start, end) });
-  }
-  if (request.url === '/api/radar') {
-    const wrap = await syntheticRadarWrap(
-      request.params.get('radar') ?? '',
-      Number(request.params.get('time')),
-    );
-    if (!wrap) {
-      throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'No radar' });
+  for (const route of ROUTES) {
+    const match = request.url.match(route.path);
+    if (!match || request.method !== (route.method ?? 'GET')) continue;
+    const body = await route.answer(request, match);
+    if (body === undefined) {
+      throw new HttpErrorResponse({ url: request.url, status: 500, statusText: 'Internal server error' });
     }
-    return new HttpResponse({ status: 200, body: wrap });
+    return new HttpResponse({ status: 200, body });
   }
-  if (request.url === '/api/observations') {
-    const points = await syntheticObservations(
-      request.params.get('parameter') ?? '',
-      Number(request.params.get('time')),
-    );
-    return new HttpResponse({ status: 200, body: points });
-  }
-  if (request.url === '/api/hours') {
-    return new HttpResponse({ status: 200, body: hoursBetween(request, -BACK_HOURS, FORWARD_HOURS) });
-  }
-  if (request.url === '/api/polygons/hours') {
-    const sector = (request.params.get('sector') ?? '') as Sector;
-    const start = Number(request.params.get('start'));
-    const end = Number(request.params.get('end'));
-    const times = (POLYGON_HOURS[sector] ?? [])
-      .map((hours) => RUN_TIME + hoursToMs(hours))
-      .filter((time) => time >= start && time <= end);
-    return new HttpResponse({ status: 200, body: times });
-  }
-  if (request.url === '/api/polygons/point') {
-    const lon = Number(request.params.get('lon'));
-    const lat = Number(request.params.get('lat'));
-    const start = Number(request.params.get('start'));
-    const end = Number(request.params.get('end'));
-    const sector = (Object.keys(SECTORS) as Sector[]).find((candidate) =>
-      contains(SECTORS[candidate], lon, lat),
-    );
-    if (!sector) return new HttpResponse({ status: 200, body: [] });
-    const frames = POLYGON_HOURS[sector].filter((hours) => {
-      const time = RUN_TIME + hoursToMs(hours);
-      return time >= start && time <= end;
-    });
-    const forecasts = syntheticPointForecasts(sector, lon, lat, frames, RUN_TIME);
-    return new HttpResponse({ status: 200, body: forecasts });
-  }
-  if (request.url === '/api/meteogram') {
-    const start = Number(request.params.get('start'));
-    const end = Number(request.params.get('end'));
-    const times: number[] = [];
-    for (
-      let time = Math.ceil(start / hoursToMs(1)) * hoursToMs(1);
-      time <= end;
-      time += hoursToMs(1)
-    ) {
-      times.push(time);
-    }
-    const heights = Array.from({ length: 46 }, (_, index) => index * 1000);
-    const weather = await loadWeather();
-    const values = weather.section(
-      request.params.get('parameter') ?? '',
-      Number(request.params.get('lat')),
-      Number(request.params.get('lon')),
-      times.map(frameHours),
-      heights,
-    );
-    return new HttpResponse({ status: 200, body: { times, heights, values } });
-  }
-  if (request.url === '/api/sounding') {
-    const time = Number(request.params.get('time'));
-    const weather = await loadWeather();
-    const levels = weather.sounding(
-      Number(request.params.get('lat')),
-      Number(request.params.get('lon')),
-      frameHours(time),
-      [
-        1000, 975, 950, 925, 900, 875, 850, 800, 750, 700, 650, 600, 550, 500, 450, 400, 350, 300,
-        250, 200, 150, 125, 100,
-      ],
-    );
-    return new HttpResponse({ status: 200, body: { time, levels } });
-  }
-  if (request.url === '/api/polygons') {
-    const sector = (request.params.get('sector') ?? '') as Sector;
-    const time = Number(request.params.get('time'));
-    const hours = msToHours(time - RUN_TIME);
-    const wrap = (POLYGON_HOURS[sector] ?? []).includes(hours)
-      ? syntheticPolygons(sector, hours, RUN_TIME)
-      : null;
-    if (!wrap) {
-      throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'No map' });
-    }
-    return new HttpResponse({ status: 200, body: wrap });
-  }
-  if (request.url !== '/api/grids') {
-    throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Not Found' });
-  }
-  const parameter = request.params.get('parameter') ?? '';
-  const model = request.params.get('model') ?? 'wide';
-  const time = Number(request.params.get('time'));
-  const bounds = (request.params.get('bbox') ?? '').split(',').map(Number) as Bounds;
-  const height = request.params.get('height');
-  const pressure = request.params.get('pressure');
-  const weather = await loadWeather();
-  const wrap = weather.wrap(
-    model,
-    parameter,
-    bounds,
-    frameHours(time),
-    RUN_TIME,
-    height === null ? null : Number(height),
-    pressure === null ? null : Number(pressure),
-  );
-  if (!wrap) {
-    throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Outside coverage' });
-  }
-  return new HttpResponse({ status: 200, body: wrap });
+  throw new HttpErrorResponse({ url: request.url, status: 404, statusText: 'Not Found' });
 }
 
-function hoursBetween(request: HttpRequest<unknown>, firstHours: number, lastHours: number): number[] {
-  const start = Number(request.params.get('start'));
-  const end = Number(request.params.get('end'));
-  const times: number[] = [];
-  for (let hours = firstHours; hours <= lastHours; hours += STEP_HOURS) {
-    const time = RUN_TIME + hoursToMs(hours);
-    if (time >= start && time <= end) times.push(time);
-  }
-  return times;
+function boundsOf(request: HttpRequest<unknown>): Bounds {
+  return [
+    Number(request.params.get('min_lon')),
+    Number(request.params.get('min_lat')),
+    Number(request.params.get('max_lon')),
+    Number(request.params.get('max_lat')),
+  ];
 }
 
 function frameHours(unixTime: number): number {

@@ -2,24 +2,23 @@ import { bboxClip } from '@turf/bbox-clip';
 import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
 import { point, polygon } from '@turf/helpers';
 import { Bounds } from '../types/wrap';
-import { ForecastEvent, ForecastPolygon, PolygonsWrap } from '../types/polygons';
+import { ForecastEvent, ForecastPolygon, PolygonsState } from '../types/polygons';
 
 export class PolygonMap {
   private constructor(
     readonly areas: ForecastPolygon[],
     readonly startTime: number,
-    readonly endTime: number,
   ) {}
 
-  static fromWrap(wrap: PolygonsWrap, bounds: Bounds): PolygonMap {
+  static fromState(state: PolygonsState, bounds: Bounds): PolygonMap {
     const areas: ForecastPolygon[] = [];
-    for (const shape of wrap.polygons) {
+    for (const shape of state.polygons) {
       const ring = flipCoordinates(shape.coordinates);
       for (const clipped of clipToBounds(ring, bounds)) {
-        areas.push({ coordinates: clipped, forecastEvents: shape.forecastEvents });
+        areas.push({ ...shape, coordinates: clipped });
       }
     }
-    return new PolygonMap(areas, wrap.startTime, wrap.endTime);
+    return new PolygonMap(areas, state.startTime);
   }
 
   eventsAt(lon: number, lat: number): ForecastEvent[] {

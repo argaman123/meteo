@@ -1,10 +1,11 @@
-import { SoundingLevel } from '../../types/sounding';
-import { Bounds, Wrap } from '../../types/wrap';
-import { feetAtPressure } from '../../utils/thermodynamics';
+import { AirLevelData } from '../../types/sounding';
+import { Bounds, ModelWrapInfo, Wrap } from '../../types/wrap';
+import { feetAtPressure, relativeHumidity } from '../../utils/thermodynamics';
 import { hoursToMs } from '../../utils/time';
 
 interface Model {
   name: string;
+  archiveName: string;
   north: number;
   west: number;
   south: number;
@@ -12,9 +13,17 @@ interface Model {
 }
 
 const MODELS: Model[] = [
-  { name: 'wide', north: 60, west: -10, south: 20, east: 60 },
-  { name: 'local', north: 52, west: 0, south: 24, east: 50 },
+  { name: 'BIG_ECMWF', archiveName: 'ECMWF03', north: 60, west: -10, south: 20, east: 60 },
+  { name: 'ECMWF', archiveName: 'ECMWF01', north: 52, west: 0, south: 24, east: 50 },
 ];
+
+const FIELDS: Record<string, string> = {
+  TMP: 'temperature',
+  SURFACE_TMP: 'temperature',
+  U: 'u',
+  V: 'v',
+  HGT: 'hgt',
+};
 
 const RESPONSE_SIZE = 70;
 const KNOTS_PER_METER_PER_SECOND = 1.94384;
@@ -57,15 +66,16 @@ export class SyntheticWeather {
 
   wrap(
     modelName: string,
-    parameter: string,
+    wireParameter: string,
     bounds: Bounds,
     hours: number,
     runTime: number,
     heightFeet: number | null = null,
     pressureMb: number | null = null,
-  ): Wrap | null {
+  ): Wrap<ModelWrapInfo> | null {
     const model = MODELS.find((candidate) => candidate.name === modelName);
-    if (!model) return null;
+    const parameter = FIELDS[wireParameter];
+    if (!model || !parameter) return null;
     const west = Math.max(bounds[0], model.west);
     const east = Math.min(bounds[2], model.east);
     const south = Math.max(bounds[1], model.south);
@@ -75,7 +85,7 @@ export class SyntheticWeather {
     const effectiveFeet = pressureMb === null ? (heightFeet ?? 0) : feetAtPressure(pressureMb);
     const values: (number | null)[][] = [];
     for (let r = 0; r < RESPONSE_SIZE; r++) {
-      const lat = north + ((south - north) * r) / (RESPONSE_SIZE - 1);
+      const lat = south + ((north - south) * r) / (RESPONSE_SIZE - 1);
       const row: (number | null)[] = [];
       for (let c = 0; c < RESPONSE_SIZE; c++) {
         const lon = west + ((east - west) * c) / (RESPONSE_SIZE - 1);
@@ -89,46 +99,42 @@ export class SyntheticWeather {
     }
     return {
       rx: (east - west) / (RESPONSE_SIZE - 1),
-      ry: (south - north) / (RESPONSE_SIZE - 1),
+      ry: (north - south) / (RESPONSE_SIZE - 1),
       start_x: west,
-      start_y: north,
+      start_y: south,
       wrap_info: {
+        info_type: 'model',
         base_time: runTime,
         forecast_time: runTime + hoursToMs(hours),
-        model: modelName,
-        param: parameter,
-        pressure: pressureMb !== null ? String(pressureMb) : parameter === 'hgt' ? '1000' : null,
-        height: heightFeet === null ? null : String(heightFeet),
+        model: model.archiveName,
+        param: wireParameter,
+        pressure: pressureMb === null ? '-' : `MB${pressureMb}`,
+        height: heightFeet === null ? '-' : heightFeet,
+        direction_stack: true,
       },
       values,
     };
   }
 
-  section(
-    parameter: string,
-    lat: number,
-    lon: number,
-    frameHours: number[],
-    heightsFeet: number[],
-  ): number[][] {
-    return heightsFeet.map((feet) =>
-      frameHours.map((hours) => this.field(lat, lon, hours, parameter, feet, null)),
-    );
-  }
-
-  sounding(lat: number, lon: number, hours: number, pressures: number[]): SoundingLevel[] {
-    const surfacePressure = round1(pressureAt(lat, lon, hours));
-    const below = pressures.filter((pressure) => pressure < surfacePressure);
-    return [surfacePressure, ...below].map((pressure) => {
+  airColumn(lat: number, lon: number, hours: number, pressures: number[]): AirLevelData[] {
+    return pressures.map((pressure) => {
       const feet = feetAtPressure(pressure);
       const value = (parameter: string) => this.field(lat, lon, hours, parameter, feet, pressure);
+      const temperature = value('temperature');
+      const dewPoint = value('dewpoint');
+      const u = value('u');
+      const v = value('v');
+      const vapor = 6.112 * Math.exp((17.67 * dewPoint) / (dewPoint + 243.5));
       return {
         pressure,
-        height: pressure === surfacePressure ? 0 : value('hgt'),
-        temperature: value('temperature'),
-        dewpoint: value('dewpoint'),
-        u: value('u'),
-        v: value('v'),
+        modelHeight: value('hgt'),
+        standardHeight: round1(feet * 0.3048),
+        temperature,
+        windDir: Math.atan2(v, u),
+        windStr: round1(Math.hypot(u, v) * KNOTS_PER_METER_PER_SECOND),
+        dewPoint,
+        rh: round1(relativeHumidity(temperature, dewPoint)),
+        ws: round1((622 * vapor) / (pressure - vapor)),
       };
     });
   }

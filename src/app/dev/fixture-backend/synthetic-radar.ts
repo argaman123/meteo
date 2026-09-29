@@ -1,70 +1,104 @@
-import { RadarTimes } from '../../types/radar';
-import { Wrap } from '../../types/wrap';
-import { minutesToMs } from '../../utils/time';
-import { SATELLITE_SECTORS, SOURCE_COUNT, sourceMixAt } from './synthetic-satellite';
+import { RadarEntity, RadarTimeRange } from '../../types/radar';
+import { RadarWrapInfo, Wrap } from '../../types/wrap';
+import { minutesToMs, msToSeconds, secondsToMs } from '../../utils/time';
+import { SATELLITE_SOURCES, SOURCE_COUNT, sourceMixAt } from './synthetic-satellite';
 
 const RADAR_SITES: Record<string, { center: [number, number]; span: number; stepMinutes: number }> = {
-  center: { center: [34.9, 32.0], span: 1.6, stepMinutes: 3 },
-  north: { center: [35.5, 33.1], span: 1.6, stepMinutes: 10 },
+  CENTER: { center: [34.9, 32.0], span: 1.6, stepMinutes: 3 },
+  NORTH: { center: [35.5, 33.1], span: 1.6, stepMinutes: 10 },
 };
 
-const CLOUD_SECTOR = SATELLITE_SECTORS['near'];
+const CLOUD_SECTOR = SATELLITE_SOURCES['near'];
 const SAMPLE_SIZE = 512;
 const GRID_SIZE = 80;
 
 let sourcesPromise: Promise<Uint8ClampedArray[]> | null = null;
 
-export function radarTimes(start: number, end: number): RadarTimes[] {
-  return Object.entries(RADAR_SITES).map(([name, site]) => {
+export function radarTimeRange(start: number, end: number): RadarTimeRange {
+  const entities = Object.entries(RADAR_SITES).flatMap(([name, site]) => {
     const step = minutesToMs(site.stepMinutes);
     const latest = Math.floor(Date.now() / step) * step;
-    const times: number[] = [];
-    for (let time = Math.ceil(start / step) * step; time <= end; time += step) {
-      if (time <= latest) times.push(time);
+    const siteEntities: RadarEntity[] = [];
+    for (let time = Math.ceil(secondsToMs(start) / step) * step; time <= secondsToMs(end); time += step) {
+      if (time > latest) continue;
+      const seconds = msToSeconds(time);
+      siteEntities.push({
+        time: seconds,
+        fileName: `${name}_${seconds}.xml`,
+        radarName: name,
+        radarType: 'RAIN',
+        fileVersion: 1,
+      });
     }
-    return { name, times };
+    return siteEntities;
   });
+  return mapEntities(entities);
 }
 
-export async function syntheticRadarWrap(radar: string, time: number): Promise<Wrap | null> {
-  const site = RADAR_SITES[radar];
+function mapEntities(entities: RadarEntity[]): RadarTimeRange {
+  const times = [...new Set(entities.map((entity) => entity.time))].sort((a, b) => a - b);
+  const radars = [...new Set(entities.map((entity) => entity.radarName))];
+  const result: RadarTimeRange = {};
+  let lastKey = '';
+  for (const time of times) {
+    const current = radars.flatMap((radar) => {
+      const nearest = entities
+        .filter((entity) => entity.radarName === radar)
+        .reduce<RadarEntity | null>(
+          (best, entity) =>
+            best === null || Math.abs(time - entity.time) < Math.abs(time - best.time) ? entity : best,
+          null,
+        );
+      return nearest && Math.abs(time - nearest.time) < 5 * 60 ? [nearest] : [];
+    });
+    const key = JSON.stringify(current);
+    if (key !== lastKey) {
+      result[String(time)] = current;
+      lastKey = key;
+    }
+  }
+  return result;
+}
+
+export async function syntheticRadarWrap(entity: RadarEntity): Promise<Wrap<RadarWrapInfo> | null> {
+  const site = RADAR_SITES[entity.radarName];
   if (!site) return null;
   const sources = await loadSources();
   const cloudStepMs = minutesToMs(CLOUD_SECTOR.stepMinutes);
-  const slotTime = Math.round(time / cloudStepMs) * cloudStepMs;
+  const slotTime = Math.round(secondsToMs(entity.time) / cloudStepMs) * cloudStepMs;
   const { from, to, mix } = sourceMixAt(slotTime);
   const radius = (GRID_SIZE - 1) / 2;
   const [lon, lat] = site.center;
   const half = site.span / 2;
-  const values: (number | null)[][] = [];
+  const values: number[][] = [];
   for (let row = 0; row < GRID_SIZE; row++) {
-    const cells: (number | null)[] = [];
+    const cells: number[] = [];
     for (let col = 0; col < GRID_SIZE; col++) {
-      if (Math.hypot(col - radius, row - radius) > radius) {
-        cells.push(null);
+      const distance = Math.hypot(col - radius, row - radius);
+      if (distance > radius) {
+        cells.push(0);
         continue;
       }
       const cellLon = lon - half + (col * site.span) / (GRID_SIZE - 1);
-      const cellLat = lat + half - (row * site.span) / (GRID_SIZE - 1);
-      cells.push(rainAt(sources[from], sources[to], mix, cellLon, cellLat));
+      const cellLat = lat - half + (row * site.span) / (GRID_SIZE - 1);
+      cells.push(distance < 6 ? -clutterAt(row, col) : rainAt(sources[from], sources[to], mix, cellLon, cellLat));
     }
     values.push(cells);
   }
   return {
     rx: site.span / (GRID_SIZE - 1),
-    ry: -site.span / (GRID_SIZE - 1),
+    ry: site.span / (GRID_SIZE - 1),
     start_x: lon - half,
-    start_y: lat + half,
-    wrap_info: {
-      base_time: time,
-      forecast_time: time,
-      model: 'radar',
-      param: 'rain',
-      pressure: null,
-      height: null,
-    },
+    start_y: lat - half,
+    wrap_info: { info_type: 'radar', name: entity.radarName, time: entity.time, type: entity.radarType },
     values,
   };
+}
+
+function clutterAt(row: number, col: number): number {
+  const scrambled = Math.sin(row * 12.9898 + col * 78.233) * 43758.5453;
+  const fraction = scrambled - Math.floor(scrambled);
+  return fraction < 0.5 ? 0 : Number((fraction * 6).toFixed(1));
 }
 
 function rainAt(

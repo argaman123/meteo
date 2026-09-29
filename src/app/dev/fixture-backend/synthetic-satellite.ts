@@ -1,32 +1,71 @@
+import { SatImage, SatelliteChannel, SatelliteSector, SatelliteSectors } from '../../types/satellite';
 import { Bounds } from '../../types/wrap';
-import { minutesToMs } from '../../utils/time';
+import { minutesToMs, msToSeconds, secondsToMs } from '../../utils/time';
 
-export const SATELLITE_SECTORS: Record<string, { bounds: Bounds; size: number; stepMinutes: number }> = {
+export const SATELLITE_SOURCES: Record<string, { bounds: Bounds; size: number; stepMinutes: number }> = {
   near: { bounds: [30, 27, 40, 36], size: 1024, stepMinutes: 5 },
   wide: { bounds: [20, 18, 52, 44], size: 3000, stepMinutes: 15 },
 };
+
+const SECTOR_BOUNDS: Record<SatelliteSector, Bounds> = {
+  modeq: [-6.085, 17.048, 51.915, 50.048],
+  noaeq: [23.973, 25.007, 42.988, 40.025],
+  naseq: [28.002, 10.965, 62.036, 43.001],
+  srneq: [28.75, -8.98, 71.75, 38.07],
+};
+
+const IMAGE_SIZE = 1024;
 
 export const SOURCE_COUNT = 19;
 
 const sourcePromises = new Map<string, Promise<ImageBitmap>>();
 const framePromises = new Map<string, Promise<Blob>>();
 
-export function satelliteHours(sector: string, start: number, end: number): number[] {
-  const step = minutesToMs(SATELLITE_SECTORS[sector]?.stepMinutes ?? 10);
-  const latest = Math.floor(Date.now() / step) * step;
-  const times: number[] = [];
-  for (let time = Math.ceil(start / step) * step; time <= end; time += step) {
-    if (time <= latest) times.push(time);
-  }
-  return times;
+export function satelliteSectors(): SatelliteSectors[] {
+  const entries = Object.fromEntries(
+    Object.entries(SECTOR_BOUNDS).map(([sector, [west, south, east, north]]) => [
+      sector,
+      [{ date: '2024-01-01', coords: { west, south, east, north } }],
+    ]),
+  );
+  return [
+    { id: '8', ...entries },
+    { id: '9', ...entries },
+  ];
 }
 
-export function syntheticSatelliteImage(sector: string, channel: string, time: number): Promise<Blob> {
-  const key = `${sector}-${channel}-${time}`;
-  let frame = framePromises.get(key);
+export function satImages(
+  start: number,
+  end: number,
+  source: string,
+  sector: string,
+  satelliteId: number,
+): SatImage[] {
+  const step = minutesToMs(sector === 'noaeq' ? 5 : 15);
+  const latest = Math.floor(Date.now() / step) * step;
+  const images: SatImage[] = [];
+  for (let time = Math.ceil(secondsToMs(start) / step) * step; time <= secondsToMs(end); time += step) {
+    if (time > latest) continue;
+    images.push({
+      imgTime: msToSeconds(time),
+      satelliteType: 'METEOSAT',
+      satelliteId,
+      satelliteSector: sector,
+      satelliteSource: source,
+      fileName: `${sector}_${source}_${msToSeconds(time)}.xml`,
+      channel_number: 0,
+      current_channel: 0,
+    });
+  }
+  return images;
+}
+
+export function syntheticSatelliteImage(fileName: string): Promise<Blob> {
+  let frame = framePromises.get(fileName);
   if (!frame) {
-    frame = renderFrame(sector, channel, time);
-    framePromises.set(key, frame);
+    const [sector, source, seconds] = fileName.replace('.xml', '').split('_');
+    frame = renderFrame(sector as SatelliteSector, source, secondsToMs(Number(seconds)));
+    framePromises.set(fileName, frame);
   }
   return frame;
 }
@@ -45,16 +84,26 @@ export function sourceMixAt(time: number): { from: number; to: number; mix: numb
   return { from, to, mix: position - from };
 }
 
-async function renderFrame(sector: string, channel: string, time: number): Promise<Blob> {
-  const { size } = SATELLITE_SECTORS[sector] ?? SATELLITE_SECTORS['near'];
+async function renderFrame(sector: SatelliteSector, source: string, time: number): Promise<Blob> {
+  const [west, south, east, north] = SECTOR_BOUNDS[sector] ?? SECTOR_BOUNDS.noaeq;
   const { from, to, mix } = sourceMixAt(time);
-  const canvas = new OffscreenCanvas(size, size);
+  const canvas = new OffscreenCanvas(IMAGE_SIZE, IMAGE_SIZE);
   const context = canvas.getContext('2d')!;
-  if (channel === 'ir') context.filter = 'grayscale(1)';
-  context.drawImage(await loadSource(sector, from), 0, 0, size, size);
-  if (mix > 0.01) {
-    context.globalAlpha = mix;
-    context.drawImage(await loadSource(sector, to), 0, 0, size, size);
+  context.fillStyle = 'black';
+  context.fillRect(0, 0, IMAGE_SIZE, IMAGE_SIZE);
+  if (source === SatelliteChannel.IR10_8) context.filter = 'grayscale(1)';
+  for (const name of ['wide', 'near']) {
+    const [sourceWest, sourceSouth, sourceEast, sourceNorth] = SATELLITE_SOURCES[name].bounds;
+    const x = ((sourceWest - west) / (east - west)) * IMAGE_SIZE;
+    const y = ((north - sourceNorth) / (north - south)) * IMAGE_SIZE;
+    const width = ((sourceEast - sourceWest) / (east - west)) * IMAGE_SIZE;
+    const height = ((sourceNorth - sourceSouth) / (north - south)) * IMAGE_SIZE;
+    context.globalAlpha = 1;
+    context.drawImage(await loadSource(name, from), x, y, width, height);
+    if (mix > 0.01) {
+      context.globalAlpha = mix;
+      context.drawImage(await loadSource(name, to), x, y, width, height);
+    }
   }
   return canvas.convertToBlob({ type: 'image/png' });
 }

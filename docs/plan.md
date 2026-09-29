@@ -10,6 +10,7 @@
 
 | Task | Area | Priority | Notes |
 |---|---|---|---|
+| Real backend: open items | Platform | High | **Migration landed 2026-09-28** (CLAUDE.md §11, `docs/backend.md`). Open: send `docs/backend-asks.md` (3 asks) to the backend team; lead to supply the local ECMWF coverage box, a real polygons archive file to confirm `[lat, lon]` coordinate order, the Hebrew precip-type names (stand-in translations); confirm on live data: model grid row order (ECMWF flipud), wind direction convention on air_column (radians, math convention assumed), polygon map validity (−1h/+2h stand-in), obs cloud colour (max layer cover) |
 | Draw-order overrides | Layer system | Low | Looks draw in fixed LookKind ranks since stacking; per-look opacity landed 2026-07-13. Remaining: user-adjustable order/opacity for rare cases (e.g. satellite above a model) — wait for a real need |
 | More shortcuts (bundles) | Layer system | Low | Shortcuts are the primary UX (vision.md); add bundles as layers land — each is one registry entry; slp/hgt ride inside bundles (lead lowered 2026-07-23) |
 | Radar layer: beyond v1 | Looks | Med | **v1 landed 2026-08-10** (see CLAUDE.md §11): LoopLayer kind, per-radar Wraps of rain, stepped client colormap with rounded edges, RainViewer fixture. Remaining: real palette bands + Z-R calibration from the lead (0.1/1/4/8 mm/h are invented), look-row vocabulary (גשם) confirmation, whether radar coverage circles/range rings should draw |

@@ -8,14 +8,14 @@ export const VISIBILITY_BANDS: { minVis: number; maxVis: number }[] = [
   { minVis: 0, maxVis: 0.2 },
 ];
 
-export function visibilityPosition(event: { minVis: number; maxVis: number }): number {
+export function visibilityPosition(minVis: number, maxVis: number): number {
   const index = VISIBILITY_BANDS.findIndex(
-    (band) => band.minVis === event.minVis && band.maxVis === event.maxVis,
+    (band) => band.minVis === minVis && band.maxVis === maxVis,
   );
   const fallback = Math.floor(VISIBILITY_BANDS.length / 2);
   return (index < 0 ? fallback : index) / (VISIBILITY_BANDS.length - 1);
 }
 
-export function visibilityText(event: { minVis: number; maxVis: number }): string {
-  return `ראות ${format(event.minVis, Quantity.Visibility, Unit.Kilometers)}-${format(event.maxVis, Quantity.Visibility, Unit.Kilometers)}`;
+export function visibilityText(minVis: number, maxVis: number): string {
+  return `ראות ${format(minVis, Quantity.Visibility, Unit.Kilometers)}-${format(maxVis, Quantity.Visibility, Unit.Kilometers)}`;
 }

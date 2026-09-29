@@ -1,9 +1,9 @@
-export interface ObservationPoint {
-  lat: number;
-  lon: number;
+export interface ObservationParam {
+  name: string;
   value: number;
 }
 
-export interface CloudPoint extends ObservationPoint {
-  base?: number;
+export interface ObservationPoint {
+  coords: [[number, number]];
+  params: ObservationParam[];
 }

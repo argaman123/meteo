@@ -14,8 +14,8 @@ export class SoundingTableService {
     if (this.points.view() !== PointView.SoundingTable || !point) return undefined;
     const [lon, lat] = point;
     return {
-      url: '/api/sounding',
-      params: { lat, lon, model: modelAtPoint(lon, lat), time: this.time.displayTime() },
+      url: '/model/air_column_nearest',
+      params: { model: modelAtPoint(lon, lat), lat, lon, forecasttime: this.time.displayTime() },
     };
   }
 }

@@ -5,10 +5,10 @@ import { Radar } from '../../engine/looks/radar';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { TimeRange } from '../../services/time-service';
-import { RadarTimes } from '../../types/radar';
-import { Wrap } from '../../types/wrap';
+import { RadarEntity, RadarTimeRange } from '../../types/radar';
+import { RadarWrapInfo, Wrap } from '../../types/wrap';
 import { sameArrays } from '../../utils/arrays';
-import { minutesToMs } from '../../utils/time';
+import { findNearestByTime, minutesToMs, msToSeconds, secondsToMs } from '../../utils/time';
 import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs } from '../base/layer';
 import { FrameLoader, LoopLayer } from '../base/loop-layer';
@@ -29,12 +29,13 @@ export class RadarLayer extends LoopLayer<RadarLoop[]> {
   override readonly timeWindow = { backHours: 24, forwardHours: 0, stepHours: 1 };
   private readonly askMinutes = 30;
   private readonly minimumRain = 0.1;
+  private readonly radar = new Radar(
+    new Provider((radars: RadarLoop[]) => radars.map((radar) => radar.shown.map)),
+    this.minimumRain,
+  );
   readonly looks = [
     {
-      look: new Radar(
-        new Provider((radars: RadarLoop[]) => radars.map((radar) => radar.shown.map)),
-        this.minimumRain,
-      ),
+      look: this.radar,
       name: 'גשם',
       checked: true,
     },
@@ -43,6 +44,7 @@ export class RadarLayer extends LoopLayer<RadarLoop[]> {
   hover(radars: RadarLoop[], lon: number, lat: number): string {
     const values = radars
       .map((radar) => radar.shown.map.valueAt(lon, lat, 'nearest'))
+      .map((value) => (this.radar.noise() ? Math.abs(value) : value))
       .filter((value) => !Number.isNaN(value));
     const most = Math.max(...values);
     if (most < this.minimumRain) return '—';
@@ -64,22 +66,18 @@ export class RadarLayer extends LoopLayer<RadarLoop[]> {
   atTime(radars: RadarLoop[], loopTime: number): RadarLoop[] {
     return radars.map((radar) => ({
       ...radar,
-      shown: radar.frames.reduce((nearest, frame) =>
-        Math.abs(frame.time - loopTime) < Math.abs(nearest.time - loopTime)
-          ? frame
-          : nearest,
-      ),
+      shown: findNearestByTime(radar.frames, loopTime),
     }));
   }
 
   fetch(on: Inputs, injector: Injector): Signal<RadarLoop[] | null | undefined> {
-    const times = this.timesResource(on, injector);
-    const frames = this.framesResource(injector, times);
+    const entities = this.entitiesResource(on, injector);
+    const frames = this.framesResource(injector, entities);
     return computed(() => {
       if (!frames.hasValue()) return undefined;
       const radars = this.loopsOf(frames.value());
       if (radars.length > 0) return radars;
-      const expected = times.hasValue() && times.value().some((radar) => radar.times.length > 0);
+      const expected = entities.hasValue() && entities.value().length > 0;
       return expected ? undefined : null;
     });
   }
@@ -92,58 +90,61 @@ export class RadarLayer extends LoopLayer<RadarLoop[]> {
     });
   }
 
-  private timesResource(on: Inputs, injector: Injector): Resource<RadarTimes[] | undefined> {
-    return httpResource<RadarTimes[]>(
+  private entitiesResource(on: Inputs, injector: Injector): Resource<RadarEntity[] | undefined> {
+    return httpResource(
       () => ({
-        url: '/api/radar/times',
+        url: '/radar/get_time_range_to_live_radars',
         params: {
-          start: String(on.exactTime() - minutesToMs(this.askMinutes)),
-          end: String(on.exactTime()),
+          start: msToSeconds(on.exactTime() - minutesToMs(this.askMinutes)),
+          end: msToSeconds(on.exactTime()),
         },
       }),
-      { injector },
+      {
+        injector,
+        parse: (timeRange) => {
+          const byFileName = new Map<string, RadarEntity>();
+          for (const entity of Object.values(timeRange as RadarTimeRange).flat()) {
+            byFileName.set(entity.fileName, entity);
+          }
+          return [...byFileName.values()];
+        },
+      },
     );
   }
 
   private framesResource(
     injector: Injector,
-    times: Resource<RadarTimes[] | undefined>,
+    entities: Resource<RadarEntity[] | undefined>,
   ): Resource<RadarFrame[] | undefined> {
     const http = injector.get(HttpClient);
     const loader = new FrameLoader<RadarFrame>();
     const params = computed(
-      () => (times.hasValue() ? times.value() : undefined),
-      { equal: (a, b) => this.sameRadarTimes(a, b) },
+      () => (entities.hasValue() ? entities.value() : undefined),
+      {
+        equal: (a, b) =>
+          sameArrays(a?.map((entity) => entity.fileName), b?.map((entity) => entity.fileName)),
+      },
     );
     return resource({
       params,
       stream: async ({ params }) =>
         loader.stream(
-          params.flatMap((radar) =>
-            radar.times.map((time) => {
-              const request: Record<string, string> = { radar: radar.name, time: String(time) };
-              return {
-                params: request,
-                load: () =>
-                  this.loadMap(http, request).then((map) => ({ name: radar.name, time, map })),
-              };
-            }),
-          ),
+          params.map((entity) => {
+            const request = { entities: [entity] };
+            return {
+              params: request,
+              load: () =>
+                firstValueFrom(
+                  http.post<Wrap<RadarWrapInfo>>('/radar/get_wrap_for_entities', request),
+                ).then((wrap) => ({
+                  name: entity.radarName,
+                  time: secondsToMs(entity.time),
+                  map: Grid.fromWrap(wrap),
+                })),
+            };
+          }),
         ),
       injector,
     });
-  }
-
-  private async loadMap(http: HttpClient, request: Record<string, string>): Promise<Grid> {
-    const wrap = await firstValueFrom(http.get<Wrap>('/api/radar', { params: request }));
-    return Grid.fromWrap(wrap);
-  }
-
-  private sameRadarTimes(a: RadarTimes[] | undefined, b: RadarTimes[] | undefined): boolean {
-    if (a === undefined || b === undefined) return a === b;
-    return (
-      a.length === b.length &&
-      a.every((radar, index) => radar.name === b[index].name && sameArrays(radar.times, b[index].times))
-    );
   }
 }

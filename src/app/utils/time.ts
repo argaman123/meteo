@@ -12,6 +12,14 @@ const monthYearFormat = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 
 const yearFormat = new Intl.DateTimeFormat('he-IL', { year: 'numeric' });
 const WEEKDAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'];
 
+export function secondsToMs(seconds: number): number {
+  return seconds * 1000;
+}
+
+export function msToSeconds(ms: number): number {
+  return Math.floor(ms / 1000);
+}
+
 export function minutesToMs(minutes: number): number {
   return minutes * 60_000;
 }
@@ -62,6 +70,12 @@ export function findNearestTime(
   if (!relevant.length) return null;
   return relevant.reduce((nearest, time) =>
     Math.abs(time - target) < Math.abs(nearest - target) ? time : nearest,
+  );
+}
+
+export function findNearestByTime<T extends { time: number }>(items: T[], target: number): T {
+  return items.reduce((nearest, item) =>
+    Math.abs(item.time - target) < Math.abs(nearest.time - target) ? item : nearest,
   );
 }
 

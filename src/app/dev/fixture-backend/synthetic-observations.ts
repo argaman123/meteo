@@ -1,4 +1,4 @@
-import { CloudPoint, ObservationPoint } from '../../types/observations';
+import { ObservationParam, ObservationPoint } from '../../types/observations';
 import { hoursToMs, minutesToMs } from '../../utils/time';
 import { LandPolygon, collectLandPolygons, isLand } from './synthetic-weather';
 
@@ -19,52 +19,64 @@ function ripple(lat: number, lon: number, drift: number, latScale: number, lonSc
   );
 }
 
-const VALUE_MAKERS: Record<
+const PARAM_MAKERS: Record<
   string,
-  (lat: number, lon: number, drift: number, jitter: number) => { value: number; base?: number }
+  (lat: number, lon: number, drift: number, jitter: number) => ObservationParam[]
 > = {
-  temperature: (lat, lon, drift, jitter) => ({
-    value: 24 - (lat - 31) * 0.9 + ripple(lat, lon, drift, 5, 7, 0) * 10 + jitter * 2,
-  }),
-  windSpeed: (lat, lon, drift, jitter) => ({
-    value: Math.max(0, ((ripple(lat, lon, drift, 6, 9, 1.3) + 1) / 2) * 28 + jitter * 3),
-  }),
-  rain: (lat, lon, drift, jitter) => {
+  TMP: (lat, lon, drift, jitter) => [
+    {
+      name: 'temperature',
+      value: round1(24 - (lat - 31) * 0.9 + ripple(lat, lon, drift, 5, 7, 0) * 10 + jitter * 2),
+    },
+  ],
+  WIND: (lat, lon, drift, jitter) => [
+    {
+      name: 'wind_speed',
+      value: Math.round(Math.max(0, ((ripple(lat, lon, drift, 6, 9, 1.3) + 1) / 2) * 55 + jitter * 6)),
+    },
+    { name: 'wind_direction', value: Math.round(((ripple(lat, lon, drift, 9, 9, 0.4) + 1) / 2) * 359) },
+  ],
+  RAIN: (lat, lon, drift, jitter) => {
     const wetness = (ripple(lat, lon, drift, 4, 6, 2.6) + 1) / 2;
-    return { value: wetness < 0.55 ? 0 : (wetness - 0.55) * 22 + jitter };
+    return [{ name: 'precipitation', value: wetness < 0.55 ? 0 : round1((wetness - 0.55) * 22 + jitter) }];
   },
-  cloud: (lat, lon, drift, jitter) => {
+  CLOUD: (lat, lon, drift, jitter) => {
     const cover = (ripple(lat, lon, drift, 7, 8, 3.9) + 1) / 2;
-    return {
-      value: Math.min(8, Math.max(0, Math.round((cover * 1.6 - 0.3) * 8 + jitter))),
-      base:
-        Math.round(
-          Math.min(20000, Math.max(500, ((ripple(lat, lon, drift, 6, 10, 5.2) + 1) / 2) * 19500 + 500 + jitter * 900)) /
-            500,
-        ) * 500,
-    };
+    const lowest = Math.min(8, Math.max(0, Math.round((cover * 1.6 - 0.3) * 8 + jitter)));
+    const baseMeters =
+      Math.round(
+        Math.min(6000, Math.max(150, ((ripple(lat, lon, drift, 6, 10, 5.2) + 1) / 2) * 5900 + 150 + jitter * 270)) /
+          150,
+      ) * 150;
+    const layers = lowest === 0 ? [{ cover: 0, base: NaN }] : [{ cover: Math.min(3, lowest), base: baseMeters }];
+    if (lowest > 3) layers.push({ cover: lowest, base: baseMeters + 1500 });
+    return layers.flatMap((layer, index) => [
+      { name: `cloud_cover_${index + 1}`, value: layer.cover },
+      ...(Number.isNaN(layer.base) ? [] : [{ name: `cloud_base_${index + 1}`, value: layer.base }]),
+    ]);
   },
 };
 
 export async function syntheticObservations(
-  parameter: string,
-  time: number,
+  param: string,
+  start: number,
+  end: number,
 ): Promise<ObservationPoint[]> {
   const stations = await loadStations();
-  const makeValue = VALUE_MAKERS[parameter] ?? VALUE_MAKERS['temperature'];
-  return stations.map((station, index): CloudPoint => {
+  const makeParams = PARAM_MAKERS[param] ?? PARAM_MAKERS['TMP'];
+  return stations.flatMap((station, index): ObservationPoint[] => {
     const cadence = index % 5 === 0 ? hoursToMs(1) : minutesToMs(10);
     const phase = index * minutesToMs(10);
-    const lastUpdate = Math.floor((time - phase) / cadence) * cadence + phase;
+    const lastUpdate = Math.floor((end - 1 - phase) / cadence) * cadence + phase;
+    if (lastUpdate < start) return [];
     const drift = lastUpdate / hoursToMs(3);
     const jitter = fraction(index * 17.517) * 2 - 1;
-    const made = makeValue(station.lat, station.lon, drift, jitter);
-    return {
-      lat: station.lat,
-      lon: station.lon,
-      value: Number(made.value.toFixed(1)),
-      ...(made.base === undefined ? {} : { base: made.base }),
-    };
+    return [
+      {
+        coords: [[station.lon, station.lat]],
+        params: makeParams(station.lat, station.lon, drift, jitter),
+      },
+    ];
   });
 }
 
@@ -76,7 +88,7 @@ function loadStations(): Promise<Station[]> {
 async function buildStations(): Promise<Station[]> {
   const [supplied, landGeojson] = await Promise.all([
     fetch('/fixtures/observations/temperature.json').then(
-      (response) => response.json() as Promise<ObservationPoint[]>,
+      (response) => response.json() as Promise<{ lat: number; lon: number; value: number }[]>,
     ),
     fetch('/fixtures/land.geojson').then((response) => response.json()),
   ]);
@@ -93,6 +105,10 @@ async function buildStations(): Promise<Station[]> {
     stations.push({ lat, lon, base: 34 - (lat - 18) * 0.55 + fraction(seed * 39.425) * 6 - 3 });
   }
   return stations;
+}
+
+function round1(value: number): number {
+  return Math.round(value * 10) / 10;
 }
 
 function fraction(seed: number): number {

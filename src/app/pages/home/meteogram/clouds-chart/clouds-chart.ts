@@ -1,12 +1,17 @@
 import { Component, computed, inject, viewChild } from '@angular/core';
 import { PolygonStyle } from '../../../../engine/looks/polygons';
-import { EVENT_APPEARANCES } from '../../../../layers/polygons/polygons-layer';
-import { CloudEvent, ForecastEvent } from '../../../../types/polygons';
+import {
+  DrawnEvent,
+  EVENT_APPEARANCES,
+  drawnEvents,
+  mapValidity,
+} from '../../../../layers/polygons/polygons-layer';
+import { CloudEvent } from '../../../../types/polygons';
 import { MeteogramFrame } from '../meteogram-frame/meteogram-frame';
 import { MeteogramService } from '../meteogram-service';
 import { TimeBarService } from '../../time-bar/time-bar-service';
 
-interface EventBlock<E extends ForecastEvent = ForecastEvent> {
+interface EventBlock<E extends DrawnEvent = DrawnEvent> {
   start: number;
   end: number;
   event: E;
@@ -44,16 +49,17 @@ export class CloudsChart {
     const blocks: EventBlock[] = [];
     const latest = new Map<string, EventBlock>();
     for (const forecast of this.forecasts.value()) {
-      for (const event of forecast.forecastEvents) {
+      const validity = mapValidity(forecast.startTime);
+      for (const event of drawnEvents(forecast.forecastEvents)) {
         const key = JSON.stringify(event);
         const previous = latest.get(key);
-        if (previous && previous.end >= forecast.startTime) {
-          previous.end = forecast.endTime;
+        if (previous && previous.end >= validity.start) {
+          previous.end = validity.end;
           continue;
         }
         const block: EventBlock = {
-          start: forecast.startTime,
-          end: forecast.endTime,
+          start: validity.start,
+          end: validity.end,
           event,
           style: EVENT_APPEARANCES[event.type].style(event),
         };
@@ -66,8 +72,13 @@ export class CloudsChart {
 
   private clouds = computed(() =>
     this.blocks()
-      .filter((block): block is EventBlock<CloudEvent> => block.event.type === 'cloud')
-      .sort((a, b) => b.event.topFt - a.event.topFt),
+      .filter((block): block is EventBlock<CloudEvent> => block.event.type === 'CLOUD')
+      .map((block) => ({
+        ...block,
+        baseFt: block.event.parameters.cloudBase * 1000,
+        topFt: block.event.parameters.cloudTop * 1000,
+      }))
+      .sort((a, b) => b.topFt - a.topFt),
   );
 
   protected topFt = computed(() => {
@@ -75,7 +86,7 @@ export class CloudsChart {
     if (!clouds.length) return this.meteogram.topFt;
     return Math.max(
       10_000,
-      Math.ceil(Math.max(...clouds.map((block) => block.event.topFt)) / 5000) * 5000,
+      Math.ceil(Math.max(...clouds.map((block) => block.topFt)) / 5000) * 5000,
     );
   });
 
@@ -84,10 +95,10 @@ export class CloudsChart {
     const topFt = this.topFt();
     return this.clouds().map((block) => {
       const shown = this.shownBlock(block);
-      const blockHeight = ((block.event.topFt - block.event.baseFt) / topFt) * 100;
+      const blockHeight = ((block.topFt - block.baseFt) / topFt) * 100;
       return {
         ...shown,
-        top: (1 - block.event.topFt / topFt) * 100,
+        top: (1 - block.topFt / topFt) * 100,
         height: blockHeight,
         text: (blockHeight / 100) * height >= 11 ? shown.text : '',
       };
@@ -97,7 +108,7 @@ export class CloudsChart {
   protected lanes = computed(() => {
     const lanes = new Map<string, ShownBlock[]>();
     for (const block of this.blocks()) {
-      if (block.event.type === 'cloud') continue;
+      if (block.event.type === 'CLOUD') continue;
       const name = EVENT_APPEARANCES[block.event.type].name(block.event);
       lanes.set(name, [...(lanes.get(name) ?? []), this.shownBlock(block)]);
     }
@@ -114,10 +125,8 @@ export class CloudsChart {
 
   protected hoverText = (time: number, heightFt: number): string => {
     const blocks = Number.isNaN(heightFt)
-      ? this.blocks().filter((block) => block.event.type !== 'cloud')
-      : this.clouds().filter(
-          (block) => heightFt >= block.event.baseFt && heightFt <= block.event.topFt,
-        );
+      ? this.blocks().filter((block) => block.event.type !== 'CLOUD')
+      : this.clouds().filter((block) => heightFt >= block.baseFt && heightFt <= block.topFt);
     const lines = blocks
       .filter((block) => time >= block.start && time <= block.end)
       .map((block) => EVENT_APPEARANCES[block.event.type].hoverText(block.event));

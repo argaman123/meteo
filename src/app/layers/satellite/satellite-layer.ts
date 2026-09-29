@@ -4,16 +4,23 @@ import { firstValueFrom } from 'rxjs';
 import { Image, ImageInput } from '../../engine/looks/image';
 import { Provider } from '../../objects/provider';
 import { TimeRange } from '../../services/time-service';
-import { SatelliteBoundsMap, SatelliteConfiguration } from '../../types/satellite';
+import {
+  LimitedSatConf,
+  SatImage,
+  SatelliteChannel,
+  SatelliteSector,
+  SatelliteSectors,
+} from '../../types/satellite';
 import { Bounds } from '../../types/wrap';
 import { sameArrays } from '../../utils/arrays';
 import { Control, OptionsPresentation, options } from '../../utils/controls';
 import { contains } from '../../utils/geo';
-import { equalize, grayChannel } from '../../utils/image';
-import { minutesToMs } from '../../utils/time';
+import { decodeEqualizedImage } from '../../utils/image';
+import { findNearestByTime, minutesToMs, msToSeconds, secondsToMs } from '../../utils/time';
 import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs } from '../base/layer';
 import { FrameLoader, LoopLayer } from '../base/loop-layer';
+import { scheduledConfiguration, sectorBounds } from './satellite-configuration';
 
 export interface SatelliteFrame {
   time: number;
@@ -28,24 +35,33 @@ export interface SatelliteLoop {
 }
 
 interface SatelliteChoice {
-  satellite: string;
   channel: string;
-  sector: string;
+  sector: SatelliteSector;
+  satellite: number;
+}
+
+interface SatelliteImages {
+  satellite: number;
+  images: SatImage[];
 }
 
 export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   readonly name = 'לוויין';
   private readonly askMinutes = 30;
+  private readonly defaultSector: SatelliteSector = 'noaeq';
+  private readonly satellites = [8, 9];
   override readonly timeWindow = { backHours: 24, forwardHours: 0, stepHours: 1 };
   readonly channel = options<string>('auto', [
     { value: 'auto', label: 'אוטו' },
-    { value: 'ir', label: 'IR' },
-    { value: 'colorful', label: 'צבעוני' },
+    { value: SatelliteChannel.IR10_8, label: 'IR' },
+    { value: SatelliteChannel.FLC, label: 'FLC' },
   ], 'ערוץ', OptionsPresentation.Select);
   readonly sector = options<string>('auto', [
     { value: 'auto', label: 'אוטו' },
-    { value: 'near', label: 'מקומי' },
-    { value: 'wide', label: 'אזורי' },
+    { value: 'noaeq', label: 'ישראל והסביבה' },
+    { value: 'modeq', label: 'הים התיכון' },
+    { value: 'naseq', label: 'חצי האי ערב' },
+    { value: 'srneq', label: 'אפריקה' },
   ], 'גזרה', OptionsPresentation.Select);
   override readonly controls: Control[] = [this.channel, this.sector];
   readonly looks = [
@@ -64,15 +80,16 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   ];
 
   hover(loop: SatelliteLoop, lon: number, lat: number): string {
-    const grays = loop.shown.grays;
+    const { grays, display } = loop.shown;
+    const { bounds } = loop;
     if (!grays) return '—';
-    if (!contains(loop.bounds, lon, lat)) return '—';
-    const [west, south, east, north] = loop.bounds;
-    const { width, height } = loop.shown.display;
+    if (!contains(bounds, lon, lat)) return '—';
+    const [west, south, east, north] = bounds;
+    const { width, height } = display;
     const column = Math.min(width - 1, Math.floor(((lon - west) / (east - west)) * width));
     const row = Math.min(height - 1, Math.floor(((north - lat) / (north - south)) * height));
     const gray = grays[row * width + column];
-    return format(-80 + ((47.4 + 80) * gray) / 255, Quantity.Temperature, Unit.Celsius);
+    return format(Math.floor(gray / 2) - 80, Quantity.Temperature, Unit.Celsius);
   }
 
   relevanceOf(loop: SatelliteLoop): TimeRange {
@@ -87,73 +104,92 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   }
 
   atTime(loop: SatelliteLoop, loopTime: number): SatelliteLoop {
-    const shown = loop.frames.reduce((nearest, frame) =>
-      Math.abs(frame.time - loopTime) < Math.abs(nearest.time - loopTime) ? frame : nearest,
-    );
-    return { ...loop, shown };
+    return { ...loop, shown: findNearestByTime(loop.frames, loopTime) };
   }
 
   fetch(on: Inputs, injector: Injector): Signal<SatelliteLoop | null | undefined> {
-    const choice = this.resolveChoice(injector);
-    const bounds = this.resolveBounds(injector, choice);
-    const hours = this.hoursResource(on, injector, choice);
-    const frames = this.framesResource(injector, choice, hours);
-    return computed(() => {
-      const sectorBounds = bounds();
-      if (sectorBounds === null) return null;
-      if (hours.hasValue() && hours.value().length === 0) return null;
-      const loaded = frames.hasValue() ? frames.value() : undefined;
-      if (sectorBounds === undefined || loaded === undefined || loaded.length === 0) return undefined;
-      return { frames: loaded, shown: loaded[loaded.length - 1], bounds: sectorBounds };
-    });
-  }
-
-  private resolveChoice(injector: Injector): Signal<SatelliteChoice | undefined> {
-    const configuration = httpResource<SatelliteConfiguration>(
-      () => ({ url: '/api/satellite/configuration' }),
-      { injector },
-    );
-    return computed(() => {
-      if (!configuration.hasValue()) return undefined;
-      const config = configuration.value();
-      return {
-        satellite: config.satelliteId,
-        channel: this.channel() === 'auto' ? config.channel : this.channel(),
-        sector: this.sector() === 'auto' ? config.sector : this.sector(),
-      };
-    });
-  }
-
-  private resolveBounds(
-    injector: Injector,
-    choice: Signal<SatelliteChoice | undefined>,
-  ): Signal<Bounds | null | undefined> {
-    const allBounds = httpResource<SatelliteBoundsMap>(() => ({ url: '/api/satellite/bounds' }), {
+    const choice = this.resolveChoice(on, injector);
+    const sectors = httpResource<SatelliteSectors[]>(() => ({ url: '/satellite-sectors/get-all' }), {
       injector,
     });
+    const satelliteImages = this.resolveImages(on, injector, choice);
+    const frames = this.framesResource(injector, choice, satelliteImages);
     return computed(() => {
       const current = choice();
-      if (!current || !allBounds.hasValue()) return undefined;
-      return allBounds.value()[current.satellite]?.[current.sector] ?? null;
+      const found = satelliteImages();
+      if (found === null) return null;
+      if (!current || !found || !sectors.hasValue()) return undefined;
+      const bounds = sectorBounds(sectors.value(), found.satellite, current.sector);
+      if (!bounds) return null;
+      const loaded = frames.hasValue() ? frames.value() : undefined;
+      if (loaded === undefined || loaded.length === 0) return undefined;
+      return { frames: loaded, shown: loaded[loaded.length - 1], bounds };
     });
   }
 
-  private hoursResource(
+  private resolveChoice(on: Inputs, injector: Injector): Signal<SatelliteChoice | undefined> {
+    const configuration = httpResource<LimitedSatConf[] | null>(
+      () => ({ url: '/satellite/getConfiguration' }),
+      { injector },
+    );
+    return computed(
+      () => {
+        if (!configuration.hasValue()) return undefined;
+        const scheduled = scheduledConfiguration(configuration.value() ?? [], on.exactTime());
+        return {
+          channel:
+            this.channel() === 'auto'
+              ? (scheduled?.channel ?? SatelliteChannel.IR10_8)
+              : this.channel(),
+          sector: (this.sector() === 'auto' ? this.defaultSector : this.sector()) as SatelliteSector,
+          satellite: scheduled?.satellite ?? this.satellites[0],
+        };
+      },
+      {
+        equal: (a, b) =>
+          a?.channel === b?.channel && a?.sector === b?.sector && a?.satellite === b?.satellite,
+      },
+    );
+  }
+
+  private resolveImages(
     on: Inputs,
     injector: Injector,
     choice: Signal<SatelliteChoice | undefined>,
-  ): Resource<number[] | undefined> {
-    return httpResource<number[]>(() => {
+  ): Signal<SatelliteImages | null | undefined> {
+    const otherSatellite = () =>
+      this.satellites.find((satellite) => satellite !== choice()?.satellite);
+    const preferred = this.imagesResource(on, injector, choice, () => choice()?.satellite);
+    const fallback = this.imagesResource(on, injector, choice, () =>
+      preferred.hasValue() && preferred.value().length === 0 ? otherSatellite() : undefined,
+    );
+    return computed(() => {
       const current = choice();
-      if (!current) return undefined;
+      if (!current || !preferred.hasValue()) return undefined;
+      if (preferred.value().length) return { satellite: current.satellite, images: preferred.value() };
+      if (!fallback.hasValue()) return undefined;
+      return fallback.value().length ? { satellite: otherSatellite()!, images: fallback.value() } : null;
+    });
+  }
+
+  private imagesResource(
+    on: Inputs,
+    injector: Injector,
+    choice: Signal<SatelliteChoice | undefined>,
+    satellite: () => number | undefined,
+  ): Resource<SatImage[] | undefined> {
+    return httpResource<SatImage[]>(() => {
+      const current = choice();
+      const satId = satellite();
+      if (!current || satId === undefined) return undefined;
       return {
-        url: '/api/satellite/hours',
+        url: '/satellite/filterBy',
         params: {
-          satellite: current.satellite,
-          channel: current.channel,
+          start: msToSeconds(on.exactTime() - minutesToMs(this.askMinutes)),
+          end: msToSeconds(on.exactTime()),
+          source: current.channel,
           sector: current.sector,
-          start: String(on.exactTime() - minutesToMs(this.askMinutes)),
-          end: String(on.exactTime()),
+          sat_id: satId,
         },
       };
     }, { injector });
@@ -162,25 +198,36 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   private framesResource(
     injector: Injector,
     choice: Signal<SatelliteChoice | undefined>,
-    hours: Resource<number[] | undefined>,
+    satelliteImages: Signal<SatelliteImages | null | undefined>,
   ): Resource<SatelliteFrame[] | undefined> {
     const http = injector.get(HttpClient);
     const loader = new FrameLoader<SatelliteFrame>();
     const params = computed(
       () => {
         const current = choice();
-        const times = hours.hasValue() ? hours.value() : undefined;
-        return current != null && times != null ? { choice: current, times } : undefined;
+        const found = satelliteImages();
+        if (!current || !found) return undefined;
+        return { channel: current.channel, images: found.images };
       },
-      { equal: (a, b) => a?.choice === b?.choice && sameArrays(a?.times, b?.times) },
+      {
+        equal: (a, b) =>
+          a?.channel === b?.channel &&
+          sameArrays(
+            a?.images.map((image) => image.fileName),
+            b?.images.map((image) => image.fileName),
+          ),
+      },
     );
     return resource({
       params,
       stream: async ({ params }) =>
         loader.stream(
-          params.times.map((time) => {
-            const request: Record<string, string> = { ...params.choice, time: String(time) };
-            return { params: request, load: () => this.loadFrame(http, request, time) };
+          params.images.map((image) => {
+            const request = { name: image.fileName, equalize: 'false', inverse: 'false' };
+            return {
+              params: request,
+              load: () => this.loadFrame(http, request, image, params.channel),
+            };
           }),
         ),
       injector,
@@ -190,21 +237,13 @@ export class SatelliteLayer extends LoopLayer<SatelliteLoop> {
   private async loadFrame(
     http: HttpClient,
     request: Record<string, string>,
-    time: number,
+    image: SatImage,
+    channel: string,
   ): Promise<SatelliteFrame> {
     const blob = await firstValueFrom(
-      http.get('/api/satellite/image', { params: request, responseType: 'blob' }),
+      http.get('/satellite/getImageBy', { params: request, responseType: 'blob' }),
     );
-    const bitmap = await createImageBitmap(blob);
-    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const context = canvas.getContext('2d')!;
-    context.drawImage(bitmap, 0, 0);
-    const received = context.getImageData(0, 0, bitmap.width, bitmap.height);
-    context.putImageData(equalize(received), 0, 0);
-    return {
-      time,
-      display: canvas.transferToImageBitmap(),
-      grays: request['channel'] === 'ir' ? grayChannel(received) : undefined,
-    };
+    const decoded = await decodeEqualizedImage(blob, channel === SatelliteChannel.IR10_8);
+    return { time: secondsToMs(image.imgTime), ...decoded };
   }
 }
