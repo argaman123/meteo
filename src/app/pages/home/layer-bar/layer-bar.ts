@@ -7,6 +7,7 @@ import {
   lucideCloudy,
   lucideDroplets,
   lucideSatellite,
+  lucideWaves,
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
@@ -56,6 +57,7 @@ import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from
       lucideCloudy,
       lucideDroplets,
       lucideSatellite,
+      lucideWaves,
     }),
   ],
   host: { class: 'block' },

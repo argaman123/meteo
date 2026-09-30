@@ -1,8 +1,8 @@
 import { Colormap } from '../../engine/looks/colormap';
 import { Contours } from '../../engine/looks/contours';
 import { WindBarbs } from '../../engine/looks/wind-barbs';
-import { WindField, WindParticles } from '../../engine/looks/wind-particles';
-import { Grid } from '../../objects/grid';
+import { WindParticles } from '../../engine/looks/wind-particles';
+import { Grid, VectorField } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, convert, format, unitLabel } from '../../utils/units';
@@ -42,7 +42,7 @@ export class Wind extends ModelLayer {
     },
     {
       look: new WindParticles(
-        new Provider((grids: Grid[]): WindField => ({ u: grids[0], v: grids[1] })),
+        new Provider((grids: Grid[]): VectorField => ({ u: grids[0], v: grids[1] })),
       ),
       name: 'אנימציה',
       checked: true,
@@ -57,7 +57,7 @@ export class Wind extends ModelLayer {
     },
     {
       look: new WindBarbs(
-        new Provider((grids: Grid[]): WindField => ({ u: grids[0], v: grids[1] })),
+        new Provider((grids: Grid[]): VectorField => ({ u: grids[0], v: grids[1] })),
       ),
       name: 'דגלונים',
       checked: false,

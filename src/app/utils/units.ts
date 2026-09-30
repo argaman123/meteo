@@ -30,6 +30,7 @@ export enum Quantity {
   Height = 'height',
   Pressure = 'pressure',
   RelativeHumidity = 'relative-humidity',
+  WaveHeight = 'wave-height',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -46,6 +47,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.Height]: Unit.Kilofeet,
   [Quantity.Pressure]: Unit.Millibars,
   [Quantity.RelativeHumidity]: Unit.Percent,
+  [Quantity.WaveHeight]: Unit.Meters,
 };
 
 function displayUnitOf(quantity: Quantity): Unit {
@@ -97,6 +99,8 @@ export function formatNumber(value: number, quantity: Quantity, from: Unit): str
     case Unit.Millimeters:
     case Unit.Kilofeet:
       return `${Number(converted.toFixed(1))}`;
+    case Unit.Meters:
+      return quantity === Quantity.WaveHeight ? `${Number(converted.toFixed(1))}` : `${Math.round(converted)}`;
     case Unit.MetDegrees:
       return `${(Math.round(converted) + 360) % 360}`;
     default:

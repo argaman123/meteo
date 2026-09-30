@@ -17,7 +17,8 @@ interface Manifest {
   rows: number;
   steps: number[];
   pressures: number[];
-  fields: Record<string, { levels: 'pressure' | 'surface'; scale: number; offset: number }>;
+  fields: Record<string, { levels: 'pressure' | 'surface' | 'wave'; scale: number; offset: number }>;
+  missing: number;
 }
 
 interface Model {
@@ -31,6 +32,7 @@ type Sampler = (lat: number, lon: number) => number;
 const MODELS: Model[] = [
   { name: 'BIG_ECMWF', archiveName: 'ECMWF03', bounds: [-10, 20, 60, 60] },
   { name: 'ECMWF', archiveName: 'ECMWF01', bounds: [0, 24, 50, 52] },
+  { name: 'ECMWF_WAVE', archiveName: 'ECMWFGAL01', bounds: [-10, 20, 60, 60] },
 ];
 
 const SURFACE_FIELDS: Record<string, string> = {
@@ -39,6 +41,8 @@ const SURFACE_FIELDS: Record<string, string> = {
   U: '10u',
   V: '10v',
   SLP: 'msl',
+  WAVE_HEIGHT: 'swh',
+  WAVE_DIR: 'mwd',
 };
 
 const PRESSURE_FIELDS: Record<string, string> = {
@@ -239,7 +243,7 @@ export class EcmwfWeather {
   }
 
   private sample(data: Int16Array, field: string, level: number, lat: number, lon: number): number {
-    const { west, south, resolution, columns, rows, fields } = this.manifest;
+    const { west, south, resolution, columns, rows, fields, missing } = this.manifest;
     const x = Math.min(columns - 1, Math.max(0, (lon - west) / resolution));
     const y = Math.min(rows - 1, Math.max(0, (lat - south) / resolution));
     const x0 = Math.min(columns - 2, Math.floor(x));
@@ -247,8 +251,10 @@ export class EcmwfWeather {
     const fx = x - x0;
     const fy = y - y0;
     const offset = level * rows * columns + y0 * columns + x0;
-    const bottom = data[offset] * (1 - fx) + data[offset + 1] * fx;
-    const top = data[offset + columns] * (1 - fx) + data[offset + columns + 1] * fx;
+    const corners = [data[offset], data[offset + 1], data[offset + columns], data[offset + columns + 1]];
+    if (corners.includes(missing)) return NaN;
+    const bottom = corners[0] * (1 - fx) + corners[1] * fx;
+    const top = corners[2] * (1 - fx) + corners[3] * fx;
     return (bottom * (1 - fy) + top * fy) * fields[field].scale + fields[field].offset;
   }
 

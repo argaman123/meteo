@@ -5,7 +5,18 @@ import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { Quantity, Unit, format } from '../../utils/units';
+import { ColorStop } from '../../utils/color-scale';
 import { ModelLayer } from './model-layer';
+
+const RELATIVE_HUMIDITY_PALETTE: ColorStop[] = [
+  { value: 0, color: '#050302' },
+  { value: 45, color: '#1a0f06' },
+  { value: 60, color: '#3a2410' },
+  { value: 70, color: '#6b5a24' },
+  { value: 80, color: '#9cc864' },
+  { value: 90, color: '#d4f5bf' },
+  { value: 100, color: '#ffffff' },
+];
 
 export class RelativeHumidity extends ModelLayer {
   readonly name = 'לחות יחסית';
@@ -14,18 +25,7 @@ export class RelativeHumidity extends ModelLayer {
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => grids[0]),
-        {
-          stops: [
-            { value: 0, color: '#050302' },
-            { value: 45, color: '#1a0f06' },
-            { value: 60, color: '#3a2410' },
-            { value: 70, color: '#6b5a24' },
-            { value: 80, color: '#9cc864' },
-            { value: 90, color: '#d4f5bf' },
-            { value: 100, color: '#ffffff' },
-          ],
-          style: 'smooth',
-        },
+        { stops: RELATIVE_HUMIDITY_PALETTE, style: 'smooth' },
         (value) => format(value, Quantity.RelativeHumidity, Unit.Percent),
       ),
       name: 'צבעים',

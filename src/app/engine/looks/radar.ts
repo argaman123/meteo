@@ -10,20 +10,21 @@ import { basemapBright } from '../map-service';
 import { Legend, LegendType, Look, LookKind } from '../base/look';
 import { ColormapOptions, buildImage } from './colormap';
 
+const RADAR_PALETTE = [
+  { value: 0.1, color: '#60a5fa', label: 'גשם קל' },
+  { value: 1, color: '#22c55e', label: 'גשם' },
+  { value: 4, color: '#facc15', label: 'גשם חזק' },
+  { value: 8, color: '#ef4444', label: 'גשם עז' },
+];
+
 export class Radar extends Look<Grid[]> {
   readonly kind = LookKind.Radar;
   readonly opacity: PercentControl = percent(0.85);
   readonly circle = toggle(true, 'עיגול');
   readonly noise = toggle(false, 'רעש');
   override readonly controls: Control[] = [this.opacity, this.circle, this.noise];
-  private readonly bands = [
-    { value: 0.1, color: '#60a5fa', label: 'גשם קל' },
-    { value: 1, color: '#22c55e', label: 'גשם' },
-    { value: 4, color: '#facc15', label: 'גשם חזק' },
-    { value: 8, color: '#ef4444', label: 'גשם עז' },
-  ];
-  override readonly legend: Signal<Legend> = signal({ type: LegendType.Swatches, stops: this.bands });
-  private readonly colorScale: ColorScale = colorScale(this.bands, 'stepped');
+  override readonly legend: Signal<Legend> = signal({ type: LegendType.Swatches, stops: RADAR_PALETTE });
+  private readonly colorScale: ColorScale = colorScale(RADAR_PALETTE, 'stepped');
   private readonly noiseColorScale: ColorScale = (value) => this.colorScale(Math.abs(value));
   private readonly filterValue: (value: number) => boolean;
   private readonly noiseFilterValue: (value: number) => boolean;

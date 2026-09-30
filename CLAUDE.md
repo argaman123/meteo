@@ -140,7 +140,7 @@ src/app/
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
     overlay.ts        #   Overlay: deck.gl layer host
-    base/             #   building blocks looks are made from (Look, AnimatedLayer)
+    base/             #   building blocks looks are made from (Look, AnimatedLayer, GridIcons)
     looks/            #   one file per render style (colormap, wind-particles; later contours…)
   layers/             # THE CATALOG + the layers domain service
     layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
@@ -216,7 +216,10 @@ domain's folder (`engine/`, `layers/`); owned by one feature's UI → that featu
 - **Constants live with their user** (lead, 2026-08-18): a const used by one class becomes a
   field of that class (`private readonly askMinutes = 30`), never a module const stranded above
   the file's interfaces where nobody sees it; a const with several users sits directly beside the
-  class (or functions) using it. Known prior art left alone: wind-particles' lead-approved
+  class (or functions) using it. **Exception — colour palettes** (lead 2026-09-30, "more
+  organized"): every layer/look palette is a module const directly above its class
+  (`WAVE_HEIGHT_PALETTE: ColorStop[]`), exported only when another file uses it
+  (`TEMPERATURE_PALETTE` feeds the meteogram) — never stops inlined in a constructor call. Known prior art left alone: wind-particles' lead-approved
   tuning-knobs block at the top of that file (2026-07-30).
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
@@ -699,8 +702,55 @@ want to miss information"), "way more contrasty" like the old tool; stand-in sto
 shortcut **לחות** (lucideDroplets): RH colormap + RH contours + SLP isobars + centers.
 Fixture: real ECMWF `r` aloft, 2t/2d-derived at the surface.
 
+**Waves — גלים (2026-09-30):** `Waves` (`layers/model/`), model `ECMWF_WAVE` through a מודל
+Select with one choice for now (lead: the selector exists, more models later) — `ModelLayer.modelOf(bbox)`
+is the hook (default = the local/wide pick). Wire `WAVE_HEIGHT` + `WAVE_DIR` (degrees "from") on the
+heights route at height 0, `staticLevel = true`; the backend's linear time blend of direction is a
+known, accepted flaw (lead: "use whatever the backend provides" — `docs/backend.md`). Direction is
+never interpolated as an angle on our side: providers convert height + `WAVE_DIR` to a **travel
+`VectorField`** (`u, v` = height × travel unit vector; `WindField` was renamed `VectorField` and moved beside `Grid`),
+hover reads direction `nearest`. The colormap takes the radar's `blur` feather to soften the
+70×70 grid's stair-stepped shore (a `reduction = 1` full-resolution override was tried and
+dropped — lead: no need, the real backend ignores `reduction` until ask 4 lands). Looks: צבעים (0–8 m+ stand-in
+blue→purple, land transparent) + **אנימציה = `WaveCrests`** (`engine/looks/wave-crests.ts` — Windy-style crest arcs,
+lead-confirmed: one mask-tinted arc sprite on an `IconLayer`, **one crest slot per cell
+of a 40×30 grid over the view** (each slot always respawns inside its own home cell — random
+spawning and a prime-stride cursor both left empty patches, lead: "a lot of areas feel empty") on an
+`AnimatedLayer`, fade in/out over a 2–4 s life; lead-tuned 2026-09-30 after "way too big, way too
+crowded" on a wide view: 9 px, alpha ≤160, 0.8%-of-view per second, and a slot born on land stays
+an invisible `shown: false` crest for its life instead of re-rolling onto the sea, so density is
+per VIEW area — a small sea no longer packs all slots). **A crest never turns** (lead: "just like a wave") — bearing and
+velocity are fixed at birth, it glides straight and dies on land/off-view (one NaN check). Lead's
+simplification round cut the speed chip, height-scaled alpha/speed (no wave period on either
+backend anyway), and the fixture's nearest-sampling for `mwd`; **size came back** the same day
+(lead: the colormap isn't always shown behind them) — 7 px calm → 16 px at 4 m+, fixed at birth. On by
+default.
+**`AnimatedLayer` landmine** (found here): the rAF loop is bound to the FIRST layer instance, and
+deck hands `state` to each new instance on a props change — so `step()` must read only `state`
+(and props that never change, like a control signal), never data props. Crests first read
+`this.props.u` in `step` and kept respawning inside the first view's bounds; the field now lives in
+state (`rebuild` stores it), the way wind's `ParticleSim` always did. Also: the crest array keeps its
+identity between frames, so every accessor that changes per frame must sit in `updateTriggers`
+(a dropped `getAngle` trigger froze each slot's first angle);
+קונטורים every 0.5 m (cyan) + **חיצים = `Arrows`** (`engine/looks/arrows.ts`, generic vector
+arrows; **shaft length follows the vector's length**
+— lead: longer for faster waves, then "too small / too similar throughout": barb-sized
+(`sizeFactor` 1.1), shaft half-length 12 → 60 of the 128 sprite, full length at the ctor's
+`longestAt` (waves: 3 m), eighth-steps, one cached sprite per step × ink). **`GridIcons`** (`engine/base/grid-icons.ts`, lead: arrows and
+barbs "are pretty much exactly the same and should share something") owns the shared half —
+placement on data cells, sizing, the sprite cache + `release()`, the `IconLayer`; a subclass only
+answers `iconAt(eastward, northward, lat)` → `{ key, angle, draw }` + a `sizeFactor`. Placement is
+screen-constant like the barbs always were (lead: arrows "should change size on zoom just like
+wind barbs"): stride = grid width / 35 (the barbs' old every-2nd-cell on a 70 grid), size capped at
+a 35-across slot of the view, so full-resolution grids neither crowd zoomed out nor balloon zoomed
+in past the data's cells off. `Quantity.WaveHeight` (m, one decimal —
+the Meters format case splits by quantity). Shortcut **ים** (lucideWaves): colours + crests.
+Fixture: `fetch-ecmwf.py` also pulls the ECMWF `wave` stream (`swh`, `mwd`), land packed as the
+manifest's `missing` sentinel (−32768 → NaN; any missing bilinear corner → NaN).
+
 **Wind barbs look — דגלונים (2026-09-28):** a fourth wind look (off by default), `WindBarbs`
-(`engine/looks/wind-barbs.ts`, `LookKind.Icons`'s first use) over the particles' `WindField`.
+(`engine/looks/wind-barbs.ts`, `LookKind.Icons`'s first use; a `GridIcons` subclass since
+2026-09-30) over the particles' `VectorField`.
 Lead's placement (flagged against the thin-to-screen convention, he chose it): **barbs sit on the
 data's own grid points — every 2nd cell — sized to that 2×2 block**, fitted to the SHORTER on-screen
 side (mercator-corrected cell height; sizing by width alone collided vertically on the fixture's

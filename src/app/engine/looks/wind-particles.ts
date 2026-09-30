@@ -2,7 +2,7 @@ import type { Layer as DeckLayer } from '@deck.gl/core';
 import { BitmapLayer } from '@deck.gl/layers';
 import type { Buffer, Device, Framebuffer, Texture } from '@luma.gl/core';
 import { Model } from '@luma.gl/engine';
-import { Grid } from '../../objects/grid';
+import { Grid, VectorField } from '../../objects/grid';
 import { Bounds } from '../../types/wrap';
 import { Control, options } from '../../utils/controls';
 import { MercatorBand, contains } from '../../utils/geo';
@@ -14,12 +14,7 @@ const COUNT = 2000;
 const DECAY = 0.94;
 const LINE_WIDTH = 2.5;
 
-export interface WindField {
-  u: Grid;
-  v: Grid;
-}
-
-export class WindParticles extends Look<WindField> {
+export class WindParticles extends Look<VectorField> {
   readonly kind = LookKind.Particles;
   readonly speed = options<number>(1, [
     { value: 0.5, label: '×0.5' },
@@ -28,12 +23,12 @@ export class WindParticles extends Look<WindField> {
   ]);
   override readonly controls: Control[] = [this.speed];
 
-  deckLayer(id: string, field: WindField): DeckLayer {
+  deckLayer(id: string, field: VectorField): DeckLayer {
     return new WindParticleLayer({ id, ...field, speed: this.speed });
   }
 }
 
-interface ParticleProps extends WindField {
+interface ParticleProps extends VectorField {
   speed: () => number;
 }
 

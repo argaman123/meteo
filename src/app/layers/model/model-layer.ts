@@ -55,6 +55,10 @@ export abstract class ModelLayer extends Layer<Grid<ModelWrapInfo>[]> {
     return level;
   }
 
+  protected modelOf(bbox: Bounds): Model {
+    return containsBounds(LOCAL_COVERAGE, bbox) ? Model.Local : Model.Wide;
+  }
+
   private request(
     parameter: Parameter,
     on: Inputs,
@@ -63,7 +67,7 @@ export abstract class ModelLayer extends Layer<Grid<ModelWrapInfo>[]> {
     const bbox = on.bbox();
     if (!bbox || level === undefined) return undefined;
     const [west, south, east, north] = bbox;
-    const model = containsBounds(LOCAL_COVERAGE, bbox) ? Model.Local : Model.Wide;
+    const model = this.modelOf(bbox);
     const wireParameter = level === null ? (this.surfaceParameters[parameter] ?? parameter) : parameter;
     const modelTime = snapToStep(on.displayTime(), this.pressureStepHours);
     const padding = this.reduction === null ? 0 : this.fullResolutionPaddingDeg;

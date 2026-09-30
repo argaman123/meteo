@@ -2,6 +2,11 @@ import { Bounds, Wrap } from '../types/wrap';
 import { Extremum, blurred, localExtrema } from '../utils/contours';
 import { bilinearAt } from '../utils/interpolation';
 
+export interface VectorField {
+  u: Grid;
+  v: Grid;
+}
+
 export class Grid<I = unknown> {
   private constructor(
     readonly info: I,

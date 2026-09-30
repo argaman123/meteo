@@ -38,6 +38,13 @@ each one onto the real routes and lists the gaps. Nothing here is migrated yet.
   (geopotential m), `DEWPOINT`, `RH`, `WIND` (3-D: `values[row][col] = [speed_kt, dir_rad]`,
   direction = `arctan2(v,u)` math convention — verify live), `WINDSTR`/`WINDDIR`, `SURFACE_WIND`.
   **No u/v served.**
+- **Waves** (`ECMWF_WAVE`, archive `ECMWFGAL01`; COARSE/FINE/EILAT/RED variants unused): `WAVE_HEIGHT` (m)
+  + `WAVE_DIR` (degrees "from", MWD) on the heights route at height 0 (the scripts pin `MSL`). **Known
+  flaw, accepted for now (lead 2026-09-30: "use whatever the backend provides"):** `run_ft` blends
+  `WAVE_DIR` linearly in time between 3 h model times — near the 0/360 wrap an in-between hour can
+  point the wrong way (350° + 10° → 180°). Spatial resampling is nearest by default, so that part is
+  safe. The fix, if it matters: wave U/V components (the wind-ask idiom) or `time_interp_wind_dir`.
+  No wave period/speed on either backend (ECMWF has MWP — not asked; lead: speed from height for now).
 - **Levels:** pressure = enum names `SFC`, `MB1000`…`MB10`, `MSL`, `TWO_ML`, `TEN_ML`; height = int ft
   (0 = SFC).
 - **Map grid** — two routes, both bbox-cropped and **resampled to ~70×70** (`models/service.py:18`; `LimitedData.reduction`/`zoom` are declared but unused — backend ask 4),

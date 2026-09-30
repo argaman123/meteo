@@ -31,9 +31,12 @@ FIELDS = {
     '10u': {'levels': 'surface', 'scale': 0.01, 'offset': 0},
     '10v': {'levels': 'surface', 'scale': 0.01, 'offset': 0},
     'msl': {'levels': 'surface', 'scale': 0.01, 'offset': 1000},
+    'swh': {'levels': 'wave', 'scale': 0.01, 'offset': 0},
+    'mwd': {'levels': 'wave', 'scale': 0.1, 'offset': 0},
 }
 KELVIN = {'t', '2t', '2d'}
 PASCAL = {'msl'}
+MISSING = -32768
 
 
 def crop(handle):
@@ -41,7 +44,9 @@ def crop(handle):
     rows = eccodes.codes_get(handle, 'Nj')
     first_lon = eccodes.codes_get(handle, 'longitudeOfFirstGridPointInDegrees')
     first_lat = eccodes.codes_get(handle, 'latitudeOfFirstGridPointInDegrees')
+    eccodes.codes_set(handle, 'missingValue', 1e20)
     values = eccodes.codes_get_values(handle).reshape(rows, columns)
+    values[values == 1e20] = np.nan
     lats = first_lat - RESOLUTION * np.arange(rows)
     lons = (first_lon + RESOLUTION * np.arange(columns) + 180) % 360 - 180
     order = np.argsort(lons)
@@ -58,7 +63,8 @@ def pack(name, values):
         values = values - 273.15
     if name in PASCAL:
         values = values / 100
-    return np.round((values - field['offset']) / field['scale']).astype('<i2')
+    packed = np.round((values - field['offset']) / field['scale'])
+    return np.where(np.isnan(packed), MISSING, packed).astype('<i2')
 
 
 def fetch_step(run, step):
@@ -71,6 +77,7 @@ def fetch_step(run, step):
                 'param': [name for name, field in FIELDS.items() if field['levels'] == 'pressure'],
                 'levelist': PRESSURES,
             },
+            {'param': [name for name, field in FIELDS.items() if field['levels'] == 'wave'], 'stream': 'wave'},
         ]
         for index, request in enumerate(requests):
             target = f'{folder}/{index}.grib2'
@@ -83,7 +90,7 @@ def fetch_step(run, step):
                     grids[(name, level)] = crop(handle)
                     eccodes.codes_release(handle)
     for name, field in FIELDS.items():
-        layers = [grids[(name, 0)]] if field['levels'] == 'surface' else [grids[(name, p)] for p in PRESSURES]
+        layers = [grids[(name, p)] for p in PRESSURES] if field['levels'] == 'pressure' else [grids[(name, 0)]]
         pack(name, np.stack(layers)).tofile(DOWNLOAD / f'{name}-{step:03d}.bin')
     print(f'step {step:3d}h done', flush=True)
     return layers[0].shape
@@ -107,6 +114,7 @@ def main():
         'steps': STEPS,
         'pressures': PRESSURES,
         'fields': FIELDS,
+        'missing': MISSING,
     }
     (DOWNLOAD / 'manifest.json').write_text(json.dumps(manifest, indent=2))
     shutil.rmtree(OUTPUT, ignore_errors=True)
