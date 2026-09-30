@@ -448,7 +448,7 @@ animation/imagery-loops feature. `jumpTo` snaps via `snapJump` onto the window-b
 edge snaps can never leave coverage. **Multi-layer stacking landed
 2026-07-14 (complete, 5 steps):** layers stack; `Look` carries a `kind` and the `Overlay`
 stable-sorts by the `LookKind` rank order (image < colormap < contours < particles < polygons <
-icons < text — lead reordered contours below particles 2026-07-14); colormap-kind looks are mutually exclusive across layers; state vocabulary is
+icons < text — lead reordered contours below particles 2026-07-14); colormap-kind looks are mutually exclusive across layers (**particles and icons too** since 2026-09-30 — lead: wind trails vs wave crests, barbs vs arrows; `LayersService.exclusiveKinds`, one look per kind, the newest wins); state vocabulary is
 *active* (`activeLayers`/`activeLooks`/`isLookActive`), actions are show/hide verbs. Definitions
 carry `Layer.name` + per-look `{ look, name, checked }` — `checked` starts as the definition default
 and mutates in place as the layer's session memory of its checkbox states (kind vocabulary:

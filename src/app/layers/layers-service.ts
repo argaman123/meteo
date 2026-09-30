@@ -27,6 +27,7 @@ export class LayersService {
   private level = inject(LevelService);
   private player = inject(LoopPlayer);
   private layerInjectors = new Map<Layer<unknown>, EnvironmentInjector>();
+  private readonly exclusiveKinds = new Set([LookKind.Colormap, LookKind.Particles, LookKind.Icons]);
 
   readonly activeLayers = signal(new Map<Layer<unknown>, Signal<unknown>>());
   readonly activeLooks = signal(new Set<LookEntry>());
@@ -147,9 +148,9 @@ export class LayersService {
   }
 
   private showLook(entry: LookEntry): void {
-    if (entry.look.kind === LookKind.Colormap) {
+    if (this.exclusiveKinds.has(entry.look.kind)) {
       for (const active of this.activeLooks()) {
-        if (active.look.kind === LookKind.Colormap) this.hideLook(active);
+        if (active.look.kind === entry.look.kind) this.hideLook(active);
       }
     }
     this.activeLooks.update((current) => new Set(current).add(entry));
