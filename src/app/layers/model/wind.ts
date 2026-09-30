@@ -5,7 +5,7 @@ import { WindField, WindParticles } from '../../engine/looks/wind-particles';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
-import { Quantity, Unit, convert, format } from '../../utils/units';
+import { Quantity, Unit, convert, format, unitLabel } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
 import { metDirection } from '../../utils/wind';
 import { ModelLayer } from './model-layer';
@@ -51,7 +51,7 @@ export class Wind extends ModelLayer {
       look: new Contours(
         new Provider((grids: Grid[]) => Grid.combine(grids, (u, v) =>
             convert(Math.hypot(u, v), Quantity.WindSpeed, Unit.MetersPerSecond),),),
-        () => [10, 20, 30, 40, 50], String, '#a855f7',),
+        () => [10, 20, 30, 40, 50], (value) => `${value} ${unitLabel(Quantity.WindSpeed)}`, '#a855f7',),
       name: 'קונטורים',
       checked: false,
     },

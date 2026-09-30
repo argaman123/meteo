@@ -23,6 +23,7 @@
       <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'soft'"
               [class.font-semibold]="layersService.isLayerActive(layer)"
               [class.animate-pulse]="isLayerLoading(layer)"
+              [class.opacity-50]="isLayerEmpty(layer)"
               [attr.aria-pressed]="layersService.isLayerActive(layer)" (click)="layersService.toggleLayer(layer)">
         {{ layer.name }}
       </button>

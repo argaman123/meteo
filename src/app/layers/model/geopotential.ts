@@ -11,12 +11,12 @@ export class Geopotential extends ModelLayer {
   readonly name = 'גובה גיאופוטנציאלי';
   readonly parameters = [Parameter.GeopotentialHeight];
 
-  protected override levelOf(level: Level | null): Level {
-    return typeof level === 'string' ? level : '1000';
+  protected override levelOf(level: Level | null): Level | undefined {
+    return typeof level === 'number' ? undefined : (level ?? 'SFC');
   }
   readonly looks = [
     {
-      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(20), String, '#38bdf8'),
+      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(20), (value) => format(value, Quantity.GeopotentialHeight, Unit.Meters), '#38bdf8'),
       name: 'קונטורים',
       checked: true,
     },

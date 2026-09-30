@@ -17,12 +17,10 @@ import { syntheticPointEvents, syntheticPolygons } from './synthetic-polygons';
 import { radarTimeRange, syntheticRadarWrap } from './synthetic-radar';
 import { syntheticObservations } from './synthetic-observations';
 import { satImages, satelliteSectors, syntheticSatelliteImage } from './synthetic-satellite';
-import { SyntheticWeather } from './synthetic-weather';
+import { EcmwfWeather } from './ecmwf-weather';
 
 const ARTIFICIAL_LATENCY_MS = 150;
 const STEP_HOURS = 3;
-const BACK_HOURS = 24;
-const FORWARD_HOURS = 96;
 const BACKEND_PATHS = [
   '/model/',
   '/polygon/',
@@ -49,44 +47,44 @@ interface Route {
 
 const ROUTES: Route[] = [
   {
-    path: /^\/model\/data-limited\/([^/]+)\/MB(\d+)\/([^/]+)\/(\d+)\/params$/,
+    path: /^\/model\/data-limited\/([^/]+)\/(SFC|MB\d+)\/([^/]+)\/(\d+)\/params$/,
     answer: async (request, [, model, pressure, parameter, forecast]) =>
-      (await loadWeather()).wrap(
+      (await (await loadWeather())?.wrap(
         model,
         parameter,
         boundsOf(request),
-        frameHours(Number(forecast)),
-        RUN_TIME,
+        Number(forecast),
         null,
-        Number(pressure),
+        pressure === 'SFC' ? 1000 : Number(pressure.slice(2)),
         reductionOf(request),
-      ) ?? undefined,
+      )) ?? undefined,
   },
   {
     path: /^\/model\/data_with_flat_heights_with_limit\/([^/]+)\/(\d+)\/([^/]+)\/(\d+)\/params$/,
     answer: async (request, [, model, height, parameter, forecast]) =>
-      (await loadWeather()).wrap(
+      (await (await loadWeather())?.wrap(
         model,
         parameter,
         boundsOf(request),
-        frameHours(Number(forecast)),
-        RUN_TIME,
+        Number(forecast),
         Number(height),
         null,
         reductionOf(request),
-      ) ?? undefined,
+      )) ?? undefined,
   },
   {
     path: /^\/model\/air_column_nearest$/,
     answer: async (request) => {
       const step = hoursToMs(STEP_HOURS);
       const time = Math.round(Number(request.params.get('forecasttime')) / step) * step;
+      const weather = await loadWeather();
+      if (!weather) return undefined;
       return {
         time,
-        airLevelDataList: (await loadWeather()).airColumn(
+        airLevelDataList: await weather.airColumn(
           Number(request.params.get('lat')),
           Number(request.params.get('lon')),
-          frameHours(time),
+          time,
           AIR_COLUMN_PRESSURES,
         ),
       };
@@ -96,6 +94,7 @@ const ROUTES: Route[] = [
     path: /^\/model\/air_column_in_between$/,
     answer: async (request) => {
       const weather = await loadWeather();
+      if (!weather) return undefined;
       const step = hoursToMs(STEP_HOURS);
       const start = Number(request.params.get('start'));
       const end = Number(request.params.get('end'));
@@ -103,10 +102,10 @@ const ROUTES: Route[] = [
       for (let time = Math.ceil(start / step) * step; time <= end; time += step) {
         columns.push({
           time,
-          airLevelDataList: weather.airColumn(
+          airLevelDataList: await weather.airColumn(
             Number(request.params.get('lat')),
             Number(request.params.get('lon')),
-            frameHours(time),
+            time,
             AIR_COLUMN_PRESSURES,
           ),
         });
@@ -210,7 +209,7 @@ const ROUTES: Route[] = [
   },
 ];
 
-let weatherPromise: Promise<SyntheticWeather> | null = null;
+let weatherPromise: Promise<EcmwfWeather | null> | null = null;
 
 export const fixtureBackendInterceptor: HttpInterceptorFn = (request, next) => {
   if (!BACKEND_PATHS.some((path) => request.url.startsWith(path))) return next(request);
@@ -244,15 +243,7 @@ function reductionOf(request: HttpRequest<unknown>): number | null {
   return request.params.has('reduction') ? Number(request.params.get('reduction')) : null;
 }
 
-function frameHours(unixTime: number): number {
-  const hours = msToHours(unixTime - RUN_TIME);
-  return Math.min(FORWARD_HOURS, Math.max(-BACK_HOURS, hours));
-}
-
-function loadWeather(): Promise<SyntheticWeather> {
-  weatherPromise ??= Promise.all([
-    fetch('/fixtures/gfs-surface-wind.json').then((response) => response.json()),
-    fetch('/fixtures/land.geojson').then((response) => response.json()),
-  ]).then(([gfsRecords, landGeojson]) => new SyntheticWeather(gfsRecords, landGeojson));
+function loadWeather(): Promise<EcmwfWeather | null> {
+  weatherPromise ??= EcmwfWeather.load(RUN_TIME);
   return weatherPromise;
 }

@@ -34,7 +34,7 @@ export class Temperature extends ModelLayer {
       checked: true,
     },
     {
-      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(5), String, '#f43f5e'),
+      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(5), (value) => format(value, Quantity.Temperature, Unit.Celsius), '#f43f5e'),
       name: 'קונטורים',
       checked: false,
     },

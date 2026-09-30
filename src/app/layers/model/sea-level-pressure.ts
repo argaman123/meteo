@@ -28,7 +28,7 @@ export class SeaLevelPressure extends ModelLayer {
       look: new Contours(
         new Provider((grids: Grid[]) => this.pressureGrid(grids)),
         levelsEvery(2),
-        String,
+        (value) => format(value, Quantity.Pressure, Unit.Millibars),
         '#e5e7eb',
       ),
       name: 'קונטורים',

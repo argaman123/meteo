@@ -2,6 +2,7 @@ import { LookKind } from '../engine/base/look';
 import { registerLayers } from '../utils/settings';
 import { Coordinates } from './general/coordinates';
 import { Geopotential } from './model/geopotential';
+import { RelativeHumidity } from './model/relative-humidity';
 import { RadarLayer } from './radar/radar-layer';
 import { SatelliteLayer } from './satellite/satellite-layer';
 import { SeaLevelPressure } from './model/sea-level-pressure';
@@ -16,6 +17,7 @@ export const layers = registerLayers({
   wind: new Wind(),
   geopotential: new Geopotential(),
   seaLevelPressure: new SeaLevelPressure(),
+  relativeHumidity: new RelativeHumidity(),
   satellite: new SatelliteLayer(),
   radar: new RadarLayer(),
   polygons: new PolygonsLayer(),
@@ -28,6 +30,7 @@ export const menuLayers = [
   layers.wind,
   layers.geopotential,
   layers.seaLevelPressure,
+  layers.relativeHumidity,
   layers.satellite,
   layers.radar,
   layers.polygons,
@@ -43,6 +46,14 @@ export const shortcuts = {
       { layer: layers.geopotential, looks: [LookKind.Contours] },
     ],
     'lucideCloudSun',
+  ),
+  humidity: new Shortcut(
+    'לחות',
+    [
+      { layer: layers.relativeHumidity, looks: [LookKind.Colormap, LookKind.Contours] },
+      { layer: layers.seaLevelPressure, looks: [LookKind.Contours, LookKind.Text] },
+    ],
+    'lucideDroplets',
   ),
   imagery: new Shortcut(
     'לוויין ומכ"ם',

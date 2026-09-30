@@ -1,8 +1,15 @@
 import { ObservationParam, ObservationPoint } from '../../types/observations';
 import { hoursToMs, minutesToMs } from '../../utils/time';
-import { LandPolygon, collectLandPolygons, isLand } from './synthetic-weather';
 
 const STATION_COUNT = 1000;
+
+export interface LandPolygon {
+  rings: number[][][];
+  west: number;
+  south: number;
+  east: number;
+  north: number;
+}
 
 interface Station {
   lat: number;
@@ -114,4 +121,54 @@ function round1(value: number): number {
 function fraction(seed: number): number {
   const scrambled = Math.sin(seed) * 43758.5453;
   return scrambled - Math.floor(scrambled);
+}
+
+export function isLand(land: LandPolygon[], lat: number, lon: number): boolean {
+    for (const polygon of land) {
+      if (lon < polygon.west || lon > polygon.east || lat < polygon.south || lat > polygon.north) {
+        continue;
+      }
+      let crossings = 0;
+      for (const ring of polygon.rings) {
+        for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          const [xi, yi] = ring[i];
+          const [xj, yj] = ring[j];
+          if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+            crossings++;
+          }
+        }
+      }
+      if (crossings % 2 === 1) return true;
+    }
+    return false;
+}
+
+export function collectLandPolygons(landGeojson: unknown): LandPolygon[] {
+  const geojson = landGeojson as {
+    features: { geometry: { type: string; coordinates: unknown } }[];
+  };
+  const polygons: LandPolygon[] = [];
+  for (const feature of geojson.features) {
+    const { type, coordinates } = feature.geometry;
+    const polygonList =
+      type === 'Polygon'
+        ? [coordinates as number[][][]]
+        : type === 'MultiPolygon'
+          ? (coordinates as number[][][][])
+          : [];
+    for (const rings of polygonList) {
+      let west = Infinity;
+      let south = Infinity;
+      let east = -Infinity;
+      let north = -Infinity;
+      for (const [lon, lat] of rings[0]) {
+        west = Math.min(west, lon);
+        south = Math.min(south, lat);
+        east = Math.max(east, lon);
+        north = Math.max(north, lat);
+      }
+      polygons.push({ rings, west, south, east, north });
+    }
+  }
+  return polygons;
 }

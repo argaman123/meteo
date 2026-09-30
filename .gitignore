@@ -16,6 +16,9 @@ coverage/
 public/basemaps/*.pmtiles
 tools/bin/
 tools/cft/
+tools/.venv/
+public/fixtures/ecmwf/
+public/fixtures/ecmwf-download/
 .npm-cache/
 
 # Editors

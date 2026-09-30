@@ -5,6 +5,7 @@ import {
   lucideChevronDown,
   lucideCloudSun,
   lucideCloudy,
+  lucideDroplets,
   lucideSatellite,
 } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
@@ -53,6 +54,7 @@ import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from
       lucideChevronDown,
       lucideCloudSun,
       lucideCloudy,
+      lucideDroplets,
       lucideSatellite,
     }),
   ],
@@ -76,6 +78,11 @@ export class LayerBar {
   protected isLayerLoading(layer: Layer<unknown>): boolean {
     const data = this.layersService.activeLayers().get(layer);
     return data !== undefined && data() === undefined;
+  }
+
+  protected isLayerEmpty(layer: Layer<unknown>): boolean {
+    const data = this.layersService.activeLayers().get(layer);
+    return data !== undefined && data() === null;
   }
 
   protected toggleGroup(layer: Layer<unknown>): void {

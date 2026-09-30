@@ -38,7 +38,8 @@ Three non-negotiables, in priority order:
 - **Knowledge intake is iterative.** Domain knowledge comes from the lead as we build (descriptions,
   occasional unclassified phone photos of the old app). Old code and real data **stay inside the
   closed network**; the lead supplies fixture data in the exact real formats — never fetch public
-  substitutes or build mock infrastructure unasked.
+  substitutes or build mock infrastructure unasked. (Lead-asked exception, 2026-09-30: the model
+  fixture reads real public ECMWF open data — see "Fixture model data is real ECMWF" in §11.)
 - **Don't over-fragment.** Verify often, but do not split a small task into ten micro-steps.
 - **The tree breathes.** Files and folders are placed "generally right", not over-split up front:
   similar functions share a file; folders gain subfolders only when a flat list turns vague. The
@@ -307,7 +308,7 @@ MagenS Java only for what Python lacks) — the invented `/api/*` contract is go
 fixture answers the real paths (`BACKEND_PATHS` + a `ROUTES` regex table in
 `dev/fixture-backend/fixture-backend.ts`), so cutover = delete the interceptor + proxy the paths.
 **Full route/shape map: [`docs/backend.md`](docs/backend.md); what we asked the backend team for:
-[`docs/backend-asks.md`](docs/backend-asks.md)** (4 asks — U/V wind, point events, nearest air column, full-resolution map grids; one-liners,
+[`docs/backend-asks.md`](docs/backend-asks.md)** (5 asks — U/V wind, point events, nearest air column, full-resolution map grids, `Wrap.limit` start; one-liners,
 lead: "its humans"; the fixture serves each asked shape). **`/api` is never the right request**
 (lead). Rules (lead): each backend-vs-us
 difference is decided case by case; asks are written in the backend's own idiom. **Wire types
@@ -374,7 +375,12 @@ the midpoint, then lead-retuned to **2.5** on the MacBook 2026-08-23 — "still 
 dpr-true) — and its constant `Texture` feeds the same `BitmapLayer` warp (mercator-banded y).
 Two hard-won shader rules: the fade decays **alpha only with rgb pinned white** (multiplying rgba
 grays old trails), and the decay is **floored at 8-bit resolution** (`floor(a·DECAY·255)/255`) —
-otherwise low alphas round back up and paint permanent residue on the map. Tuning knobs at the top
+otherwise low alphas round back up and paint permanent residue on the map. **Speed → screen motion is compressed** (lead 2026-09-30, on real
+ECMWF jets: fast trails were "insanely big", slow ones "hard to spot"): per-step length =
+`min(13, 3.5·speed^0.3)` (was linear clamped 3–25 m/s, an 8× spread where every jet hit the cap;
+now 2 m/s → 4.3, 10 → 7, 50 → 11.3 — ~2.6×; first cut was 5·speed^0.3, lead: "a bit too fast",
+scaled ×0.7; a pure √ was offered but can't shorten jets and
+lift calm winds without capping early). Tuning knobs at the top
 of the file: `COUNT` 2000, `DECAY` 0.94, `LINE_WIDTH` (css px — the shader bakes `× dpr` since
 2026-08-19; trails were half-width on the hidpi MacBook); texture = bounds' screen footprint × dpr
 capped 4096. The GPU passes run from the rAF tick on the shared luma device (state-tracked
@@ -521,12 +527,26 @@ to exercise real-map jumps), grids computed at the exact requested time (fractio
 hours). Satellite/radar arrive as new Layer kinds with their own fetch strategies (past-only
 "latest ~30 min" asks, multi-frame steps, always animated) on this same contract.
 
-**Fixture backend synthesizes on request (2026-07-06):** the 287 pre-generated grid JSONs and the
-generator tool are gone. `dev/fixture-backend/synthetic-weather.ts` computes any requested
-(param, model, bbox, time) `Wrap` analytically — real GFS wind (drifted by forecast hour so time
-scrubbing is visible) + synthetic pressure/temperature/waves, land-masked waves. Sources: two files
-in `public/fixtures/` (`gfs-surface-wind.json`, `land.geojson`). Run time = app load, snapped to
-3h — fixtures can never go stale.
+**Fixture model data is real ECMWF (2026-09-30, lead: "i'm starting to not like the made up
+maps"):** the analytic `synthetic-weather.ts` (and its GFS wind file + dead wave code) is gone.
+`npm run ecmwf:fetch` (`tools/fetch-ecmwf.py` — Python in a gitignored `tools/.venv`, the one
+non-Node tool: GRIB2 has no usable Node decoder) pulls the latest ECMWF IFS open-data run
+(0.25°, CC-BY 4.0, dev-only — never ships), crops the BIG_ECMWF box, and writes 16-bit
+scale/offset files per (field, step) + a `manifest.json` into **gitignored
+`public/fixtures/ecmwf/`** (~290 MB, 0–144 h every 3 h): pressure fields t/u/v/gh/r on
+1000…100 mb (12 levels) and surface 2t/2d/10u/10v/msl. `dev/fixture-backend/ecmwf-weather.ts`
+answers the model routes from it: surface = the surface fields (SURFACE_RH from 2t/2d), feet
+heights interpolated in height through each point's `gh` profile, mb levels read directly,
+heights-route times interpolated between 3 h steps, ~70×70 resampling unless `reduction` (then
+the native 0.25° grid); both air-column routes read the same files (dewpoint from t + r). **Time
+is re-anchored (lead):** the run's base shifts by WHOLE DAYS to ≤ 24 h before app load (keeps the
+diurnal cycle true — hence 144 h fetched, not 120, so the 96 h future stays covered); re-fetch only
+for fresher weather. Missing folder → console error naming the command, model routes 500. Both
+models serve the same 0.25° data (the real local 0.1° grid isn't public). Raw RH overshoots
+(−4…125%) pass through as the backend would (clamped only inside the air column's dewpoint math).
+The fetch writes to a sibling temp folder and swaps it in on success, so a failed re-fetch keeps
+the old data. Polygons/observations/satellite/radar fixtures are
+untouched; `land.geojson` stays (observations).
 
 **spartan/ui adopted, chrome rebuilt on it (2026-07-06):** initialized via `@spartan-ng/cli`
 (slate theme; dark is the default via `class="dark"` on `<html>`; CLI config in `components.json`).
@@ -656,18 +676,28 @@ two L's in raw and smooth views, none on the terrain rings). **Full resolution**
 of the old tool's raw/smooth ECMWF maps — "way more detailed" than our 70×70): SLP overrides
 `ModelLayer.reduction = 1` (sent as `reduction` — backend ask 4, assumed to exist for this map;
 null on every other model layer), so מפורט draws the native grid; כללי and the centers work on
-`grid.resampled(70, 70).smoothed(16)` — the old 70×70 look, independent of native size. Fixture:
-each model carries a stand-in `resolutionDeg` (ECMWF 0.1°, BIG_ECMWF 0.25°) served when `reduction`
-is asked, and SLP gained **terrain noise only over mountains** (a hand-authored `MOUNTAIN_RANGES`
-list of rotated Gaussian ellipses — Zagros, Alborz, Taurus, E-Anatolia, Caucasus, Alps, Atlas,
-Hejaz, Dinarides, Lebanon — times two quintic value-noise octaves, 0.9° ×3 + 0.45° ×1.5 hPa), so
-מפורט = the smooth map plus closed rings over terrain, like the photos. Noise over all land was
-tried first and rejected (lead: "wiggly lines... looks bad" — flat deserts never wiggle). Measured: ~30 ms redraw, ~75 ms per time
-step incl. synthesis. Centers = `Grid.extrema(6)` over the pure `localExtrema` (`utils/contours.ts`): strict window
+`grid.resampled(70, 70).smoothed(16)` — the old 70×70 look, independent of native size.
+Full-resolution requests **pad the bbox by 0.25° on every side** (`fullResolutionPaddingDeg`, lead
+2026-09-30: isobars stopped short of the screen edge — the backend's `Wrap.limit` crops inward to
+cells inside the bbox and mislabels the crop's start, backend ask 5), so the native grid always
+covers past the view and lines run off-screen. Fixture:
+real ECMWF msl since 2026-09-30 (the synthetic terrain-noise mountains are gone with the synthetic
+generator). Centers = `Grid.extrema(6)` over the pure `localExtrema` (`utils/contours.ts`): strict window
 max/min with a scan-order tie-break (the fixture's 0.1 rounding made plateau peaks tie — no
 labels until then), 2-cell edge margin. Catalog-only: SLP never replaces hgt in מזג אוויר (lead);
 RH will later be mixed with it. **↑/↓ step the level** while the level bar shows
 (`LevelService.stepUp`/`stepDown`, the time bar's `(window:keydown)` host idiom).
+
+**Relative humidity — לחות יחסית (2026-09-30):** `RelativeHumidity` (`layers/model/`), wire `RH`,
+follows the level bar; at the surface it asks **`SURFACE_RH`** (the backend's own rule — ECMWF
+lists RH as missing at SFC, `ecmwf_model.py`, served by `SurfaceRHScript`), a second
+`surfaceParameters` entry beside TMP. Looks: צבעים (0–100%, lead's direction: deep dark brown →
+light green, near black → near white; retuned twice 2026-09-30 for spotting clouds by altitude — near-black
+through 45%, steep brightening 60→100% (lead: the first 85% switch point was too high, "we dont
+want to miss information"), "way more contrasty" like the old tool; stand-in stops inline) +
+קונטורים every 10% (**on by default** — lead: "they are important"; labels read "70%" via Units; green `#4ade80` — lead: green for RH, the free contour hue). New
+shortcut **לחות** (lucideDroplets): RH colormap + RH contours + SLP isobars + centers.
+Fixture: real ECMWF `r` aloft, 2t/2d-derived at the surface.
 
 **Wind barbs look — דגלונים (2026-09-28):** a fourth wind look (off by default), `WindBarbs`
 (`engine/looks/wind-barbs.ts`, `LookKind.Icons`'s first use) over the particles' `WindField`.
@@ -753,12 +783,8 @@ model-layer (the meteogram's inline copy uses it); `feetAtPressure` is now share
 and the fixture. **Wire (ASSUMED — confirm with the backend lead):** `/api/sounding?lat&lon&model&time`
 → `SoundingWrap { time, levels: { pressure, height (geopotential m), temperature, dewpoint, u, v }[] }`
 (`types/sounding.ts`)
-(surface level first; RH is computed, not sent). Fixture: `SyntheticWeather.sounding()` = a surface
-level at the sea-level pressure (height 0 — no terrain) + the standard levels above it up to 100 mb,
-sampled from the same fields as the map/meteogram plus a new synthetic `dewpoint` field; the
-pressure-level `hgt` formula gained a warm-air thickness factor `1 + (T_sfc − 15)/288` so D-values
-grow with height (this also gives the map's pressure-level geopotential a realistic north–south
-gradient). No tropopause in the fixture's temperature field, so the top rows run very cold.
+(surface level first; RH is computed, not sent). Fixture: the air-column routes read the real
+ECMWF pressure levels (see the fixture paragraph above; dewpoint derived from t + r).
 
 **Meteogram v1 — מטאוגרמה (2026-09-23, lead-specced in one session; Hebrew name lead-corrected):** not a classic line meteogram — a
 **time-height section** per tab: x = time, y = **0–45 kft** (`MeteogramService.topFt`), clicked
@@ -861,7 +887,7 @@ Grid now shares); `/api/polygons/point?lat&lon&start&end` → `PointForecast[]
 (lead: the frontend declares no sector for point queries); outside every sector → empty →
 אין תופעות. Range = the temperature layer's own 24/96 window around the hour-floored
 now; model local/wide by `contains(LOCAL_COVERAGE, point)` (exported from model-layer). Fixture:
-`SyntheticWeather.section()` evaluates the same fields the map uses (−2 °C/1,000 ft lapse etc.);
+the air column reads the same real ECMWF files as the map;
 `syntheticPointForecasts` point-in-polygons the sector scenes. spartan **tabs** + **context-menu**
 vendored (tabs' helm selectors translated to brain 1.0.4's `data-state`/`data-orientation`, the
 switch precedent). Rejected same session: Zulu/Local (local only), level persistence, per-knob
@@ -998,7 +1024,9 @@ Turf swap): walk each line, a candidate every 5% of the view width; take it if i
 width past this line's previous label and ≥ 5% of the view width from every placed label — so
 every line gets a label wherever a free spot exists and **stays unlabeled if every spot is taken**
 (lead: labels on all lines, never overlapping). The former flattest-stretch scoring (tilt + bend)
-was dropped: labels may now sit steep or on a bend — the accepted price of ~60 fewer lines. Constructor `(provider, LevelPicker, label, color)` — each contour set
+was dropped: labels may now sit steep or on a bend — the accepted price of ~60 fewer lines. Constructor `(provider, LevelPicker, label, color)` — **every contour label carries its unit
+through the Units module** (lead 2026-09-30: "units are important to differentiate" — "20°C",
+"1016mb", "120 m", "30 kt", "70%"; never `String`) — each contour set
 carries a fixed identity color (lead 2026-07-08, the classic-synoptic model; simultaneous sets are
 told apart by color, never made exclusive): temperature adds rose isotherms via `levelsEvery(5)`,
 wind adds violet isotachs via a fixed kt array (provider converts m/s→kt through the Units module —
@@ -1261,7 +1289,7 @@ scaling contract). All scales are invented stand-ins awaiting the lead's real on
 −10min/+60min (latest holds an hour). Fixture: `synthetic-observations.ts` builds **~1,000 land-only
 stations** (lead 2026-08-23, grounded on ~8,600 worldwide SYNOP: the lead-supplied
 temperature.json stations + deterministic seeds over the wide-sector bbox, land-tested via
-`isLand`/`collectLandPolygons` now exported from synthetic-weather — windSpeed.json is no longer
+`isLand`/`collectLandPolygons`, which live in synthetic-observations.ts since 2026-09-30 — windSpeed.json is no longer
 read, delete or keep is the lead's call). Values are **smooth regional ripple fields** per
 parameter (lat/lon sines drifting with time + small per-station jitter — lead: "make them change
 from area to area so i see the full colored range"), each anchored to the station's own
@@ -1319,10 +1347,15 @@ any active layer has `!staticLevel` — layers declare, no instanceof (the timeW
 earlier `followsLevel`-on-ModelLayer + instanceof check was lead-rejected as model-specific
 knowledge in the component). **Wire**: feet → `height=<feet>` (**assumed, confirm with backend
 lead**; `wrap_info.height` echoes), mb → `pressure=<mb>` (**lead-corrected** — an invented
-`level` param was wrong); `ModelLayer.levelParam(level)` builds the fragment and `Geopotential`
-overrides it to respond to pressures only — a feet level drops the param, request identity stays
-stable, no refetch ("static when kft, moves when pressures"; verified live: `'500'` drew the
-500 mb isobar ~5,700 m, a feet pick returned it to its default 1000 mb map). Level switches
+`level` param was wrong); `ModelLayer.levelOf(level)` maps the rail's level to the requested one.
+**Geopotential is pressure-levels only** (lead 2026-09-30: its old static 1000 mb map in ft mode
+"is misleading"; a nearest-pressure-surface mapping was built and rejected the same day, and a
+backend ask was ruled out — geopotential on a flat height equals the height): `levelOf` returning
+`undefined` means "no map at this level" — Geopotential returns it for feet levels, so its data is
+null (no request, looks removed) and **any active layer whose data is null dims its menu row** (`isLayerEmpty`, opacity-50;
+also true for e.g. polygons with no map in force) — no note (lead: dimming alone). The surface stop (shared by both rails) asks `SFC` on the pressure route (lead 2026-09-30) — the
+backend's own `HeightScript` serves HGT at SFC as MB1000 (its "TODO is it optimal?"), and the
+fixture mirrors that. Level switches
 refetch through request identity, draw follows.
 UI: `pages/home/level-bar/` — **slimmed through a live lead-iteration marathon (2026-08-23)** to
 a narrow frosted column beside the menu panel (`start-51 top-15`): a **kft/mb cycle toggle** on
@@ -1340,9 +1373,8 @@ time-handle idiom, `dragIndex` local signal); the value chip — "the popup text
 format case) or `300mb`, wrapped in an inner `dir="auto"` span (bidi renders `mb300` otherwise).
 Hard-won RTL rule: `dir` for notation goes on an INNER span — on the positioned element itself
 it flips the element's own inset-inline resolution (the chip rendered off-screen on both sides
-before this clicked). Fixture: −2°C per 1,000 ft lapse, wind +60% per 10,000 ft + 2°/1,000 ft
-veer; pressure asks synthesize via the barometric-equivalent feet, hgt at a `pressure` returns
-the isobar height in meters + synoptic ripple — all invented stand-ins; verified end-to-end.
+before this clicked). Fixture: real ECMWF since 2026-09-30 — feet heights interpolate through
+each point's gh profile, mb levels read directly.
 `activeLevel` is session-only (the settings machinery binds only layer/look fields). Deferred
 (plan row): level persistence, real level lists, keyboard a11y, height-param confirmation.
 

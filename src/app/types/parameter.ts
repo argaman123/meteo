@@ -5,6 +5,8 @@ export enum Parameter {
   V = 'V',
   GeopotentialHeight = 'HGT',
   SeaLevelPressure = 'SLP',
+  RelativeHumidity = 'RH',
+  SurfaceRelativeHumidity = 'SURFACE_RH',
 }
 
 export enum Model {

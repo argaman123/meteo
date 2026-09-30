@@ -122,7 +122,7 @@ class ParticleSim {
         this.respawn(i);
         continue;
       }
-      const step = Math.min(25, Math.max(3, speed)) * move;
+      const step = Math.min(13, 3.5 * Math.pow(speed, 0.3)) * move;
       const nextLon = headLon + (u / speed) * step;
       const nextLat = headLat + (v / speed) * step;
       if (!contains(this.bounds, nextLon, nextLat)) {

@@ -11,6 +11,7 @@
     "format": "prettier --write \"src/**/*.{ts,html,css}\" \"tools/**/*.ts\"",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "basemap:fetch": "powershell -ExecutionPolicy Bypass -File tools/fetch-basemap.ps1",
+    "ecmwf:fetch": "python3 -m venv tools/.venv && tools/.venv/bin/pip install -q ecmwf-opendata eccodes numpy && tools/.venv/bin/python tools/fetch-ecmwf.py",
     "serve:dist": "http-server dist/meteo/browser -p 8080 --silent"
   },
   "private": true,
