@@ -166,3 +166,10 @@ function formatUnit(date: Date, unit: TimeUnit, major: boolean): string {
   if (unit === 'month') return major ? monthYearFormat.format(date) : monthFormat.format(date);
   return yearFormat.format(date);
 }
+
+export function stepTimesBefore(time: number, backMs: number, stepMs: number): number[] {
+  const newest = Math.floor(time / stepMs) * stepMs;
+  const times: number[] = [];
+  for (let step = newest - backMs; step <= newest; step += stepMs) times.push(step);
+  return times;
+}

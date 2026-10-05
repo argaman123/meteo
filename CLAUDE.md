@@ -140,7 +140,7 @@ src/app/
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
     overlay.ts        #   Overlay: deck.gl layer host
-    base/             #   building blocks looks are made from (Look, AnimatedLayer, GridIcons)
+    base/             #   building blocks looks are made from (Look, AnimatedLayer, GridIcons, PointIcons)
     looks/            #   one file per render style (colormap, wind-particles; later contours…)
   layers/             # THE CATALOG + the layers domain service
     layers-service.ts #   LayersService: layer/look activation + fetch/draw + shortcuts
@@ -149,6 +149,8 @@ src/app/
     model/            #   ModelLayer machinery + one file per model layer (temperature, wind, …); future kinds get sibling folders
     polygons/         #   PolygonsLayer (+ EVENT_APPEARANCES record + SECTORS) + one file per forecast-event kind
     coordinates/      #   Coordinates readout layer (no looks; hover-only + persisted format control)
+    radar/            #   RadarLayer machinery (per-site loops) + RainRadar
+    birds/            #   FilteredBirdsLayer (+ BIRD_HEIGHT_PALETTE) + RawBirdRadar (a RadarLayer)
   objects/            # runtime data classes built from DAOs (e.g. Grid, MeteogramData)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
@@ -311,7 +313,7 @@ MagenS Java only for what Python lacks) — the invented `/api/*` contract is go
 fixture answers the real paths (`BACKEND_PATHS` + a `ROUTES` regex table in
 `dev/fixture-backend/fixture-backend.ts`), so cutover = delete the interceptor + proxy the paths.
 **Full route/shape map: [`docs/backend.md`](docs/backend.md); what we asked the backend team for:
-[`docs/backend-asks.md`](docs/backend-asks.md)** (5 asks — U/V wind, point events, nearest air column, full-resolution map grids, `Wrap.limit` start; one-liners,
+[`docs/backend-asks.md`](docs/backend-asks.md)** (6 asks — U/V wind, point events, nearest air column, full-resolution map grids, `Wrap.limit` start, bird radar times; one-liners,
 lead: "its humans"; the fixture serves each asked shape). **`/api` is never the right request**
 (lead). Rules (lead): each backend-vs-us
 difference is decided case by case; asks are written in the backend's own idiom. **Wire types
@@ -448,7 +450,7 @@ animation/imagery-loops feature. `jumpTo` snaps via `snapJump` onto the window-b
 edge snaps can never leave coverage. **Multi-layer stacking landed
 2026-07-14 (complete, 5 steps):** layers stack; `Look` carries a `kind` and the `Overlay`
 stable-sorts by the `LookKind` rank order (image < colormap < contours < particles < polygons <
-icons < text — lead reordered contours below particles 2026-07-14); colormap-kind looks are mutually exclusive across layers (**particles and icons too** since 2026-09-30 — lead: wind trails vs wave crests, barbs vs arrows; `LayersService.exclusiveKinds`, one look per kind, the newest wins); state vocabulary is
+icons < points — lead reordered contours below particles 2026-07-14); colormap-kind looks are mutually exclusive across layers (**particles and icons too** since 2026-09-30 — lead: wind trails vs wave crests, barbs vs arrows; `LayersService.exclusiveKinds`, one look per kind, the newest wins); state vocabulary is
 *active* (`activeLayers`/`activeLooks`/`isLookActive`), actions are show/hide verbs. Definitions
 carry `Layer.name` + per-look `{ look, name, checked }` — `checked` starts as the definition default
 and mutates in place as the layer's session memory of its checkbox states (kind vocabulary:
@@ -666,6 +668,74 @@ showing the resolved config value (needs a Control-vocabulary extension — the 
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
 
+**Birds — ציפורים (2026-10-01):** two real layers behind ONE menu row (lead: "two different
+layers, because that's what they are", packed into one button with a toggle). **`LayerGroup`**
+(`layers/base/layer-group.ts`: name + `layers: { layer, label }[]` + a session-only `picked`
+signal) sits in the registry's `menuLayers` list beside plain layers — presentation grouping lives
+in the registry, never on layers. The layer bar resolves each item to one layer (`layerOf`: the
+active one of its layers, else `picked`; `showGroupLayer` swaps) and renders it with the existing row/panel; a group's panel starts
+with a Table toggle **מסונן | גולמי** — exclusive (lead): picking swaps the active layer,
+the row button turns the shown layer on/off (lead renamed members → layers). **Heights are meters, forced** (lead: "the users of
+this use meters only") — `Quantity.BirdHeight` displays m with no settings control; the
+detections wire's ft are converted on receive. **מסונן** = `FilteredBirdsLayer` (`layers/birds/`), a
+`LoopLayer` of per-radar loops (ramon/meron/eilat/merged — "merged" is a radar's name) from
+`/observations/get_bird_specific_process` (ms; one `birdsRequest` per 5-min window through `FrameLoader`, each answer a
+`batch` of radar files, so a sliding window fetches only new windows (lead renamed slots); the wire's sentinel row is dropped on receive), drawn by
+the **`BirdIcons`** look (a gull-stroke sprite baked per height color, 16 px, with a dark
+outline so it reads over colorful maps — lead: "bigger... stronger outline") on **`LookKind.Points`** —
+the old `Text` kind renamed (lead-picked name) and now shared by everything drawn at its own
+lon/lat point: bird icons, obs values, SLP H/L centers; top of the draw order, NOT exclusive
+(unlike `Icons`, the grid-placed barbs/arrows — birds show beside them). **`PointIcons<P>`** (`engine/base/point-icons.ts`, lead: birds and obs labels "should use a
+parent that merges the similarities") owns the shared half of point sprites — the `IconLayer`,
+the per-key sprite cache + `release()`; a subclass answers `iconOf(point)` → `{ key, paint }` +
+a `size` (`Labels` and `BirdIcons` both extend it, the `GridIcons` idiom). **גולמי** =
+`RawBirdRadar` (`layers/birds/` beside its sibling — lead: the birds folder holds both, named
+by `Filtered`/`Raw` prefixes): the radar machinery was split — `RadarLayer` is now the abstract
+per-site loop machinery (`timesRoute`), `RainRadar` the old rain layer (registry key `radar`
+unchanged), `RawBirdRadar` asks `/radar/get_time_range_to_bird_radars` (backend ask 6); grid
+values are heights in meters (ASSUMED, lead). The `Radar` look now takes its palette (rain's moved
+to `RAIN_PALETTE` in rain-radar.ts) and its `noise` option follows the lead's rule for fixed-vs-choice
+options: **a value given is fixed (no control); omitted → the user's toggle** — rain omits it
+(רעש toggle), RawBirdRadar passes `noise: false` (bird grids have no negatives; lead: never leave a
+control that does nothing). Both layers color by one stand-in
+`BIRD_HEIGHT_PALETTE` (m, stepped 0/250/500/750/1000 — exported from filtered-birds-layer, imported by
+RawBirdRadar). Swatch legend labels sit in a `dir="auto"` span (digit-only labels rendered reversed
+under RTL). Shortcut **ציפורים** (lucideBird) = the filtered icons. Fixture
+(`synthetic-birds.ts`, made up): October southbound migration — 90 flocks of 1–3 birds (lead: fewer) streaming down the
+Rift Valley and the coastal plain at 40–60 km/h, 500–5,000 ft on the wire (~150–1,500 m);
+detections per radar within 0.6°, every 5 min (eilat 10); raw grids stamp the same birds plus low (20–140 m)
+ground-clutter speckle concentrated at each radar's center and fading with range (lead: noise
+toward the center, not random blobs) — a steady core plus per-scan flicker. A real-data fixture (NEXRAD migration night
+relocated onto the sites) was built and removed the same day — lead: "wayyy too crowded in both
+ways, not even close in reality"; made-up data stays until the look is improved.
+
+**`LoopLayer<F>` — one loop class owns the frame boilerplate (2026-10-01, lead: "always the same
+100 line boilerplate"):** every loop layer extends `LoopLayer<F>` (`layers/base/loop-layer.ts`) —
+it owns `relevanceOf` (frames ± the layer's `loopMinutes`), `loopTimesOf`, `atTime`, and the whole
+`fetch`; **`timeWindow` and `loopMinutes` are declared by every concrete layer itself** (lead: an
+important per-layer spec, nothing to do with being a loop — no inherited defaults; obs ask 60, the
+rest 30, all 24/0/1h; renamed from askMinutes 2026-10-05 — it is the loop's length back from the chosen time, and the validity pad after the newest frame; `loopIdOf` renamed from sourceOf the same day, named for what it returns). The `fetch`: request list → `resource({ stream })` → a
+file-private `FrameLoader` (deduped by each request's own `params` JSON, so no hand-written
+`equal`s) → per-loop grouping via the overridable `loopIdOf(frame)` field (returns the loop's id string — radar name / bird radar;
+default one loop) → the loading/empty gate (no requests yet = loading, empty list = null, all
+loaded and still empty = null). A subclass writes name, timeWindow, loopMinutes, looks, controls, hover and ONE
+method, **`frameRequests(on, injector)`** → `Signal<FrameRequest<F>[] | undefined>`, each request
+`{ params, load: () => Promise<F[]> }` (an answer may hold several frames — a birds window
+returns one per radar file). Data is always `Loop<F>[]` (`{ frames, shown }` per loop id;
+observations and satellite = one loop). Users: `RadarLayer` (rain + raw birds),
+`FilteredBirdsLayer`, `ObservationsLayer`, `SatelliteLayer` — satellite's config → images →
+fallback-satellite chain lives inside its `frameRequests` (undefined until resolved, `[]` when
+nothing to show) and its sector `bounds` ride on each `SatelliteFrame` (lead: "is it not a
+framelooplayer" — a separate optional `FrameLoopLayer` parent with satellite left on a bare
+`LoopLayer` was built first; one class, one name, no "which do I pick"). A plain-utils version
+(`showNearest`, `loopsBySource`, `streamFrames`…) was rejected the same day — lead: a reader still
+meets "a weird function" whose generic body lives in another file, for too little saving.
+Behavior unified en route: observations' relevance start pads by ask (was −10 min), and an
+all-empty obs/satellite window now reads null instead of loading forever. `stepTimesBefore(time,
+backMs, stepMs)` (`utils/time.ts`) builds the obs/birds client time grid. Obs and filtered birds share
+`nearestPoint(points, lon, lat, maxDistance)` (`utils/geo.ts`) for hover; obs convert the wire's
+`coords` to an `Observation { lon, lat, params }` on receive so both point kinds read lon/lat.
+
 **Sea-level pressure — לחץ מפלס ים (2026-09-29):** `SeaLevelPressure` (`layers/model/`), wire
 `SLP` on the ordinary surface request (height 0 → the backend's script pins MSL, hPa) — overrides
 `staticLevel = true`, so the level bar hides for it. Two looks: isobars every 2 mb (`Contours`,
@@ -838,11 +908,17 @@ ECMWF pressure levels (see the fixture paragraph above; dewpoint derived from t 
 
 **Meteogram v1 — מטאוגרמה (2026-09-23, lead-specced in one session; Hebrew name lead-corrected):** not a classic line meteogram — a
 **time-height section** per tab: x = time, y = **0–45 kft** (`MeteogramService.topFt`), clicked
-point fixed. Flow (lead): a plain map click opens a **chooser menu** at the click (spartan
-context-menu opened programmatically — a hidden `[hlmContextMenuTrigger]` span, `open({x,y})`, so
-right-click stays native; `pages/home/point-menu/`, one item מטאוגרמה, room for raw values/Skew-T);
+point fixed. Flow (lead): a **right-click** on the map opens a **chooser menu** at the click
+(moved from a plain left click 2026-10-05 — lead: a click outside must close the menu, and a
+left-click chooser reopened on the very click that closed it; Google Maps' "what's here" idiom).
+`PointMenu` wraps the map container (`<app-point-menu><div #mapContainer/></app-point-menu>`) and
+puts spartan's `[hlmContextMenuTrigger]` on its own div, so CDK handles the right-click natively:
+opens at the cursor, a click outside or Escape closes, `[disabled]` while a view is open (the
+trigger must live in PointMenu's view — triggered from home-page, the menu's icons lost
+PointMenu's `viewProviders`); lon/lat come from `MapService.rightClicks` (maplibre's `contextmenu`,
+which also suppresses the browser menu); `pages/home/point-menu/`, items מטאוגרמה / סונדה בדקירה;
 picking it drops a **pin** (a `#pin` element declared in the meteogram template — visuals live in templates, lead review — handed to the generic `MapService.showMarker(element, point)`/`hideMarker(element)`; the click seam is
-`MapService.clicks`, an RxJS Observable fed by a private `Subject` — **events are Observables, state is signals** (lead 2026-09-24: a signal+effect "event" was rejected in review as unconventional; it replays on re-creation), `PointMenu` subscribes with `takeUntilDestroyed`; maplibre stays in engine/) and opens the sheet; **while open, a map click
+`MapService.rightClicks`, an RxJS Observable fed by a private `Subject` — **events are Observables, state is signals** (lead 2026-09-24: a signal+effect "event" was rejected in review as unconventional; it replays on re-creation), `PointMenu` subscribes with `takeUntilDestroyed`; maplibre stays in engine/) and opens the sheet; **while open, a right-click
 moves the point directly** (no menu). **Placement — a drawer rising out of the time bar (lead, 2026-09-24, after ~8 rendered mockup
 rounds on the live app):** `<app-meteogram>` is projected (`<ng-content/>`) into the time bar's
 **track column**, above the track — so the drawer is exactly the track's width by construction
@@ -1302,7 +1378,7 @@ contract `/api/observations?parameter&time` — **assumed, confirm with backend 
 carrying the latest-known value per point (server-side semantic; a station that reports hourly
 holds through six frames). Being the sparsest active loop layer, obs set the loop pace (10 min
 per beat, verified). Rendering: the generic **`Labels` look** (`engine/looks/labels.ts`,
-`LookKind.Text`'s first use) — canvas-sprite text via `IconLayer` (the house contour-label
+`LookKind.Points`' first use (then named `Text`)) — canvas-sprite text via `IconLayer` (the house contour-label
 technique: strokeText halo + fillText, 2× oversampled, cached per color+text, `release()` clears;
 a deck `TextLayer` sdf version was built first and rejected 2026-08-23 — synthesized halos looked
 wrong at any tuning, and sdf is only worth it for unbounded unique strings; **stress-measured

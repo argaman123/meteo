@@ -1,9 +1,8 @@
 import { signal } from '@angular/core';
 import { gradientLegend } from '../../engine/base/look';
-import { ObservationPoint } from '../../types/observations';
 import { ColorStop, colorScale } from '../../utils/color-scale';
 import { Quantity, Unit, format } from '../../utils/units';
-import { ObservationParameter, paramValue } from './observations-layer';
+import { Observation, ObservationParameter, paramValue } from './observations-layer';
 
 const STOPS: ColorStop[] = [
   { value: 0, color: '#e2e8f0' },
@@ -29,7 +28,7 @@ export const CLOUD: ObservationParameter = {
       .join(' · '),
 };
 
-function cloudLayers(point: ObservationPoint): { cover: number; base: number }[] {
+function cloudLayers(point: Observation): { cover: number; base: number }[] {
   return [1, 2, 3, 4]
     .map((layer) => ({
       cover: paramValue(point, `cloud_cover_${layer}`),

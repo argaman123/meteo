@@ -141,6 +141,18 @@ each one onto the real routes and lists the gaps. Nothing here is migrated yet.
   total_cloud_cover, cloud_cover_1..4 (eighths), cloud_base_1..4 (**m**), precipitation, …,
   station: { block_station, station_call, place: { id, name, coords ("[lon, lat]" string), … } } }`.
 - No endpoint returns "each station's latest at a historic T" except `getDataByParam`'s window.
+- **Birds (filtered detections):** `GET /observations/get_bird_specific_process?start&end` (**ms,
+  both inclusive**) → `SurfaceObsWithTime[][]`, one inner list per CSV file (one radar, one time):
+  `{ coords: [[lon, lat]], params: [{ name: "height", value: "<ft as a string>" }], radar, obsTime (ms) }`.
+  Heights are already **ft** (the backend multiplies the CSV's meters). `radar` is mapped from the
+  file prefix: `1316ISR`→ramon, `1314ISR`→meron, `dgnISR`→merged, `odim`→eilat ("merged" is a
+  radar name, not a combined product — lead). **Quirk:** every file also gets a sentinel row
+  `coords [[0, 0]]`, height `"-1"` (meant for empty files; a second `readlines()` makes it
+  unconditional) — we drop rows with negative height. Coordinate order `[lon, lat]` ASSUMED.
+- **Birds (raw radar):** `GET /radar/get_time_range_to_bird_radars?start&end` (radars whose name
+  ends with `BIRD`; broken — backend ask 6) → the same `RadarTimeRange`; frames through
+  `get_wrap_for_entities` with `fileVersion: 3` (bird chain: no cleaners, no negatives). Cell
+  value = bird height, unit **ASSUMED meters** (lead) — displayed as meters (forced, lead).
 
 ## Sondes (`/sonde`) and lightning (`/surface`) — for later
 

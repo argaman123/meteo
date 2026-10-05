@@ -14,7 +14,7 @@ export enum LookKind {
   Particles,
   Polygons,
   Icons,
-  Text,
+  Points,
 }
 
 export enum LegendType {

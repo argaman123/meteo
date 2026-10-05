@@ -6,7 +6,9 @@
   <div
     class="absolute top-12 bottom-(--time-bar-height) start-48 end-(--sounding-table-width) overflow-hidden rounded-xl"
   >
-    <div #mapContainer class="h-full w-full"></div>
+    <app-point-menu>
+      <div #mapContainer class="h-full w-full"></div>
+    </app-point-menu>
     <div
       class="pointer-events-none absolute inset-0 rounded-xl border border-white/10 shadow-[inset_0_0_12px_rgb(0_0_0/0.35)]"
     ></div>
@@ -74,7 +76,6 @@
   </app-time-bar>
   <app-layer-bar class="absolute start-0 top-12 bottom-14.5" />
   <app-sounding-table class="absolute end-0 top-12 bottom-(--time-bar-height)" />
-  <app-point-menu />
   <app-hover-readout />
   <app-perf-hud />
 </div>

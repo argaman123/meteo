@@ -3,7 +3,10 @@ import { registerLayers } from '../utils/settings';
 import { Coordinates } from './general/coordinates';
 import { Geopotential } from './model/geopotential';
 import { RelativeHumidity } from './model/relative-humidity';
-import { RadarLayer } from './radar/radar-layer';
+import { FilteredBirdsLayer } from './birds/filtered-birds-layer';
+import { RawBirdRadar } from './birds/raw-bird-radar';
+import { LayerGroup } from './base/layer-group';
+import { RainRadar } from './radar/rain-radar';
 import { SatelliteLayer } from './satellite/satellite-layer';
 import { SeaLevelPressure } from './model/sea-level-pressure';
 import { Shortcut } from './base/shortcut';
@@ -21,9 +24,11 @@ export const layers = registerLayers({
   relativeHumidity: new RelativeHumidity(),
   waves: new Waves(),
   satellite: new SatelliteLayer(),
-  radar: new RadarLayer(),
+  radar: new RainRadar(),
   polygons: new PolygonsLayer(),
   observations: new ObservationsLayer(),
+  filteredBirds: new FilteredBirdsLayer(),
+  rawBirdRadar: new RawBirdRadar(),
   coordinates: new Coordinates(),
 });
 
@@ -38,6 +43,10 @@ export const menuLayers = [
   layers.radar,
   layers.polygons,
   layers.observations,
+  new LayerGroup('ציפורים', [
+    { layer: layers.filteredBirds, label: 'מסונן' },
+    { layer: layers.rawBirdRadar, label: 'גולמי' },
+  ]),
 ];
 
 export const shortcuts = {
@@ -54,7 +63,7 @@ export const shortcuts = {
     'לחות',
     [
       { layer: layers.relativeHumidity, looks: [LookKind.Colormap, LookKind.Contours] },
-      { layer: layers.seaLevelPressure, looks: [LookKind.Contours, LookKind.Text] },
+      { layer: layers.seaLevelPressure, looks: [LookKind.Contours, LookKind.Points] },
     ],
     'lucideDroplets',
   ),
@@ -78,7 +87,12 @@ export const shortcuts = {
   ),
   observations: new Shortcut(
     'תצפיות',
-    [{ layer: layers.observations, looks: [LookKind.Text] }],
+    [{ layer: layers.observations, looks: [LookKind.Points] }],
     'lucideBinoculars',
+  ),
+  birds: new Shortcut(
+    'ציפורים',
+    [{ layer: layers.filteredBirds, looks: [LookKind.Points] }],
+    'lucideBird',
   ),
 };

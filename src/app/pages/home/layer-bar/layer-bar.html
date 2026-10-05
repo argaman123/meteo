@@ -18,25 +18,39 @@
   </button>
   @if (layersExpanded()) {
   <div class="flex flex-col gap-1.5" animate.enter="animate-unfold" animate.leave="animate-fold">
-  @for (layer of layers; track layer) {
+  @for (item of menuItems; track item) {
+    @let layer = layerOf(item);
+    @let group = groupOf(item);
     <div class="flex gap-1">
       <button hlmBtn size="sm" class="grow justify-start" [variant]="layersService.isLayerActive(layer) ? 'default' : 'soft'"
               [class.font-semibold]="layersService.isLayerActive(layer)"
               [class.animate-pulse]="isLayerLoading(layer)"
               [class.opacity-50]="isLayerEmpty(layer)"
               [attr.aria-pressed]="layersService.isLayerActive(layer)" (click)="layersService.toggleLayer(layer)">
-        {{ layer.name }}
+        {{ item.name }}
       </button>
       @if (layersService.isLayerActive(layer)) {
         <button hlmBtn size="sm" variant="ghost" class="w-9 px-0" [attr.aria-expanded]="isExpanded(layer)"
-          [attr.aria-label]="'אפשרויות ' + layer.name" (click)="toggleGroup(layer)">
+          [attr.aria-label]="'אפשרויות ' + item.name" (click)="toggleGroup(layer)">
           <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-90]="!isExpanded(layer)"/>
         </button>
       }
     </div>
-    @if (hasChildRows(layer)) {
+    @if (hasChildRows(layer) || (group && isExpanded(layer))) {
       <div class="flex flex-col gap-1 rounded-md border bg-background/50 p-1.5 transition-colors hover:border-foreground/20"
            animate.enter="animate-expand" animate.leave="animate-collapse">
+        @if (group) {
+          <div class="flex flex-wrap gap-1 py-1 ps-1.5">
+            @for (entry of group.layers; track entry.layer) {
+              <button hlmBtn size="sm" class="h-6 grow px-2 text-xs"
+                      [variant]="entry.layer === layer ? 'default' : 'ghost'"
+                      [attr.aria-pressed]="entry.layer === layer"
+                      (click)="showGroupLayer(group, entry.layer)">
+                {{ entry.label }}
+              </button>
+            }
+          </div>
+        }
         @for (control of layer.controls; track control) {
           @if (control.type === ControlType.Options) {
             @switch (control.presentation) {

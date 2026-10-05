@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideBinoculars,
+  lucideBird,
   lucideChevronDown,
   lucideCloudSun,
   lucideCloudy,
@@ -27,6 +28,7 @@ import { DecimalPipe } from '@angular/common';
 import { HlmSlider } from '@spartan-ng/helm/slider';
 import { HlmSwitch } from '@spartan-ng/helm/switch';
 import { Layer } from '../../../layers/base/layer';
+import { LayerGroup } from '../../../layers/base/layer-group';
 import { LayersService } from '../../../layers/layers-service';
 import { menuLayers, shortcuts } from '../../../layers/registry';
 import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from '../../../utils/controls';
@@ -52,6 +54,7 @@ import { ControlType, OptionsControl, OptionsPresentation, PercentControl } from
   viewProviders: [
     provideIcons({
       lucideBinoculars,
+      lucideBird,
       lucideChevronDown,
       lucideCloudSun,
       lucideCloudy,
@@ -68,10 +71,28 @@ export class LayerBar {
   protected readonly OptionsPresentation = OptionsPresentation;
 
   protected readonly layersService = inject(LayersService);
-  protected readonly layers = menuLayers;
+  protected readonly menuItems = menuLayers;
   protected readonly shortcuts = Object.values(shortcuts);
   protected readonly groupStates = signal(new Map<Layer<unknown>, boolean>());
   protected readonly layersExpanded = signal(true);
+
+  protected groupOf(item: Layer<unknown> | LayerGroup): LayerGroup | null {
+    return item instanceof LayerGroup ? item : null;
+  }
+
+  protected layerOf(item: Layer<unknown> | LayerGroup): Layer<unknown> {
+    if (!(item instanceof LayerGroup)) return item;
+    const active = item.layers.find(({ layer }) => this.layersService.isLayerActive(layer));
+    return active?.layer ?? item.picked();
+  }
+
+  protected showGroupLayer(group: LayerGroup, layer: Layer<unknown>): void {
+    const shown = this.layerOf(group);
+    group.picked.set(layer);
+    if (shown === layer || !this.layersService.isLayerActive(shown)) return;
+    this.layersService.hideLayer(shown);
+    this.layersService.showLayer(layer);
+  }
 
   protected isExpanded(layer: Layer<unknown>): boolean {
     return this.layersService.isLayerActive(layer) && (this.groupStates().get(layer) ?? true);

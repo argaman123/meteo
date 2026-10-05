@@ -58,3 +58,21 @@ export class MercatorBand {
     return inverseMercatorY(this.top + fraction * this.span);
   }
 }
+
+export function nearestPoint<P extends { lon: number; lat: number }>(
+  points: P[],
+  lon: number,
+  lat: number,
+  maxDistance: number,
+): P | undefined {
+  let nearest: P | undefined = undefined;
+  let best = maxDistance;
+  for (const point of points) {
+    const distance = Math.hypot(point.lon - lon, point.lat - lat);
+    if (distance < best) {
+      best = distance;
+      nearest = point;
+    }
+  }
+  return nearest;
+}

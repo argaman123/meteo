@@ -15,6 +15,7 @@ import { contains } from '../../utils/geo';
 import { daysToMs, hoursToMs, msToHours } from '../../utils/time';
 import { syntheticPointEvents, syntheticPolygons } from './synthetic-polygons';
 import { radarTimeRange, syntheticRadarWrap } from './synthetic-radar';
+import { birdDetections, birdRadarTimeRange, syntheticBirdRadarWrap } from './synthetic-birds';
 import { syntheticObservations } from './synthetic-observations';
 import { satImages, satelliteSectors, syntheticSatelliteImage } from './synthetic-satellite';
 import { EcmwfWeather } from './ecmwf-weather';
@@ -192,11 +193,24 @@ const ROUTES: Route[] = [
       radarTimeRange(Number(request.params.get('start')), Number(request.params.get('end'))),
   },
   {
+    path: /^\/radar\/get_time_range_to_bird_radars$/,
+    answer: async (request) =>
+      birdRadarTimeRange(Number(request.params.get('start')), Number(request.params.get('end'))),
+  },
+  {
     method: 'POST',
     path: /^\/radar\/get_wrap_for_entities$/,
+    answer: async (request) => {
+      const entity = (request.body as { entities: RadarEntity[] }).entities[0];
+      const wrap =
+        entity.fileVersion === 3 ? syntheticBirdRadarWrap(entity) : await syntheticRadarWrap(entity);
+      return wrap ?? undefined;
+    },
+  },
+  {
+    path: /^\/observations\/get_bird_specific_process$/,
     answer: async (request) =>
-      (await syntheticRadarWrap((request.body as { entities: RadarEntity[] }).entities[0])) ??
-      undefined,
+      birdDetections(Number(request.params.get('start')), Number(request.params.get('end'))),
   },
   {
     path: /^\/observations\/getDataByParam$/,

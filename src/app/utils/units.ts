@@ -31,6 +31,7 @@ export enum Quantity {
   Pressure = 'pressure',
   RelativeHumidity = 'relative-humidity',
   WaveHeight = 'wave-height',
+  BirdHeight = 'bird-height',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -48,6 +49,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.Pressure]: Unit.Millibars,
   [Quantity.RelativeHumidity]: Unit.Percent,
   [Quantity.WaveHeight]: Unit.Meters,
+  [Quantity.BirdHeight]: Unit.Meters,
 };
 
 function displayUnitOf(quantity: Quantity): Unit {

@@ -30,7 +30,7 @@
               @for (stop of card.legend.stops; track $index) {
                 <div class="flex items-center gap-1.5 text-xs">
                   <span class="size-3 shrink-0 rounded-[4px]" [style.background]="stop.color"></span>
-                  {{ stop.label }}
+                  <span dir="auto">{{ stop.label }}</span>
                 </div>
               }
             </div>

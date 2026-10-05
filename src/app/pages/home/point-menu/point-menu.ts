@@ -1,5 +1,11 @@
-import { CdkContextMenuTrigger } from '@angular/cdk/menu';
-import { Component, ElementRef, afterRenderEffect, inject, viewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  afterRenderEffect,
+  computed,
+  inject,
+  viewChild,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import { lucideChartArea, lucideTable2 } from '@ng-icons/lucide';
@@ -12,18 +18,19 @@ import { PointService, PointView } from './point-service';
   selector: 'app-point-menu',
   imports: [HlmContextMenuTrigger, HlmDropdownMenu, HlmDropdownMenuItem, NgIcon],
   viewProviders: [provideIcons({ lucideChartArea, lucideTable2 })],
+  host: { class: 'block h-full w-full' },
   templateUrl: './point-menu.html',
 })
 export class PointMenu {
   private map = inject(MapService);
   protected points = inject(PointService);
-  private trigger = viewChild.required(CdkContextMenuTrigger);
+  protected readonly viewOpen = computed(() => this.points.view() !== null);
   private pin = viewChild.required<ElementRef<HTMLElement>>('pin');
   private clickedPoint: [number, number] | null = null;
   protected readonly views = PointView;
 
   constructor() {
-    this.map.clicks.pipe(takeUntilDestroyed()).subscribe((click) => this.openAtClick(click));
+    this.map.rightClicks.pipe(takeUntilDestroyed()).subscribe((click) => this.pickPoint(click));
     afterRenderEffect(() => {
       const point = this.points.point();
       const pin = this.pin().nativeElement;
@@ -36,13 +43,9 @@ export class PointMenu {
     if (this.clickedPoint) this.points.showView(view, this.clickedPoint);
   }
 
-  private openAtClick(click: MapClick): void {
+  private pickPoint(click: MapClick): void {
     const point: [number, number] = [click.lon, click.lat];
-    if (this.points.view()) {
-      this.points.movePoint(point);
-      return;
-    }
-    this.clickedPoint = point;
-    this.trigger().open({ x: click.clientX, y: click.clientY });
+    if (this.viewOpen()) this.points.movePoint(point);
+    else this.clickedPoint = point;
   }
 }

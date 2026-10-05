@@ -4,27 +4,20 @@ import { BitmapLayer, PathLayer } from '@deck.gl/layers';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Bounds } from '../../types/wrap';
-import { ColorScale, colorScale, rgba } from '../../utils/color-scale';
+import { ColorScale, ColorStop, colorScale, rgba } from '../../utils/color-scale';
 import { Control, PercentControl, percent, toggle } from '../../utils/controls';
 import { basemapBright } from '../map-service';
-import { Legend, LegendType, Look, LookKind } from '../base/look';
+import { Legend, LegendStop, LegendType, Look, LookKind } from '../base/look';
 import { ColormapOptions, buildImage } from './colormap';
-
-const RADAR_PALETTE = [
-  { value: 0.1, color: '#60a5fa', label: 'גשם קל' },
-  { value: 1, color: '#22c55e', label: 'גשם' },
-  { value: 4, color: '#facc15', label: 'גשם חזק' },
-  { value: 8, color: '#ef4444', label: 'גשם עז' },
-];
 
 export class Radar extends Look<Grid[]> {
   readonly kind = LookKind.Radar;
   readonly opacity: PercentControl = percent(0.85);
   readonly circle = toggle(true, 'עיגול');
-  readonly noise = toggle(false, 'רעש');
-  override readonly controls: Control[] = [this.opacity, this.circle, this.noise];
-  override readonly legend: Signal<Legend> = signal({ type: LegendType.Swatches, stops: RADAR_PALETTE });
-  private readonly colorScale: ColorScale = colorScale(RADAR_PALETTE, 'stepped');
+  readonly noise: Signal<boolean>;
+  override readonly controls: Control[];
+  override readonly legend: Signal<Legend>;
+  private readonly colorScale: ColorScale;
   private readonly noiseColorScale: ColorScale = (value) => this.colorScale(Math.abs(value));
   private readonly filterValue: (value: number) => boolean;
   private readonly noiseFilterValue: (value: number) => boolean;
@@ -34,10 +27,21 @@ export class Radar extends Look<Grid[]> {
 
   constructor(
     provider: Provider<Grid[]>,
+    palette: (ColorStop & LegendStop)[],
     minimumValue = -Infinity,
-    options: Pick<ColormapOptions, 'blur'> = {},
+    options: Pick<ColormapOptions, 'blur'> & { noise?: boolean } = {},
   ) {
     super(provider);
+    if (options.noise === undefined) {
+      const noise = toggle(false, 'רעש');
+      this.noise = noise;
+      this.controls = [this.opacity, this.circle, noise];
+    } else {
+      this.noise = signal(options.noise);
+      this.controls = [this.opacity, this.circle];
+    }
+    this.legend = signal({ type: LegendType.Swatches, stops: palette });
+    this.colorScale = colorScale(palette, 'stepped');
     this.filterValue = (value) => value >= minimumValue;
     this.noiseFilterValue = (value) => Math.abs(value) >= minimumValue;
     this.blur = options.blur ?? true;

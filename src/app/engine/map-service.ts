@@ -21,14 +21,14 @@ export class MapService {
   private overlay = inject(Overlay);
   private map: maplibregl.Map | null = null;
   private markers = new Map<HTMLElement, maplibregl.Marker>();
-  private clickSubject = new Subject<MapClick>();
+  private rightClickSubject = new Subject<MapClick>();
 
   readonly bbox = signal<Bounds | null>(null);
   readonly settledBbox = signal<Bounds | null>(null);
   readonly zoom = signal<number | null>(null);
   readonly settledZoom = signal<number | null>(null);
   readonly cursor = signal<[number, number] | null>(null);
-  readonly clicks = this.clickSubject.asObservable();
+  readonly rightClicks = this.rightClickSubject.asObservable();
   readonly basemap = signal<BasemapId>('dark');
   readonly basemaps: { id: BasemapId; label: string; bright: boolean }[] = [
     { id: 'dark', label: 'כהה', bright: false },
@@ -66,8 +66,8 @@ export class MapService {
     this.map.on('mousemove', (event) => {
       this.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
-    this.map.on('click', (event) => {
-      this.clickSubject.next({
+    this.map.on('contextmenu', (event) => {
+      this.rightClickSubject.next({
         lon: event.lngLat.lng,
         lat: event.lngLat.lat,
         clientX: event.originalEvent.clientX,

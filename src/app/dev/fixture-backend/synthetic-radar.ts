@@ -35,7 +35,7 @@ export function radarTimeRange(start: number, end: number): RadarTimeRange {
   return mapEntities(entities);
 }
 
-function mapEntities(entities: RadarEntity[]): RadarTimeRange {
+export function mapEntities(entities: RadarEntity[]): RadarTimeRange {
   const times = [...new Set(entities.map((entity) => entity.time))].sort((a, b) => a - b);
   const radars = [...new Set(entities.map((entity) => entity.radarName))];
   const result: RadarTimeRange = {};

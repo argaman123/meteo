@@ -15,7 +15,7 @@ import { LevelService } from '../services/level-service';
 import { LoopPlayer } from '../services/loop-player';
 import { TimeService } from '../services/time-service';
 import { Inputs, Layer, LookEntry } from './base/layer';
-import { LoopLayer } from './base/loop-layer';
+import { Loop, LoopLayer } from './base/loop-layer';
 import { Shortcut } from './base/shortcut';
 
 @Service()
@@ -57,7 +57,7 @@ export class LayersService {
         continue;
       }
       if (value === null) continue;
-      loopTimes.push(layer.loopTimesOf(value));
+      loopTimes.push(layer.loopTimesOf(value as Loop[]));
     }
     if (loadingLayers > 0 && loopTimes.length === 0) return;
     this.player.setTimes(...loopTimes);
@@ -182,12 +182,12 @@ export class LayersService {
     });
   }
 
-  private playLoop(layer: LoopLayer<unknown>, data: Signal<unknown>): Signal<unknown> {
+  private playLoop(layer: LoopLayer, data: Signal<unknown>): Signal<unknown> {
     return computed(() => {
       const value = data();
       const playing = this.player.loopTime();
       if (value === undefined || value === null || playing === null) return value;
-      return layer.atTime(value, playing);
+      return layer.atTime(value as Loop[], playing);
     });
   }
 

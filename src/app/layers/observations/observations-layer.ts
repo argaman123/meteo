@@ -1,49 +1,51 @@
 import { HttpClient } from '@angular/common/http';
-import { Injector, Resource, Signal, computed, resource } from '@angular/core';
+import { Injector, Signal, computed } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { Labels } from '../../engine/looks/labels';
 import { Legend } from '../../engine/base/look';
 import { Provider } from '../../objects/provider';
-import { TimeRange } from '../../services/time-service';
-import { ObservationPoint } from '../../types/observations';
-import { sameArrays } from '../../utils/arrays';
+import { ObservationParam, ObservationPoint } from '../../types/observations';
 import { Control, OptionsPresentation, options } from '../../utils/controls';
 import { ColorScale } from '../../utils/color-scale';
-import { findNearestByTime, minutesToMs } from '../../utils/time';
+import { nearestPoint } from '../../utils/geo';
+import { minutesToMs, stepTimesBefore } from '../../utils/time';
 import { Inputs } from '../base/layer';
-import { FrameLoader, LoopLayer } from '../base/loop-layer';
+import { FrameRequest, Loop, LoopLayer } from '../base/loop-layer';
 import { CLOUD } from './cloud';
 import { RAIN } from './rain';
 import { TEMPERATURE } from './temperature';
 import { WIND } from './wind';
 
-interface ObservationsFrame {
-  time: number;
-  points: ObservationPoint[];
+export interface Observation {
+  lon: number;
+  lat: number;
+  params: ObservationParam[];
 }
 
-export interface ObservationsLoop {
-  frames: ObservationsFrame[];
-  shown: ObservationsFrame;
+interface ObservationsFrame {
+  time: number;
+  points: Observation[];
 }
+
+export type ObservationsLoop = Loop<ObservationsFrame>;
 
 export interface ObservationParameter {
   parameter: string;
   label: string;
   colorScale: ColorScale;
   legend: Signal<Legend>;
-  valueOf: (point: ObservationPoint) => number;
-  textOf: (point: ObservationPoint) => string;
+  valueOf: (point: Observation) => number;
+  textOf: (point: Observation) => string;
 }
 
-export function paramValue(point: ObservationPoint, name: string): number {
+export function paramValue(point: Observation, name: string): number {
   return point.params.find((param) => param.name === name)?.value ?? NaN;
 }
 
-export class ObservationsLayer extends LoopLayer<ObservationsLoop> {
+export class ObservationsLayer extends LoopLayer<ObservationsFrame> {
   readonly name = 'תצפיות';
   override readonly timeWindow = { backHours: 24, forwardHours: 0, stepHours: 1 };
-  private readonly askMinutes = 60;
+  protected readonly loopMinutes = 60;
   private readonly stepMinutes = 10;
   private readonly parameters = [TEMPERATURE, WIND, RAIN, CLOUD];
   readonly parameter = options<string>(
@@ -60,15 +62,15 @@ export class ObservationsLayer extends LoopLayer<ObservationsLoop> {
   readonly looks = [
     {
       look: new Labels(
-        new Provider((loop: ObservationsLoop) => {
+        new Provider((loops: ObservationsLoop[]) => {
           const { colorScale, valueOf, textOf } = this.currentParameter();
+          const points = loops.flatMap((loop) => loop.shown.points);
           return {
-            points: loop.shown.points.map((point) => {
+            points: points.map((point) => {
               const { r, g, b } = colorScale(valueOf(point));
-              const [lon, lat] = point.coords[0];
               return {
-                lon,
-                lat,
+                lon: point.lon,
+                lat: point.lat,
                 text: textOf(point),
                 color: `rgb(${r} ${g} ${b})`,
               };
@@ -82,81 +84,34 @@ export class ObservationsLayer extends LoopLayer<ObservationsLoop> {
     },
   ];
 
-  hover(loop: ObservationsLoop, lon: number, lat: number): string {
-    const { textOf } = this.currentParameter();
-    let nearest: ObservationPoint | undefined = undefined;
-    let best = 0.35;
-    for (const point of loop.shown.points) {
-      const [pointLon, pointLat] = point.coords[0];
-      const distance = Math.hypot(pointLon - lon, pointLat - lat);
-      if (distance < best) {
-        best = distance;
-        nearest = point;
-      }
-    }
+  hover(loops: ObservationsLoop[], lon: number, lat: number): string {
+    const points = loops.flatMap((loop) => loop.shown.points);
+    const nearest = nearestPoint(points, lon, lat, 0.35);
     if (!nearest) return '—';
-    return textOf(nearest);
+    return this.currentParameter().textOf(nearest);
   }
 
-  loopTimesOf(loop: ObservationsLoop): number[] {
-    return loop.frames.map((frame) => frame.time);
-  }
-
-  atTime(loop: ObservationsLoop, loopTime: number): ObservationsLoop {
-    return { ...loop, shown: findNearestByTime(loop.frames, loopTime) };
-  }
-
-  relevanceOf(loop: ObservationsLoop): TimeRange {
-    const times = loop.frames.map((frame) => frame.time);
-    return {
-      start: Math.min(...times) - minutesToMs(this.stepMinutes),
-      end: Math.max(...times) + minutesToMs(this.askMinutes),
-    };
-  }
-
-  fetch(on: Inputs, injector: Injector): Signal<ObservationsLoop | null | undefined> {
-    const frames = this.framesResource(on, injector);
-    return computed(() => {
-      const loaded = frames.hasValue() ? frames.value() : undefined;
-      if (loaded === undefined || loaded.length === 0) return undefined;
-      return { frames: loaded, shown: loaded[loaded.length - 1] };
-    });
-  }
-
-  private framesResource(
+  protected frameRequests(
     on: Inputs,
     injector: Injector,
-  ): Resource<ObservationsFrame[] | undefined> {
+  ): Signal<FrameRequest<ObservationsFrame>[]> {
     const http = injector.get(HttpClient);
-    const loader = new FrameLoader<ObservationsFrame>();
-    return resource({
-      params: this.requestParams(on),
-      stream: async ({ params }) =>
-        loader.stream(
-          params.requestTimes.map((time) => this.obsRequest(http, params.parameter, time)),
-        ),
-      injector,
-    });
-  }
-
-  private requestParams(on: Inputs) {
-    const stepMs = minutesToMs(this.stepMinutes);
-    return computed(
-      () => {
-        const newest = Math.floor(on.exactTime() / stepMs) * stepMs;
-        const requestTimes: number[] = [];
-        for (let time = newest - minutesToMs(this.askMinutes); time <= newest; time += stepMs) {
-          requestTimes.push(time);
-        }
-        return { parameter: this.parameter(), requestTimes };
-      },
-      { equal: (a, b) => a.parameter === b.parameter && sameArrays(a.requestTimes, b.requestTimes) },
+    return computed(() =>
+      stepTimesBefore(
+        on.exactTime(),
+        minutesToMs(this.loopMinutes),
+        minutesToMs(this.stepMinutes),
+      ).map((time) => this.obsRequest(http, this.parameter(), time)),
     );
   }
 
-  private obsRequest(http: HttpClient, parameter: string, time: number) {
+  private obsRequest(
+    http: HttpClient,
+    parameter: string,
+    time: number,
+  ): FrameRequest<ObservationsFrame> {
     const request: Record<string, string> = {
-      start: String(time - minutesToMs(this.askMinutes)),
+      start: String(time - minutesToMs(this.loopMinutes)),
       end: String(time),
       param: parameter,
       cache: 'false',
@@ -166,8 +121,12 @@ export class ObservationsLayer extends LoopLayer<ObservationsLoop> {
       load: () =>
         firstValueFrom(
           http.get<ObservationPoint[]>('/observations/getDataByParam', { params: request }),
-        ).then((points) => ({ time, points })),
+        ).then((points) => [
+          {
+            time,
+            points: points.map(({ coords: [[lon, lat]], params }) => ({ lon, lat, params })),
+          },
+        ]),
     };
   }
-
 }
