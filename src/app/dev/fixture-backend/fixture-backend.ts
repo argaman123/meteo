@@ -16,6 +16,7 @@ import { daysToMs, hoursToMs, msToHours } from '../../utils/time';
 import { syntheticPointEvents, syntheticPolygons } from './synthetic-polygons';
 import { radarTimeRange, syntheticRadarWrap } from './synthetic-radar';
 import { birdDetections, birdRadarTimeRange, syntheticBirdRadarWrap } from './synthetic-birds';
+import { lightningObservations } from './synthetic-lightning';
 import { syntheticObservations } from './synthetic-observations';
 import { satImages, satelliteSectors, syntheticSatelliteImage } from './synthetic-satellite';
 import { EcmwfWeather } from './ecmwf-weather';
@@ -29,6 +30,7 @@ const BACKEND_PATHS = [
   '/satellite-sectors/',
   '/radar/',
   '/observations/',
+  '/surface/',
 ];
 const AIR_COLUMN_PRESSURES = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100];
 
@@ -219,6 +221,14 @@ const ROUTES: Route[] = [
         request.params.get('param') ?? '',
         Number(request.params.get('start')),
         Number(request.params.get('end')),
+      ),
+  },
+  {
+    path: /^\/surface\/get_lightning$/,
+    answer: async (request) =>
+      lightningObservations(
+        Number(request.params.get('start_time')),
+        Number(request.params.get('end_time')),
       ),
   },
 ];

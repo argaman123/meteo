@@ -14,6 +14,8 @@ export enum Unit {
   Kilofeet = 'kilofeet',
   Millibars = 'millibars',
   Percent = 'percent',
+  Kiloamperes = 'kiloamperes',
+  Minutes = 'minutes',
 }
 
 export enum Quantity {
@@ -32,6 +34,8 @@ export enum Quantity {
   RelativeHumidity = 'relative-humidity',
   WaveHeight = 'wave-height',
   BirdHeight = 'bird-height',
+  LightningCurrent = 'lightning-current',
+  Age = 'age',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -50,6 +54,8 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.RelativeHumidity]: Unit.Percent,
   [Quantity.WaveHeight]: Unit.Meters,
   [Quantity.BirdHeight]: Unit.Meters,
+  [Quantity.LightningCurrent]: Unit.Kiloamperes,
+  [Quantity.Age]: Unit.Minutes,
 };
 
 function displayUnitOf(quantity: Quantity): Unit {
@@ -143,5 +149,9 @@ export function unitLabel(quantity: Quantity): string {
       return 'mb';
     case Unit.Percent:
       return '%';
+    case Unit.Kiloamperes:
+      return 'kA';
+    case Unit.Minutes:
+      return 'דק׳';
   }
 }

@@ -160,8 +160,11 @@ each one onto the real routes and lists the gaps. Nothing here is migrated yet.
   `get-latest-sonde?id`, `get-nearest-sonde?id&time&next` → levels `{ pressure, modelHeight,
   standardHeight, temperature, windDir, windStr, dewPoint, rh, ws, time }` (−9999 = null; a real 0
   also becomes −9999). Stations: `/places/get-sonde-stations`.
-- Lightning: `GET /surface/get_lightning?start_time&end_time` → `[{ coords: [[lon, lat]], params,
-  obsTime }]`.
+- Lightning (in use since 2026-10-07): `GET /surface/get_lightning?start_time&end_time` →
+  `[{ coords: [[lon, lat]], params, obsTime }]` — an obs row. Times are **epoch seconds** both ways
+  (queries LIGHTNING_OBS.OBS_TIME raw; getDataByParam divides ms by 1000 for the same database).
+  `params[0].value` is a string: peak current in kA, sign = polarity (lead: kA; the fixture names
+  it `current`).
 
 ## Gaps — our contract vs. the real backend
 

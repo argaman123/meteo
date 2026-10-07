@@ -1,6 +1,6 @@
 export interface ObservationParam {
   name: string;
-  value: number;
+  value: number | string;
 }
 
 export interface ObservationPoint {

@@ -6,6 +6,7 @@ import { RelativeHumidity } from './model/relative-humidity';
 import { FilteredBirdsLayer } from './birds/filtered-birds-layer';
 import { RawBirdRadar } from './birds/raw-bird-radar';
 import { LayerGroup } from './base/layer-group';
+import { LightningLayer } from './lightning/lightning-layer';
 import { RainRadar } from './radar/rain-radar';
 import { SatelliteLayer } from './satellite/satellite-layer';
 import { SeaLevelPressure } from './model/sea-level-pressure';
@@ -29,6 +30,7 @@ export const layers = registerLayers({
   observations: new ObservationsLayer(),
   filteredBirds: new FilteredBirdsLayer(),
   rawBirdRadar: new RawBirdRadar(),
+  lightning: new LightningLayer(),
   coordinates: new Coordinates(),
 });
 
@@ -47,6 +49,7 @@ export const menuLayers = [
     { layer: layers.filteredBirds, label: 'מסונן' },
     { layer: layers.rawBirdRadar, label: 'גולמי' },
   ]),
+  layers.lightning,
 ];
 
 export const shortcuts = {
@@ -77,6 +80,7 @@ export const shortcuts = {
     [
       { layer: layers.satellite, looks: [LookKind.Image] },
       { layer: layers.radar, looks: [LookKind.Radar] },
+      { layer: layers.lightning, looks: [LookKind.Points] },
     ],
     'lucideSatellite',
   ),

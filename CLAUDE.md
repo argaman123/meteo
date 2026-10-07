@@ -133,7 +133,7 @@ src/app/
   pages/              # one subfolder per page of the site
     home/             # the front page: top bar + map view (layer-bar, time-bar, legend-bar, hover-readout)
       meteogram/      #   MeteogramService + the sheet + one folder per chart (meteogram-frame, meteogram-colormap, tabs)
-      point-menu/     #   the map-click chooser (מטאוגרמה / סונדה בדקירה; later raw values) + the pin +
+      point-menu/     #   the map-click chooser (מטאוגרמה / סונדה בדקירה) + the pin +
                       #     PointService (THE clicked point + which PointView is open)
       sounding-table/ #   SoundingTableService + the end-edge drawer with the radiosonde-style table
   services/           # domain services with no natural feature folder (TimeService)
@@ -151,6 +151,7 @@ src/app/
     coordinates/      #   Coordinates readout layer (no looks; hover-only + persisted format control)
     radar/            #   RadarLayer machinery (per-site loops) + RainRadar
     birds/            #   FilteredBirdsLayer (+ BIRD_HEIGHT_PALETTE) + RawBirdRadar (a RadarLayer)
+    lightning/        #   LightningLayer (a LoopLayer of age-colored lightnings)
   objects/            # runtime data classes built from DAOs (e.g. Grid, MeteogramData)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
@@ -172,7 +173,7 @@ public/               # static assets (Angular 22 convention; served from /)
   basemaps/           # self-hosted styles + tiles (vendored)
   fonts/              # self-hosted Hebrew+Latin font
   fixtures/           # sample data in the real backend formats
-  icons/
+  icons/            # map icon SVGs, each a pair: <name>.svg + <name>-outline.svg (drawn by SvgIcons)
 ```
 
 Future domain folders (e.g. geo) are added when their feature arrives, following the same hybrid
@@ -203,7 +204,7 @@ domain's folder (`engine/`, `layers/`); owned by one feature's UI → that featu
   TimeUnit-style, no naked `3_600_000`s). Identifiers say `Ms` (`stepMs`), never spelled out.
   Human-facing durations stay hours/minutes fields (`TimeWindow.backHours`, `stepMinutes`)
   converted at use. **Seconds exist only on the wire** (lead 2026-09-28): the real backend's
-  satellite/radar routes speak epoch seconds, so those requests/parses convert at the edge through
+  satellite/radar/lightning routes speak epoch seconds, so those requests/parses convert at the edge through
   `msToSeconds`/`secondsToMs` — nothing past the parse holds seconds.
 - **Naming:** descriptive, no abbreviations a junior wouldn't know. One concept = one name everywhere.
   Methods are verb+noun with the noun explicit (`showLayer`, `hideLook`, `toggleGroup` — never a bare
@@ -681,14 +682,15 @@ detections wire's ft are converted on receive. **מסונן** = `FilteredBirdsLa
 `LoopLayer` of per-radar loops (ramon/meron/eilat/merged — "merged" is a radar's name) from
 `/observations/get_bird_specific_process` (ms; one `birdsRequest` per 5-min window through `FrameLoader`, each answer a
 `batch` of radar files, so a sliding window fetches only new windows (lead renamed slots); the wire's sentinel row is dropped on receive), drawn by
-the **`BirdIcons`** look (a gull-stroke sprite baked per height color, 16 px, with a dark
+the **`SvgIcons`** look (`'bird'`: a gull stroke, 16 px, tinted per height with a dark
 outline so it reads over colorful maps — lead: "bigger... stronger outline") on **`LookKind.Points`** —
 the old `Text` kind renamed (lead-picked name) and now shared by everything drawn at its own
 lon/lat point: bird icons, obs values, SLP H/L centers; top of the draw order, NOT exclusive
 (unlike `Icons`, the grid-placed barbs/arrows — birds show beside them). **`PointIcons<P>`** (`engine/base/point-icons.ts`, lead: birds and obs labels "should use a
 parent that merges the similarities") owns the shared half of point sprites — the `IconLayer`,
 the per-key sprite cache + `release()`; a subclass answers `iconOf(point)` → `{ key, paint }` +
-a `size` (`Labels` and `BirdIcons` both extend it, the `GridIcons` idiom). **גולמי** =
+a `size` (the `GridIcons` idiom; birds left it for `SvgIcons` 2026-10-07, so `Labels` is its only
+user now). **גולמי** =
 `RawBirdRadar` (`layers/birds/` beside its sibling — lead: the birds folder holds both, named
 by `Filtered`/`Raw` prefixes): the radar machinery was split — `RadarLayer` is now the abstract
 per-site loop machinery (`timesRoute`), `RainRadar` the old rain layer (registry key `radar`
@@ -708,6 +710,38 @@ ground-clutter speckle concentrated at each radar's center and fading with range
 toward the center, not random blobs) — a steady core plus per-scan flicker. A real-data fixture (NEXRAD migration night
 relocated onto the sites) was built and removed the same day — lead: "wayyy too crowded in both
 ways, not even close in reality"; made-up data stays until the look is improved.
+
+**Map icons are SVG files (2026-10-07, lead: "a good solution from now on" — hand-plotted canvas
+paths and parsing lucide's SVG strings were both rejected):** `SvgIcons` (`engine/looks/svg-icons.ts`)
+is the one generic look for a tinted symbol at each point — ctor `(provider, icon, size, legend)`,
+input `{ lon, lat, color }[]`. It draws ONE deck `IconLayer` whose data holds two instances per point, in
+order: `<icon>-outline.svg` tinted opaque dark, then `<icon>.svg` tinted `point.color` (deck's `mask`
++ `getColor`, auto-packed icons — the files' own colors are ignored, only their shape counts). The
+interleaving is the point: with two separate layers every outline sat under every fill, so dense
+clusters merged into one rimless blob (lead: "they need better outline"); now each icon covers its
+neighbours with its own rim. The outline file is the same shape with a thicker stroke in the same
+viewBox, so it rims exactly (bolt: stroke 6 in a 28 box ≈ 1.5 px at 14 px). A new icon = two SVG files + one `new SvgIcons(…)`;
+no canvas, no sprite cache, nothing to `release()`. Text labels stay on canvas (`Labels`).
+
+**Lightning — ברקים (2026-10-07):** `LightningLayer` (`layers/lightning/lightning-layer.ts`), a `LoopLayer` on the real
+`/surface/get_lightning?start_time&end_time` — **epoch seconds** both ways (read from the backend: it queries the obs
+database's OBS_TIME raw, the same column getDataByParam reaches only after dividing our ms by 1000), current
+in kA (lead). One lightning is an obs row: `LightningObservation extends ObservationPoint { obsTime }`
+(`types/lightning.ts`; `BirdDetection` extends it the same way — `ObservationParam.value` is
+`number | string` because both send `str(value)`, read through `Number(...)`). Lightnings
+**accumulate, colored by age** (lead): each 5-min loop frame (30-min loop, syncs with radar/satellite)
+asks the whole **משך** period before it (a click-to-cycle chip like wind's ×1 speed — lead —
+15/30/60 min, default 30) — overlapping
+asks re-download lightnings, accepted for one-request-per-frame simplicity. Look = `SvgIcons`
+(`'bolt'`, 14 px — lucide's zap, ISC notice in `public/icons/LICENSE-lucide`),
+colored by age as a fraction of the period (`AGE_PALETTE` white → yellow → orange → dark red at
+thirds, so legend ticks read 0/10/20/30); gradient legend in
+minutes through the new `Quantity.Age`/`Unit.Minutes` (דק׳). Hover = nearest lightning, signed current
+via `Quantity.LightningCurrent`/`Unit.Kiloamperes` + its local time ("+13 kA · 13:31" — lead: the
+old site's on-map numbers were messy, the value belongs in hover). Joins the **לוויין ומכ"ם**
+shortcut (lead). Fixture (`synthetic-lightning.ts`, made up): 4 drifting storm cells with 4-h life
+cycles, lightnings per 10-s slot seeded deterministically (overlapping asks agree), ~15% positive. Naming (lead): one item is a **`Lightning`** (`{ lon, lat, current, time }`,
+`frame.lightnings`) — never "strike"; hence the layer class is `LightningLayer`.
 
 **`LoopLayer<F>` — one loop class owns the frame boilerplate (2026-10-01, lead: "always the same
 100 line boilerplate"):** every loop layer extends `LoopLayer<F>` (`layers/base/loop-layer.ts`) —

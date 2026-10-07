@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injector, Signal, computed, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { BirdIcons } from '../../engine/looks/bird-icons';
+import { SvgIcons } from '../../engine/looks/svg-icons';
 import { LegendType } from '../../engine/base/look';
 import { Provider } from '../../objects/provider';
 import { BirdDetection } from '../../types/birds';
@@ -53,7 +53,7 @@ export class FilteredBirdsLayer extends LoopLayer<FilteredBirdsFrame> {
   private readonly colorScale = colorScale(BIRD_HEIGHT_PALETTE, 'stepped');
   readonly looks = [
     {
-      look: new BirdIcons(
+      look: new SvgIcons(
         new Provider((radars: FilteredBirdsLoop[]) => ({
           points: radars.flatMap((radar) =>
             radar.shown.birds.map((bird) => ({
@@ -63,6 +63,8 @@ export class FilteredBirdsLayer extends LoopLayer<FilteredBirdsFrame> {
             })),
           ),
         })),
+        'bird',
+        16,
         signal({ type: LegendType.Swatches, stops: BIRD_HEIGHT_PALETTE }),
       ),
       name: 'סמלים',

@@ -39,7 +39,7 @@ export interface ObservationParameter {
 }
 
 export function paramValue(point: Observation, name: string): number {
-  return point.params.find((param) => param.name === name)?.value ?? NaN;
+  return Number(point.params.find((param) => param.name === name)?.value ?? NaN);
 }
 
 export class ObservationsLayer extends LoopLayer<ObservationsFrame> {
