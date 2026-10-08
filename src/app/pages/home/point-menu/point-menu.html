@@ -1,11 +1,12 @@
-<div class="h-full w-full" [hlmContextMenuTrigger]="menu" [disabled]="viewOpen()">
+<div class="h-full w-full" [hlmContextMenuTrigger]="menu">
   <ng-content />
 </div>
-<div
-  #pin
-  class="size-4 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"
-  [class.hidden]="!points.point()"
-></div>
+@if (points.point(); as point) {
+  <div
+    [appMapPin]="point"
+    class="size-4 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"
+  ></div>
+}
 <ng-template #menu>
   <hlm-dropdown-menu class="w-40">
     <button hlmDropdownMenuItem (triggered)="showView(views.Meteogram)">
@@ -15,6 +16,10 @@
     <button hlmDropdownMenuItem (triggered)="showView(views.SoundingTable)">
       <ng-icon name="lucideTable2" />
       סונדה בדקירה
+    </button>
+    <button hlmDropdownMenuItem (triggered)="showMeasure()">
+      <ng-icon name="lucideRuler" />
+      מדידת מרחק
     </button>
   </hlm-dropdown-menu>
 </ng-template>

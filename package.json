@@ -36,6 +36,7 @@
     "@turf/boolean-point-in-polygon": "^7.3.5",
     "@turf/buffer": "^7.3.5",
     "@turf/center-of-mass": "^7.3.5",
+    "@turf/distance": "^7.3.5",
     "@turf/helpers": "^7.3.5",
     "@turf/isolines": "^7.3.5",
     "class-variance-authority": "^0.7.0",

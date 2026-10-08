@@ -1,6 +1,7 @@
 import { LookKind } from '../engine/base/look';
 import { registerLayers } from '../utils/settings';
 import { Coordinates } from './general/coordinates';
+import { Measurement } from './general/measurement';
 import { Geopotential } from './model/geopotential';
 import { RelativeHumidity } from './model/relative-humidity';
 import { FilteredBirdsLayer } from './birds/filtered-birds-layer';
@@ -32,6 +33,7 @@ export const layers = registerLayers({
   rawBirdRadar: new RawBirdRadar(),
   lightning: new LightningLayer(),
   coordinates: new Coordinates(),
+  measurement: new Measurement(),
 });
 
 export const menuLayers = [

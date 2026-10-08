@@ -11,6 +11,7 @@ export interface Inputs {
   window(): TimeRange;
   zoom(): number;
   level(): number | string | null;
+  cursor(): [number, number] | null;
 }
 
 export interface LookEntry {

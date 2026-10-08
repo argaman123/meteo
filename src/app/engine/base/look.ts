@@ -14,6 +14,7 @@ export enum LookKind {
   Particles,
   Polygons,
   Icons,
+  Lines,
   Points,
 }
 

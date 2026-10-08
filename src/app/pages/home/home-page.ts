@@ -16,6 +16,7 @@ import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { LegendBar } from './legend-bar/legend-bar';
 import { LevelBar } from './level-bar/level-bar';
+import { Measure } from './measure/measure';
 import { Meteogram } from './meteogram/meteogram';
 import { PointMenu } from './point-menu/point-menu';
 import { SettingsPanel } from './settings-panel/settings-panel';
@@ -38,6 +39,7 @@ import { layers } from '../../layers/registry';
     LayerBar,
     LegendBar,
     LevelBar,
+    Measure,
     Meteogram,
     PointMenu,
     SettingsPanel,

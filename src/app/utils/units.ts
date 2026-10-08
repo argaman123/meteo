@@ -36,6 +36,7 @@ export enum Quantity {
   BirdHeight = 'bird-height',
   LightningCurrent = 'lightning-current',
   Age = 'age',
+  Distance = 'distance',
 }
 
 const displayUnit: Record<Quantity, Unit> = {
@@ -56,6 +57,7 @@ const displayUnit: Record<Quantity, Unit> = {
   [Quantity.BirdHeight]: Unit.Meters,
   [Quantity.LightningCurrent]: Unit.Kiloamperes,
   [Quantity.Age]: Unit.Minutes,
+  [Quantity.Distance]: Unit.Kilometers,
 };
 
 function displayUnitOf(quantity: Quantity): Unit {

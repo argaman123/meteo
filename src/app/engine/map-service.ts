@@ -9,6 +9,11 @@ export type BasemapId = 'dark' | 'light' | 'colorful';
 
 export const basemapBright = signal(false);
 
+export interface MarkerDrag {
+  element: HTMLElement;
+  point: [number, number];
+}
+
 export interface MapClick {
   lon: number;
   lat: number;
@@ -21,14 +26,15 @@ export class MapService {
   private overlay = inject(Overlay);
   private map: maplibregl.Map | null = null;
   private markers = new Map<HTMLElement, maplibregl.Marker>();
-  private rightClickSubject = new Subject<MapClick>();
 
   readonly bbox = signal<Bounds | null>(null);
   readonly settledBbox = signal<Bounds | null>(null);
   readonly zoom = signal<number | null>(null);
   readonly settledZoom = signal<number | null>(null);
   readonly cursor = signal<[number, number] | null>(null);
-  readonly rightClicks = this.rightClickSubject.asObservable();
+  readonly clicks = new Subject<MapClick>();
+  readonly rightClicks = new Subject<MapClick>();
+  readonly markerDrags = new Subject<MarkerDrag>();
   readonly basemap = signal<BasemapId>('dark');
   readonly basemaps: { id: BasemapId; label: string; bright: boolean }[] = [
     { id: 'dark', label: 'כהה', bright: false },
@@ -66,14 +72,8 @@ export class MapService {
     this.map.on('mousemove', (event) => {
       this.cursor.set([event.lngLat.lng, event.lngLat.lat]);
     });
-    this.map.on('contextmenu', (event) => {
-      this.rightClickSubject.next({
-        lon: event.lngLat.lng,
-        lat: event.lngLat.lat,
-        clientX: event.originalEvent.clientX,
-        clientY: event.originalEvent.clientY,
-      });
-    });
+    this.map.on('click', (event) => this.clicks.next(this.mapClickOf(event)));
+    this.map.on('contextmenu', (event) => this.rightClicks.next(this.mapClickOf(event)));
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
     this.overlay.attach(this.map);
     this.publish();
@@ -104,16 +104,41 @@ export class MapService {
     this.map?.flyTo({ center, zoom });
   }
 
-  showMarker(element: HTMLElement, point: [number, number]): void {
+  showMarker(element: HTMLElement, point: [number, number], draggable = false): void {
     if (!this.map) return;
-    const marker = this.markers.get(element) ?? new maplibregl.Marker({ element });
-    this.markers.set(element, marker);
-    marker.setLngLat(point).addTo(this.map);
+    const shown = this.markers.get(element);
+    if (shown) shown.setLngLat(point);
+    else this.createMarker(element, draggable).setLngLat(point).addTo(this.map);
   }
 
   hideMarker(element: HTMLElement): void {
     this.markers.get(element)?.remove();
     this.markers.delete(element);
+  }
+
+  setDoubleClickZoom(enabled: boolean): void {
+    if (enabled) this.map?.doubleClickZoom.enable();
+    else this.map?.doubleClickZoom.disable();
+  }
+
+  private createMarker(element: HTMLElement, draggable: boolean): maplibregl.Marker {
+    const marker = new maplibregl.Marker({ element, draggable });
+    element.addEventListener('click', (event) => event.stopPropagation());
+    marker.on('drag', () => {
+      const { lng, lat } = marker.getLngLat();
+      this.markerDrags.next({ element, point: [lng, lat] });
+    });
+    this.markers.set(element, marker);
+    return marker;
+  }
+
+  private mapClickOf(event: maplibregl.MapMouseEvent): MapClick {
+    return {
+      lon: event.lngLat.lng,
+      lat: event.lngLat.lat,
+      clientX: event.originalEvent.clientX,
+      clientY: event.originalEvent.clientY,
+    };
   }
 
   private publish(): void {
@@ -146,7 +171,11 @@ export class MapService {
       if ('url' in source && source.url?.startsWith('pmtiles:///')) {
         source.url = `pmtiles://${location.origin}/${source.url.slice('pmtiles:///'.length)}`;
       }
-      if (source.type === 'geojson' && typeof source.data === 'string' && source.data.startsWith('/')) {
+      if (
+        source.type === 'geojson' &&
+        typeof source.data === 'string' &&
+        source.data.startsWith('/')
+      ) {
         source.data = location.origin + source.data;
       }
     }

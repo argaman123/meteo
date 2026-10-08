@@ -10,17 +10,26 @@ export function formatCoordinates(lon: number, lat: number, format: CoordinateFo
     case CoordinateFormat.Decimal:
       return `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
     case CoordinateFormat.DegreesMinutesSeconds:
-      return `${formatDegreesMinutesSeconds(lat, 'N', 'S')} ${formatDegreesMinutesSeconds(lon, 'E', 'W')}`;
+      return `${formatDegreesMinutesSeconds(lat)}${lat < 0 ? 'S' : 'N'} ${formatDegreesMinutesSeconds(lon)}${lon < 0 ? 'W' : 'E'}`;
   }
 }
 
-function formatDegreesMinutesSeconds(value: number, positive: string, negative: string): string {
+export function formatDegrees(angle: number, format: CoordinateFormat): string {
+  switch (format) {
+    case CoordinateFormat.Decimal:
+      return `${angle.toFixed(4)}°`;
+    case CoordinateFormat.DegreesMinutesSeconds:
+      return formatDegreesMinutesSeconds(angle);
+  }
+}
+
+function formatDegreesMinutesSeconds(value: number): string {
   const totalSeconds = Math.round(Math.abs(value) * 3600);
   const degrees = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
   const pad = (part: number) => String(part).padStart(2, '0');
-  return `${degrees}°${pad(minutes)}'${pad(seconds)}"${value < 0 ? negative : positive}`;
+  return `${degrees}°${pad(minutes)}'${pad(seconds)}"`;
 }
 
 export function contains(bounds: Bounds, lon: number, lat: number): boolean {

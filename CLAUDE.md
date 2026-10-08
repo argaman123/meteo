@@ -29,8 +29,12 @@ Three non-negotiables, in priority order:
 
 ## 2. How we work (operating rules — always)
 
-- **Plan → approve → build.** Every non-trivial task gets a short spec and the user's sign-off
-  *before* code. Ask many questions up front. **Do not assume** — verify even when fairly sure.
+- **Questions → build.** Every task starts with questions — one at a time, as offered answers
+  (AskUserQuestion). **The answers ARE the approval: then build.** Never post a design, spec,
+  plan or "here's what I'll do — approve?" summary, short or long — the lead never reads them
+  (repeated 2026-07-07, 09-28, 09-30, 10-07, 10-08). This overrides any skill that prescribes a
+  design/approval gate (superpowers brainstorming included). Unsure → one more question, never a
+  write-up. **Do not assume** — verify even when fairly sure.
 - **Check the lead's ideas against convention.** When a request deviates from widely-agreed
   practice, say so briefly at decision time — he wants to learn and choose well, not just be obeyed.
 - **Offer, don't choose.** Present ideas and options; the user approves — never silently pick, even
@@ -136,6 +140,7 @@ src/app/
       point-menu/     #   the map-click chooser (מטאוגרמה / סונדה בדקירה) + the pin +
                       #     PointService (THE clicked point + which PointView is open)
       sounding-table/ #   SoundingTableService + the end-edge drawer with the radiosonde-style table
+      measure/        #   the ruler button + MeasureService (show/hide/addPoint over the Measurement layer)
   services/           # domain services with no natural feature folder (TimeService)
   engine/             # rendering machinery — ONLY place importing maplibre/deck.gl
     map-service.ts    #   MapService: the maplibre map + camera signals + flyTo/setBasemap/init
@@ -152,6 +157,7 @@ src/app/
     radar/            #   RadarLayer machinery (per-site loops) + RainRadar
     birds/            #   FilteredBirdsLayer (+ BIRD_HEIGHT_PALETTE) + RawBirdRadar (a RadarLayer)
     lightning/        #   LightningLayer (a LoopLayer of age-colored lightnings)
+  directives/         # attribute directives (MapPin: [appMapPin]="point" keeps any element on the map)
   objects/            # runtime data classes built from DAOs (e.g. Grid, MeteogramData)
   types/              # backend data contracts (DAO shapes); area-specific interfaces colocate
   utils/              # pure functions; similar functions share a file, split when grown
@@ -226,6 +232,13 @@ domain's folder (`engine/`, `layers/`); owned by one feature's UI → that featu
   tuning-knobs block at the top of that file (2026-07-30).
 - **Styling:** Tailwind utilities for layout/spacing; design tokens for color/typography; logical
   properties for direction. No magic numbers — use tokens.
+- **Shared code reads generic contracts only** (lead, 2026-10-08): a shared component or service
+  (hover chip, Overlay, LayersService, the time bar) never names a specific feature — the feature
+  plugs into an existing contract instead (measuring became a layer rather than a line of
+  measure code in the hover readout). If no contract fits, ask before adding feature code there.
+- **Event streams are plain public `Subject`s** (lead, 2026-10-08): `readonly clicks = new
+  Subject<MapClick>()` — never a private Subject re-exposed through `asObservable()` (an
+  anti-pattern to him); state stays signals.
 - **Generic pure functions live in `utils/`, even with a single user** (lead, 2026-09-24): a
   helper nothing about which is feature-specific (array/interpolation math, pointer geometry,
   contour level pickers) goes to the matching `utils/` file so the next person can find it
@@ -669,6 +682,36 @@ showing the resolved config value (needs a Control-vocabulary extension — the 
 pill on the map, prefers-reduced-motion, keyboard-help overlay, pressure-rail static labels,
 per-basemap border ink.
 
+**Distance measuring — מדידת מרחק (2026-10-08):** distance only (lead: "draw" dropped from the
+plan). **Measuring is a layer** (lead, the Coordinates precedent — the hover chip and Overlay stay
+generic): `Measurement` (`layers/general/measurement.ts`, registered, not in `menuLayers`) owns a
+session `points` signal, its data is the points (null while empty), its `hover(points, lon, lat)`
+returns the running total to the cursor (the hover chip's מרחק line), and its looks are the new
+generic **`Path` look** (`engine/looks/path.ts`, new `LookKind.Lines` under Points: white core over
+a dark casing) + `Labels` at each leg's midpoint. **Points are draggable** (lead): each point is a
+dot in the Measure template carrying the generic **`MapPin` directive** (`directives/map-pin.ts`:
+`<div [appMapPin]="point" movable (moved)="…">` — shows the element as a maplibre marker while
+it exists, hides it on destroy, emits `moved` from `MapService.markerDrags`; the meteogram pin uses
+it too — **the one way to put an element on the map**), feeding
+`MeasureService.movePoint(index, point)`, so legs, labels and the total recompute live. A marker's
+click never reaches the map (`createMarker` stops its propagation — a handle click otherwise
+added a point). Landmine fixed en route:
+`showMarker` used to call `addTo` on every update, and maplibre's `addTo` first `remove()`s the
+marker — killing any drag in progress; a shown marker now only `setLngLat`s. `MeasureService`
+(`pages/home/measure/`) forwards `showMeasure(start?)`/`addPoint`/`movePoint`/`hideMeasure` over
+`showLayer`/`hideLayer` and owns the tool's map wiring (subscribes `clicks`/`rightClicks`, a
+double-click-zoom effect); the `Measure` component is just the ruler button + the handles. Started by a top-bar ruler button (filled while on) or the right-click
+chooser's third item (that spot is the first point); left-clicks add points (`MapService.clicks`,
+the `rightClicks` idiom); **a right-click, Esc or the button clears it and turns it off** (lead) —
+`MeasureService` listens to `rightClicks` itself, so the chooser stays measure-agnostic
+except for its own מדידת מרחק item; nothing persists. Double-click zoom is
+off while measuring (`MapService.setDoubleClickZoom`). Every distance reads `km · arc degrees`
+(lead) — km via the new `Quantity.Distance`, the arc angle via the Geo module's
+`formatDegrees(angle, format)` in the קואורדינטות setting's DD/DMS — both from
+**`@turf/distance`**. A dashed live leg runs from the last point to the cursor (lead): **`Inputs`
+gained `cursor()`** (MapService.cursor) for it — the layer's data is `{ points, cursor }` and the
+`Path` look draws its optional `nextPoint` dashed (deck's `PathStyleExtension`).
+
 **Birds — ציפורים (2026-10-01):** two real layers behind ONE menu row (lead: "two different
 layers, because that's what they are", packed into one button with a toggle). **`LayerGroup`**
 (`layers/base/layer-group.ts`: name + `layers: { layer, label }[]` + a session-only `picked`
@@ -709,7 +752,7 @@ detections per radar within 0.6°, every 5 min (eilat 10); raw grids stamp the s
 ground-clutter speckle concentrated at each radar's center and fading with range (lead: noise
 toward the center, not random blobs) — a steady core plus per-scan flicker. A real-data fixture (NEXRAD migration night
 relocated onto the sites) was built and removed the same day — lead: "wayyy too crowded in both
-ways, not even close in reality"; made-up data stays until the look is improved.
+ways, not even close in reality"; made-up data stays.
 
 **Map icons are SVG files (2026-10-07, lead: "a good solution from now on" — hand-plotted canvas
 paths and parsing lucide's SVG strings were both rejected):** `SvgIcons` (`engine/looks/svg-icons.ts`)
@@ -874,8 +917,10 @@ map's END edge** (lead loved the slide-in; built first for a Skew-T, which is **
 view** (lead picked it over a per-view pin component and a views list, after calling the menu's
 `meteogram.point() ?? soundingTable.point()` pin line "too specific"): `PointService`
 (`point-menu/point-service.ts`) holds the clicked `point` and the open `view` (`PointView` enum)
-— `showView(view, point)` / `movePoint(point)` / `hideView()`. The chooser opens only while no
-view is open, a click while one is open moves the point, the pin (in `point-menu/`) shows at
+— `showView(view, point)` / `hideView()`. **Right-click always opens the chooser** (lead
+2026-10-08, for simplicity and predictability: the disabled-while-a-view-is-open rule and the
+right-click-moves-the-point shortcut are gone — picking an item opens that view at the new spot,
+switching views if one is open), the pin (in `point-menu/`) shows at
 `point()`, and each drawer renders on its own `active = view() === PointView.X`. The views'
 services keep no point of their own: the meteogram's requests read the shared point (its charts
 only exist while it's active), and the always-mounted sounding table's `request()` returns
@@ -947,13 +992,12 @@ point fixed. Flow (lead): a **right-click** on the map opens a **chooser menu** 
 left-click chooser reopened on the very click that closed it; Google Maps' "what's here" idiom).
 `PointMenu` wraps the map container (`<app-point-menu><div #mapContainer/></app-point-menu>`) and
 puts spartan's `[hlmContextMenuTrigger]` on its own div, so CDK handles the right-click natively:
-opens at the cursor, a click outside or Escape closes, `[disabled]` while a view is open (the
+opens at the cursor, a click outside or Escape closes (the
 trigger must live in PointMenu's view — triggered from home-page, the menu's icons lost
 PointMenu's `viewProviders`); lon/lat come from `MapService.rightClicks` (maplibre's `contextmenu`,
 which also suppresses the browser menu); `pages/home/point-menu/`, items מטאוגרמה / סונדה בדקירה;
-picking it drops a **pin** (a `#pin` element declared in the meteogram template — visuals live in templates, lead review — handed to the generic `MapService.showMarker(element, point)`/`hideMarker(element)`; the click seam is
-`MapService.rightClicks`, an RxJS Observable fed by a private `Subject` — **events are Observables, state is signals** (lead 2026-09-24: a signal+effect "event" was rejected in review as unconventional; it replays on re-creation), `PointMenu` subscribes with `takeUntilDestroyed`; maplibre stays in engine/) and opens the sheet; **while open, a right-click
-moves the point directly** (no menu). **Placement — a drawer rising out of the time bar (lead, 2026-09-24, after ~8 rendered mockup
+picking it drops a **pin** (an element in the point-menu template — visuals live in templates, lead review — put on the map by the generic `MapPin` directive; the click seam is
+`MapService.rightClicks`, a public RxJS `Subject` (never wrapped in `asObservable()` — lead 2026-10-08: an anti-pattern) — **events are Observables, state is signals** (lead 2026-09-24: a signal+effect "event" was rejected in review as unconventional; it replays on re-creation), `PointMenu` subscribes with `takeUntilDestroyed`; maplibre stays in engine/) and opens the sheet; while open, a right-click opens the chooser again (picking moves the point). **Placement — a drawer rising out of the time bar (lead, 2026-09-24, after ~8 rendered mockup
 rounds on the live app):** `<app-meteogram>` is projected (`<ng-content/>`) into the time bar's
 **track column**, above the track — so the drawer is exactly the track's width by construction
 (chart day lines meet the bar's ticks, the chart's white map-time line continues the handle), it
@@ -1284,7 +1328,7 @@ upward). **One moment, two views** (lead renamed the tangled currentTime/targetT
 live, the held pick otherwise) and **`displayTime`** derives as `snapJump(exactTime)` — a linear
 chain, not two live-branches. Imagery asks + the relevance gate read exactTime (they can never
 diverge); model asks, jumps, and the chip read displayTime; `Inputs` = bbox / displayTime /
-exactTime / window / zoom. **Per-layer draw effects**: the global draw effect
+exactTime / window / zoom / level / cursor. **Per-layer draw effects**: the global draw effect
 became one effect per activation in the `layerInjector` — playhead flips redraw only loop layers
 (wind would otherwise visibly reset twice a second). Satellite: `SatelliteLoop { frames, shown,
 bounds }`, all window frames fetched (`Promise.all`, explicit-field `equal` dedupe),

@@ -43,6 +43,7 @@ export class LayersService {
     window: () => this.time.window(),
     zoom: () => this.map.settledZoom() ?? 0,
     level: () => this.level.activeLevel(),
+    cursor: () => this.map.cursor(),
   };
 
   private syncLoops = effect(() => {

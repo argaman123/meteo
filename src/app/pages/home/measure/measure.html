@@ -1,0 +1,21 @@
+<button
+  hlmBtn
+  size="sm"
+  class="w-9 px-0"
+  aria-label="מדידת מרחק"
+  hlmTooltip="מדידת מרחק"
+  position="bottom"
+  [variant]="measure.active() ? 'default' : 'secondary'"
+  [attr.aria-pressed]="measure.active()"
+  (click)="measure.toggleMeasure()"
+>
+  <ng-icon name="lucideRuler" />
+</button>
+@for (point of measure.points(); track $index) {
+  <div
+    [appMapPin]="point"
+    movable
+    (moved)="measure.movePoint($index, $event)"
+    class="size-3 cursor-grab rounded-full border-2 border-background bg-white shadow-[0_0_6px_rgb(0_0_0/0.5)]"
+  ></div>
+}
