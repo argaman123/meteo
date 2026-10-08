@@ -24,7 +24,10 @@ const WAVE_HEIGHT_PALETTE: ColorStop[] = [
 
 export class Waves extends ModelLayer {
   readonly name = 'גלים';
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   readonly parameters = [Parameter.WaveHeight, Parameter.WaveDirection];
+  protected readonly quantity = Quantity.WaveHeight;
+  protected readonly unit = Unit.Meters;
   override readonly staticLevel = true;
   readonly model = options(
     Model.Wave,
@@ -38,7 +41,7 @@ export class Waves extends ModelLayer {
       look: new Colormap(
         new Provider((grids: Grid[]) => grids[0]),
         { stops: WAVE_HEIGHT_PALETTE, style: 'smooth' },
-        (value) => format(value, Quantity.WaveHeight, Unit.Meters),
+        this.label,
         { blur: true },
       ),
       name: 'צבעים',
@@ -53,7 +56,7 @@ export class Waves extends ModelLayer {
       look: new Contours(
         new Provider((grids: Grid[]) => grids[0]),
         levelsEvery(0.5),
-        (value) => format(value, Quantity.WaveHeight, Unit.Meters),
+        this.label,
         '#22d3ee',
       ),
       name: 'קונטורים',
@@ -66,12 +69,11 @@ export class Waves extends ModelLayer {
     },
   ];
 
-  hover(grids: Grid[], lon: number, lat: number): string {
+  override hover(grids: Grid[], lon: number, lat: number): string | null {
     const height = grids[0].valueAt(lon, lat, 'bilinear');
     const direction = grids[1].valueAt(lon, lat, 'nearest');
-    if (Number.isNaN(height) || Number.isNaN(direction))
-      return format(NaN, Quantity.WaveHeight, Unit.Meters);
-    return `${format(height, Quantity.WaveHeight, Unit.Meters)} · ${format(direction, Quantity.Direction, Unit.MetDegrees)}`;
+    if (Number.isNaN(height) || Number.isNaN(direction)) return null;
+    return `${this.label(height)} · ${format(direction, Quantity.Direction, Unit.MetDegrees)}`;
   }
 
   protected override modelOf(): Model {

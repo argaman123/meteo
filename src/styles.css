@@ -43,6 +43,9 @@
 @theme {
   --font-sans: 'Source Sans 3', 'Heebo', sans-serif;
 
+  --shadow-float: 0 0 12px rgb(0 0 0 / 0.45);
+  --shadow-float-sm: 0 0 8px rgb(0 0 0 / 0.45);
+
   --animate-unfold: unfold 0.15s ease-out;
   --animate-fold: fold 0.12s ease-in both;
   --animate-expand: expand 0.15s ease-out;

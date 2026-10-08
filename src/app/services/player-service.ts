@@ -2,7 +2,7 @@ import { DestroyRef, Service, computed, inject, signal } from '@angular/core';
 import { findNearestTime, mergeTimes } from '../utils/time';
 
 @Service()
-export class LoopPlayer {
+export class PlayerService {
   private readonly frameMs = 400;
   private readonly restartDelayMs = 1500;
   readonly playing = signal(true);

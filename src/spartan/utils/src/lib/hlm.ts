@@ -10,7 +10,9 @@ import {
   runInInjectionContext,
 } from '@angular/core';
 import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+const twMerge = extendTailwindMerge({ extend: { theme: { shadow: ['float', 'float-sm'] } } });
 
 export function hlm(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

@@ -5,24 +5,23 @@ import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Level } from '../../services/level-service';
 import { Parameter } from '../../types/parameter';
-import { Quantity, Unit, format } from '../../utils/units';
+import { Quantity, Unit } from '../../utils/units';
 
 export class Geopotential extends ModelLayer {
   readonly name = 'גובה גיאופוטנציאלי';
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   readonly parameters = [Parameter.GeopotentialHeight];
+  protected readonly quantity = Quantity.GeopotentialHeight;
+  protected readonly unit = Unit.Meters;
 
   protected override levelOf(level: Level | null): Level | undefined {
     return typeof level === 'number' ? undefined : (level ?? 'SFC');
   }
   readonly looks = [
     {
-      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(20), (value) => format(value, Quantity.GeopotentialHeight, Unit.Meters), '#38bdf8'),
+      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(20), this.label, '#38bdf8'),
       name: 'קונטורים',
       checked: true,
     },
   ];
-
-  hover(grids: Grid[], lon: number, lat: number): string {
-    return format(grids[0].valueAt(lon, lat, 'bilinear'), Quantity.GeopotentialHeight, Unit.Meters);
-  }
 }

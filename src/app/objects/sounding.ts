@@ -1,5 +1,6 @@
 import { AirColumnTime } from '../types/sounding';
 import { fractionalIndex } from '../utils/interpolation';
+import { Unit, convertBetween } from '../utils/units';
 
 export interface SoundingLevel {
   pressure: number;
@@ -23,15 +24,18 @@ export class Sounding {
 
   static fromAirColumn(column: AirColumnTime): Sounding {
     const levels = column.airLevelDataList
-      .map((level) => ({
-        pressure: level.pressure,
-        height: level.modelHeight,
-        temperature: level.temperature,
-        dewpoint: level.dewPoint,
-        humidity: level.rh,
-        u: level.windStr * Math.cos(level.windDir),
-        v: level.windStr * Math.sin(level.windDir),
-      }))
+      .map((level) => {
+        const windSpeed = convertBetween(level.windStr, Unit.Knots, Unit.MetersPerSecond);
+        return {
+          pressure: level.pressure,
+          height: level.modelHeight,
+          temperature: level.temperature,
+          dewpoint: level.dewPoint,
+          humidity: level.rh,
+          u: windSpeed * Math.cos(level.windDir),
+          v: windSpeed * Math.sin(level.windDir),
+        };
+      })
       .sort((a, b) => b.pressure - a.pressure);
     return new Sounding(column.time, levels);
   }

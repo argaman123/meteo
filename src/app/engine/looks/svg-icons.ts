@@ -4,6 +4,7 @@ import { IconLayer } from '@deck.gl/layers';
 import { Provider } from '../../objects/provider';
 import { rgba } from '../../utils/color-scale';
 import { Legend, Look, LookKind } from '../base/look';
+import { OUTLINE_COLOR } from '../map-service';
 
 interface IconPoint {
   lon: number;
@@ -22,7 +23,7 @@ interface IconPart {
 
 export class SvgIcons extends Look<SvgIconsInput> {
   readonly kind = LookKind.Points;
-  private readonly outlineColor = rgba('#0f172a');
+  private readonly outlineColor = rgba(OUTLINE_COLOR);
 
   constructor(
     provider: Provider<SvgIconsInput>,

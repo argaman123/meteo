@@ -1,6 +1,6 @@
-import { AirColumnTime, AirLevelData } from '../types/sounding';
 import { bilinearAt, fractionalIndex } from '../utils/interpolation';
 import { Unit, convertBetween } from '../utils/units';
+import { Sounding, SoundingLevel } from './sounding';
 
 export class MeteogramData {
   private constructor(
@@ -9,23 +9,18 @@ export class MeteogramData {
     readonly data: Float32Array,
   ) {}
 
-  static fromAirColumns(
-    columns: AirColumnTime[],
+  static fromSoundings(
+    soundings: Sounding[],
     heightsFt: number[],
-    valueOf: (level: AirLevelData) => number,
+    valueOf: (level: SoundingLevel) => number,
   ): MeteogramData {
-    const sorted = [...columns].sort((a, b) => a.time - b.time);
-    const times = sorted.map((column) => column.time);
+    const sorted = [...soundings].sort((a, b) => a.time - b.time);
+    const times = sorted.map((sounding) => sounding.time);
     const data = new Float32Array(times.length * heightsFt.length).fill(NaN);
-    sorted.forEach((column, col) => {
-      const levels = [...column.airLevelDataList].sort((a, b) => a.modelHeight - b.modelHeight);
-      const levelFeet = levels.map((level) => convertBetween(level.modelHeight, Unit.Meters, Unit.Feet));
+    sorted.forEach((sounding, col) => {
       heightsFt.forEach((heightFt, row) => {
-        const index = fractionalIndex(levelFeet, heightFt);
-        if (index === null) return;
-        const lower = valueOf(levels[Math.floor(index)]);
-        const upper = valueOf(levels[Math.ceil(index)]);
-        data[row * times.length + col] = lower + (upper - lower) * (index - Math.floor(index));
+        const level = sounding.levelAtHeight(convertBetween(heightFt, Unit.Feet, Unit.Meters));
+        if (level) data[row * times.length + col] = valueOf(level);
       });
     });
     return new MeteogramData(times, heightsFt, data);

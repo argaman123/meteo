@@ -10,9 +10,9 @@ import {
 } from '@angular/core';
 import { LookKind } from '../engine/base/look';
 import { MapService } from '../engine/map-service';
-import { Overlay } from '../engine/overlay';
+import { OverlayService } from '../engine/overlay-service';
 import { LevelService } from '../services/level-service';
-import { LoopPlayer } from '../services/loop-player';
+import { PlayerService } from '../services/player-service';
 import { TimeService } from '../services/time-service';
 import { Inputs, Layer, LookEntry } from './base/layer';
 import { Loop, LoopLayer } from './base/loop-layer';
@@ -21,11 +21,11 @@ import { Shortcut } from './base/shortcut';
 @Service()
 export class LayersService {
   private injector = inject(EnvironmentInjector);
-  private overlay = inject(Overlay);
+  private overlay = inject(OverlayService);
   private map = inject(MapService);
   private time = inject(TimeService);
   private level = inject(LevelService);
-  private player = inject(LoopPlayer);
+  private player = inject(PlayerService);
   private layerInjectors = new Map<Layer<unknown>, EnvironmentInjector>();
   private readonly exclusiveKinds = new Set([LookKind.Colormap, LookKind.Particles, LookKind.Icons]);
 

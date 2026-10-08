@@ -1,7 +1,6 @@
-import type { Color } from '@deck.gl/core';
 import { PolygonStyle } from '../../engine/looks/polygons';
 import { PrecipitationEvent, PrecipType } from '../../types/polygons';
-import { rgba } from '../../utils/color-scale';
+import { Rgba, rgba } from '../../utils/color-scale';
 
 const RAMP = ['#d85283', '#e12d5d', '#e40e0e', '#c30000', '#800000'];
 
@@ -22,7 +21,7 @@ function precipSeverity(precip: PrecipitationEvent): number {
   return rainIndex(precip) / (RAIN_TYPES.length - 1);
 }
 
-function precipColor(precip: PrecipitationEvent): Color {
+function precipColor(precip: PrecipitationEvent): Rgba {
   const position = precipSeverity(precip) * (RAMP.length - 1);
   const below = rgba(RAMP[Math.floor(position)]);
   const above = rgba(RAMP[Math.ceil(position)]);

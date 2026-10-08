@@ -5,7 +5,7 @@ import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Look, LookKind } from './base/look';
 
 @Service()
-export class Overlay {
+export class OverlayService {
   private overlay: MapboxOverlay | null = null;
   private layers = new Map<Look<unknown>, DeckLayer | DeckLayer[]>();
   private ids = new Map<Look<unknown>, string>();

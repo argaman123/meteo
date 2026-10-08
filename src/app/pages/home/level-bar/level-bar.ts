@@ -4,7 +4,7 @@ import { matTerrainRound } from '@ng-icons/material-icons/round';
 import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { LayersService } from '../../../layers/layers-service';
 import { Level, LevelService } from '../../../services/level-service';
-import { Quantity, Unit, format } from '../../../utils/units';
+import { Quantity, Unit, format, formatNumber } from '../../../utils/units';
 
 @Component({
   selector: 'app-level-bar',
@@ -17,7 +17,7 @@ import { Quantity, Unit, format } from '../../../utils/units';
   },
 })
 export class LevelBar {
-  protected readonly level = inject(LevelService);
+  protected level = inject(LevelService);
   private layersService = inject(LayersService);
   private readonly dragIndex = signal<number | null>(null);
   private readonly hoverIndex = signal<number | null>(null);
@@ -42,7 +42,7 @@ export class LevelBar {
 
   protected label(level: Level | null): string {
     if (level === null) return 'קרקע';
-    if (typeof level === 'string') return `${level}mb`;
+    if (typeof level === 'string') return format(Number(level), Quantity.Pressure, Unit.Millibars);
     return format(level, Quantity.Altitude, Unit.Feet);
   }
 
@@ -50,8 +50,9 @@ export class LevelBar {
 
   protected topLabel(level: Level | null): string {
     if (level === null) return 'קרקע';
-    if (typeof level === 'string') return level;
-    return `${level / 1000}'`;
+    if (typeof level === 'string')
+      return formatNumber(Number(level), Quantity.Pressure, Unit.Millibars);
+    return format(level, Quantity.Height, Unit.Feet);
   }
 
   protected isTick(level: Level | null): boolean {

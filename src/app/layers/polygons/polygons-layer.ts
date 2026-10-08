@@ -48,13 +48,18 @@ export function drawnEvents(events: ForecastEvent[]): DrawnEvent[] {
 }
 
 export function mapValidity(startTime: number): TimeRange {
-  return { start: startTime - hoursToMs(1), end: startTime + hoursToMs(2) };
+  return { start: startTime - hoursToMs(1.5), end: startTime + hoursToMs(1.5) };
 }
 
 export const SECTORS: Record<Sector, Bounds> = {
   [Sector.Dev]: [33.3, 29.0, 37.3, 36.35],
   [Sector.Big]: [33.3, 26.6, 56.4, 39.8],
 };
+
+interface PolygonsData {
+  map: PolygonMap;
+  zoom: number;
+}
 
 export const POLYGONS_LEGEND: SwatchesLegend = {
   type: LegendType.Swatches,
@@ -68,7 +73,7 @@ export const POLYGONS_LEGEND: SwatchesLegend = {
   ],
 };
 
-export class PolygonsLayer extends Layer<PolygonMap> {
+export class PolygonsLayer extends Layer<PolygonsData> {
   readonly name = 'עננות ותופעות';
   override readonly timeWindow = { backHours: 3, forwardHours: 96 };
   readonly sector = options<Sector>(Sector.Dev, [
@@ -76,19 +81,21 @@ export class PolygonsLayer extends Layer<PolygonMap> {
     { value: Sector.Big, label: 'אזורי' },
   ], 'גזרה', OptionsPresentation.Table);
   override readonly controls: Control[] = [this.sector];
-  private on!: Inputs;
   readonly looks = [
     {
-      look: new Polygons(new Provider((map: PolygonMap) => this.createView(map)), POLYGONS_LEGEND),
+      look: new Polygons(
+        new Provider(({ map, zoom }: PolygonsData) => this.createView(map, zoom)),
+        POLYGONS_LEGEND,
+      ),
       name: 'פוליגונים',
       checked: true,
     },
   ];
 
-  private createView(map: PolygonMap): PolygonsView {
+  private createView(map: PolygonMap, zoom: number): PolygonsView {
     return {
       frame: SECTORS[this.sector()],
-      zoom: this.on.zoom(),
+      zoom,
       polygons: [...map.areas]
         .sort((a, b) =>
           this.displayOrder(a.forecastEvents[0]) - this.displayOrder(b.forecastEvents[0]))
@@ -108,19 +115,18 @@ export class PolygonsLayer extends Layer<PolygonMap> {
       return -1
   }
 
-  hover(map: PolygonMap, lon: number, lat: number): string {
+  hover({ map }: PolygonsData, lon: number, lat: number): string | null {
     const lines = drawnEvents(map.eventsAt(lon, lat)).map((event) =>
       EVENT_APPEARANCES[event.type].hoverText(event),
     );
-    return lines.length ? lines.join('\n') : '—';
+    return lines.length ? lines.join('\n') : null;
   }
 
-  relevanceOf(map: PolygonMap): TimeRange {
+  relevanceOf({ map }: PolygonsData): TimeRange {
     return mapValidity(map.startTime);
   }
 
-  fetch(on: Inputs, injector: Injector): Signal<PolygonMap | null | undefined> {
-    this.on = on;
+  fetch(on: Inputs, injector: Injector): Signal<PolygonsData | null | undefined> {
     const hours = httpResource(() => this.hoursRequest(on), {
       injector,
       parse: (mapTimes) =>
@@ -142,7 +148,9 @@ export class PolygonsLayer extends Layer<PolygonMap> {
       const currentMapTime = mapTime();
       if (currentMapTime === undefined) return undefined;
       if (currentMapTime === null) return null;
-      return map.hasValue() ? map.value() : undefined;
+      if (!map.hasValue()) return undefined;
+      const polygonMap = map.value();
+      return polygonMap && { map: polygonMap, zoom: on.zoom() };
     });
   }
 

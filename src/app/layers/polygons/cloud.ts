@@ -1,6 +1,7 @@
 import { PolygonPattern, PolygonStyle } from '../../engine/looks/polygons';
 import { CbEvent, CloudEvent, Eights, PrecipitationEvent } from '../../types/polygons';
 import { rgba } from '../../utils/color-scale';
+import { Quantity, Unit, format, formatNumber } from '../../utils/units';
 import { EventAppearance } from './polygons-layer';
 import { applyCb, cbHover } from './cb';
 import { applyPrecip, precipHover } from './precip';
@@ -75,13 +76,13 @@ function eightsRange(eights: Eights): [number, number] {
 
 function eightsText(eights: Eights): string {
   const [fewest, most] = eightsRange(eights);
-  return fewest === most ? `${most}/8` : `${fewest}-${most}/8`;
+  const mostText = format(most, Quantity.CloudCover, Unit.Eighths);
+  return fewest === most
+    ? mostText
+    : `${formatNumber(fewest, Quantity.CloudCover, Unit.Eighths)}-${mostText}`;
 }
 
 function heightRange(event: CloudEvent): string {
-  return `${thousands(event.parameters.cloudBase)}-${thousands(event.parameters.cloudTop)}`;
-}
-
-function thousands(kilofeet: number): string {
-  return `${Number(kilofeet.toFixed(1))}'`;
+  const { cloudBase, cloudTop } = event.parameters;
+  return `${format(cloudBase, Quantity.CloudBase, Unit.Kilofeet)}-${format(cloudTop, Quantity.CloudBase, Unit.Kilofeet)}`;
 }

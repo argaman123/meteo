@@ -132,7 +132,11 @@ export class SoundingTable {
       humidityFraction: Math.min(100, level.humidity),
       windDirection: format(direction, Quantity.Direction, Unit.MetDegrees),
       downwindDegrees: direction + 180,
-      windSpeed: formatNumber(Math.hypot(level.u, level.v), Quantity.WindSpeed, Unit.Knots),
+      windSpeed: formatNumber(
+        Math.hypot(level.u, level.v),
+        Quantity.WindSpeed,
+        Unit.MetersPerSecond,
+      ),
     };
   }
 }

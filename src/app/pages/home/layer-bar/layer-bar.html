@@ -52,139 +52,39 @@
           </div>
         }
         @for (control of layer.controls; track control) {
-          @if (control.type === ControlType.Options) {
-            @switch (control.presentation) {
-              @case (OptionsPresentation.Table) {
-                <div class="flex flex-wrap gap-1 py-1 ps-1.5">
-                  @for (choice of control.choices; track choice.value) {
-                    <button hlmBtn size="sm" class="h-6 grow px-2 text-xs"
-                            [variant]="choice.value === control() ? 'default' : 'ghost'"
-                            [attr.aria-pressed]="choice.value === control()"
-                            (click)="control.set(choice.value)">
-                      {{ choice.label }}
-                    </button>
-                  }
-                </div>
-              }
-              @default {
-                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
-                  <span class="grow">{{ control.label }}</span>
-                  @if (control.presentation === OptionsPresentation.Select) {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
-                            [attr.aria-label]="control.label" [hlmDropdownMenuTrigger]="choicesMenu">
-                      {{ optionLabel(control) }}
-                    </button>
-                    <ng-template #choicesMenu>
-                      <hlm-dropdown-menu>
-                        @for (choice of control.choices; track choice.value) {
-                          <button hlmDropdownMenuRadio [checked]="choice.value === control()"
-                                  [keepOpen]="false" (triggered)="control.set(choice.value)">
-                            <hlm-dropdown-menu-radio-indicator/>
-                            {{ choice.label }}
-                          </button>
-                        }
-                      </hlm-dropdown-menu>
-                    </ng-template>
-                  } @else {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
-                            [attr.aria-label]="control.label" (click)="cycleOptions(control)">
-                      {{ optionLabel(control) }}
-                    </button>
-                  }
-                </div>
-              }
-            }
+          @if (control.type === ControlType.Options && control.presentation === OptionsPresentation.Table) {
+            <div class="py-1 ps-1.5"><app-control [control]="control"/></div>
+          } @else {
+            <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
+              <span class="grow">{{ control.label }}</span>
+              <app-control [control]="control"/>
+            </div>
           }
         }
         @for (entry of layer.looks; track entry.look) {
-          @if (isExpanded(layer)) {
-            <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
-              <label class="flex grow items-center gap-2">
-                <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="layersService.isLookActive(entry)"
-                              [disabled]="!layersService.isLayerActive(layer)" (checkedChange)="layersService.toggleLook(entry)"/>
-                <span class="transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ entry.name }}</span>
-              </label>
-              <span class="flex items-center gap-2 transition-opacity" [class.opacity-50]="!layersService.isLookActive(entry)">
+          <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
+            <label class="flex grow items-center gap-2">
+              <hlm-checkbox [inputId]="layer.name + '-' + entry.name" [checked]="layersService.isLookActive(entry)"
+                            [disabled]="!layersService.isLayerActive(layer)" (checkedChange)="layersService.toggleLook(entry)"/>
+              <span class="transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ entry.name }}</span>
+            </label>
+            <span class="flex items-center gap-2 transition-opacity" [class.opacity-50]="!layersService.isLookActive(entry)">
               @for (control of entry.look.controls; track control) {
-                @switch (control.type) {
-                  @case (ControlType.Color) {
-                    <span class="flex w-9 justify-center">
-                      <span class="size-4 rounded-[4px]" [style.background]="control.color"></span>
-                    </span>
-                  }
-                  @case (ControlType.Percent) {
-                    <hlm-popover class="contents">
-                      <button hlmPopoverTrigger hlmBtn variant="ghost" size="sm"
-                              class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums" aria-label="שקיפות">
-                        {{ control() * 100 | number: '1.0-0' }}%
-                      </button>
-                      <hlm-popover-content *hlmPopoverPortal class="w-44 p-3">
-                        <hlm-slider aria-label="שקיפות" [min]="0" [max]="1" [step]="0.05" [value]="[control()]"
-                          (valueChange)="setPercent(control, $any($event))"/>
-                      </hlm-popover-content>
-                    </hlm-popover>
-                  }
-                  @case (ControlType.Options) {
-                    @if (!control.label) {
-                      <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
-                              aria-label="אפשרויות" (click)="cycleOptions(control)">
-                        {{ optionLabel(control) }}
-                      </button>
-                    }
-                  }
-                  @case (ControlType.Toggle) {
-                    @if (!control.label) {
-                      <span class="flex w-9 justify-center">
-                        <hlm-switch size="sm" aria-label="אפשרות"
-                                    [checked]="control()" (checkedChange)="control.set($event)"/>
-                      </span>
-                    }
-                  }
+                @if (!control.label) {
+                  <app-control [control]="control"/>
                 }
               }
-              </span>
-            </div>
-            @for (control of entry.look.controls; track control) {
-              @if (control.type === ControlType.Toggle && control.label) {
-                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
-                  <span class="w-4"></span>
-                  <span class="grow transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ control.label }}</span>
-                  <span class="flex w-9 justify-center transition-opacity" [class.opacity-50]="!layersService.isLookActive(entry)">
-                    <hlm-switch size="sm" [attr.aria-label]="control.label"
-                                [checked]="control()" (checkedChange)="control.set($event)"/>
-                  </span>
-                </div>
-              }
-              @if (control.type === ControlType.Options && control.label) {
-                <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
-                  <span class="w-4"></span>
-                  <span class="grow transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ control.label }}</span>
-                  @if (control.presentation === OptionsPresentation.Select) {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
-                            [class.opacity-50]="!layersService.isLookActive(entry)"
-                            [attr.aria-label]="control.label" [hlmDropdownMenuTrigger]="choicesMenu">
-                      {{ optionLabel(control) }}
-                    </button>
-                    <ng-template #choicesMenu>
-                      <hlm-dropdown-menu>
-                        @for (choice of control.choices; track choice.value) {
-                          <button hlmDropdownMenuRadio [checked]="choice.value === control()"
-                                  [keepOpen]="false" (triggered)="control.set(choice.value)">
-                            <hlm-dropdown-menu-radio-indicator/>
-                            {{ choice.label }}
-                          </button>
-                        }
-                      </hlm-dropdown-menu>
-                    </ng-template>
-                  } @else {
-                    <button hlmBtn variant="ghost" size="sm" class="h-5 min-w-9 rounded-full border-border bg-muted/30 px-1.5 text-xs tabular-nums"
-                            [class.opacity-50]="!layersService.isLookActive(entry)"
-                            [attr.aria-label]="control.label" (click)="cycleOptions(control)">
-                      {{ optionLabel(control) }}
-                    </button>
-                  }
-                </div>
-              }
+            </span>
+          </div>
+          @for (control of entry.look.controls; track control) {
+            @if (control.label) {
+              <div class="flex items-center gap-2 py-1 ps-1.5 text-sm">
+                <span class="w-4"></span>
+                <span class="grow transition-colors" [class.text-muted-foreground]="!layersService.isLookActive(entry)">{{ control.label }}</span>
+                <span class="flex transition-opacity" [class.opacity-50]="!layersService.isLookActive(entry)">
+                  <app-control [control]="control"/>
+                </span>
+              </div>
             }
           }
         }

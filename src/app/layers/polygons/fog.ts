@@ -14,11 +14,11 @@ export class Fog implements EventAppearance<FogEvent> {
     return {
       fill: rgba('#535353', Math.round(255 * (0.4 + 0.3 * visibilityPosition(fog_min_vis, fog_max_vis)))),
       pattern: PolygonPattern.Grid,
-      text: [`${fog_min_vis}-${fog_max_vis} km`],
+      text: [visibilityText(fog_min_vis, fog_max_vis)],
     };
   }
 
   hoverText(event: FogEvent): string {
-    return `${this.name()} · ${visibilityText(event.parameters.fog_min_vis, event.parameters.fog_max_vis)}`;
+    return `${this.name()} · ראות ${visibilityText(event.parameters.fog_min_vis, event.parameters.fog_max_vis)}`;
   }
 }

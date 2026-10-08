@@ -1,4 +1,4 @@
-import { Quantity, Unit, format } from '../../utils/units';
+import { Quantity, Unit, format, formatNumber } from '../../utils/units';
 
 export const VISIBILITY_BANDS: { minVis: number; maxVis: number }[] = [
   { minVis: 5, maxVis: 10 },
@@ -17,5 +17,5 @@ export function visibilityPosition(minVis: number, maxVis: number): number {
 }
 
 export function visibilityText(minVis: number, maxVis: number): string {
-  return `ראות ${format(minVis, Quantity.Visibility, Unit.Kilometers)}-${format(maxVis, Quantity.Visibility, Unit.Kilometers)}`;
+  return `${formatNumber(minVis, Quantity.Visibility, Unit.Kilometers)}-${format(maxVis, Quantity.Visibility, Unit.Kilometers)}`;
 }

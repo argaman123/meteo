@@ -28,13 +28,16 @@ export const WIND_SPEED_PALETTE: ColorStop[] = [
 
 export class Wind extends ModelLayer {
   readonly name = 'רוח';
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   readonly parameters = [Parameter.U, Parameter.V];
+  protected readonly quantity = Quantity.WindSpeed;
+  protected readonly unit = Unit.MetersPerSecond;
   readonly looks = [
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => Grid.combine(grids, Math.hypot)),
         { stops: WIND_SPEED_PALETTE, style: 'smooth' },
-        (value) => format(value, Quantity.WindSpeed, Unit.MetersPerSecond),
+        this.label,
         { opacity: 0.55 },
       ),
       name: 'צבעים',
@@ -64,11 +67,11 @@ export class Wind extends ModelLayer {
     },
   ];
 
-  hover(grids: Grid[], lon: number, lat: number): string {
+  override hover(grids: Grid[], lon: number, lat: number): string | null {
     const u = grids[0].valueAt(lon, lat, 'bilinear');
     const v = grids[1].valueAt(lon, lat, 'bilinear');
     const speed = Math.hypot(u, v);
-    if (Number.isNaN(speed)) return format(NaN, Quantity.WindSpeed, Unit.MetersPerSecond);
-    return `${format(speed, Quantity.WindSpeed, Unit.MetersPerSecond)} · ${format(metDirection(u, v), Quantity.Direction, Unit.MetDegrees)}`;
+    if (Number.isNaN(speed)) return null;
+    return `${this.label(speed)} · ${format(metDirection(u, v), Quantity.Direction, Unit.MetDegrees)}`;
   }
 }

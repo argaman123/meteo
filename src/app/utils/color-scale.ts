@@ -16,7 +16,9 @@ export interface Palette {
 
 export type ColorScale = (value: number) => RGBColor;
 
-export function rgba(color: string, alpha = 255): [number, number, number, number] {
+export type Rgba = [number, number, number, number];
+
+export function rgba(color: string, alpha = 255): Rgba {
   const parsed = rgb(color);
   return [parsed.r, parsed.g, parsed.b, alpha];
 }

@@ -55,11 +55,3 @@ export abstract class Look<I> {
   abstract deckLayer(id: string, input: I): DeckLayer | DeckLayer[];
   release(): void {}
 }
-
-export interface LabelIcon {
-  url: string;
-  width: number;
-  height: number;
-  anchorX: number;
-  anchorY: number;
-}

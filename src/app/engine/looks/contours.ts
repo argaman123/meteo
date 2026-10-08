@@ -1,13 +1,15 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { IconLayer, PathLayer } from '@deck.gl/layers';
-import { rgb } from 'd3-color';
 import { interpolateRgb } from 'd3-interpolate';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { rgba } from '../../utils/color-scale';
 import { ContourLine, LevelPicker, contourLines } from '../../utils/contours';
 import { Control, color as colorControl } from '../../utils/controls';
-import { LabelIcon, Look, LookKind } from '../base/look';
+import { Look, LookKind } from '../base/look';
+import { OUTLINE_COLOR } from '../map-service';
+import { SpriteCache } from '../base/sprite-cache';
+import { createLabel } from './labels';
 
 interface ContourLabel {
   position: [number, number];
@@ -17,7 +19,7 @@ interface ContourLabel {
 
 export class Contours extends Look<Grid> {
   readonly kind = LookKind.Contours;
-  private labelIcons = new Map<string, LabelIcon>();
+  private readonly sprites = new SpriteCache();
 
   override readonly controls: Control[];
 
@@ -32,19 +34,19 @@ export class Contours extends Look<Grid> {
   }
 
   override release(): void {
-    this.labelIcons.clear();
+    this.sprites.clear();
   }
 
   deckLayer(id: string, grid: Grid): DeckLayer[] {
-    const line = rgb(this.color);
+    const labelColor = interpolateRgb(this.color, '#ffffff')(0.5);
     const lines = contourLines(grid.data, grid.width, grid.height, grid.bounds, this.levels(grid));
     const labels = this.placeLabels(lines, grid.bounds[2] - grid.bounds[0]);
     return [
       new PathLayer<ContourLine>({
-        id: `${id}-casing`,
+        id: `${id}-outline`,
         data: lines,
         getPath: (line) => line.path,
-        getColor: rgba('#0f172a', 200),
+        getColor: rgba(OUTLINE_COLOR, 200),
         getWidth: 3.5,
         widthUnits: 'pixels',
       }),
@@ -52,7 +54,7 @@ export class Contours extends Look<Grid> {
         id: `${id}-lines`,
         data: lines,
         getPath: (line) => line.path,
-        getColor: [line.r, line.g, line.b, 255],
+        getColor: rgba(this.color),
         getWidth: 1.5,
         widthUnits: 'pixels',
       }),
@@ -60,43 +62,14 @@ export class Contours extends Look<Grid> {
         id: `${id}-labels`,
         data: labels,
         getPosition: (label) => label.position,
-        getIcon: (label) => this.icon(label.text),
+        getIcon: (label) =>
+          this.sprites.spriteOf(label.text, () =>
+            createLabel(label.text, 12, 700, labelColor, OUTLINE_COLOR, 4),
+          ),
         getAngle: (label) => label.angle,
         getSize: 18,
       }),
     ];
-  }
-
-  private icon(text: string): LabelIcon {
-    const cached = this.labelIcons.get(text);
-    if (cached) return cached;
-    const scale = 2;
-    const height = 18 * scale;
-    const canvas = document.createElement('canvas');
-    canvas.height = height;
-    const context = canvas.getContext('2d')!;
-    const font = `700 ${12 * scale}px 'Source Sans 3', 'Heebo', sans-serif`;
-    context.font = font;
-    const width = Math.ceil(context.measureText(text).width + 8 * scale);
-    canvas.width = width;
-    context.font = font;
-    context.textAlign = 'center';
-    context.textBaseline = 'middle';
-    context.lineJoin = 'round';
-    context.strokeStyle = '#0f172a';
-    context.lineWidth = 4 * scale;
-    context.strokeText(text, width / 2, height / 2 + scale * 0.5);
-    context.fillStyle = interpolateRgb(this.color, '#ffffff')(0.5);
-    context.fillText(text, width / 2, height / 2 + scale * 0.5);
-    const icon = {
-      url: canvas.toDataURL(),
-      width,
-      height,
-      anchorX: width / 2,
-      anchorY: height / 2,
-    };
-    this.labelIcons.set(text, icon);
-    return icon;
   }
 
   private levels(grid: Grid): number[] {

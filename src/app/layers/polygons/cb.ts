@@ -18,7 +18,7 @@ const NAMES: Record<string, string> = {
 
 export function applyCb(style: PolygonStyle, cb: CbEvent): void {
   const fill = FILLS[cb.parameters.cb_type] ?? FILLS['CB'];
-  style.fill = rgba(fill, style.fill[3] ?? 255);
+  style.fill = rgba(fill, style.fill[3]);
   style.outline = rgba(fill);
   const severity = Math.max(0, SEVERITY_ORDER.indexOf(cb.parameters.cb_type)) / (SEVERITY_ORDER.length - 1);
   style.outlineWidth = 4 + 4 * severity;

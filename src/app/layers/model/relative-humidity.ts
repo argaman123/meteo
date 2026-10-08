@@ -4,7 +4,7 @@ import { levelsEvery } from '../../utils/contours';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
-import { Quantity, Unit, format } from '../../utils/units';
+import { Quantity, Unit } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
 import { ModelLayer } from './model-layer';
 
@@ -20,13 +20,16 @@ const RELATIVE_HUMIDITY_PALETTE: ColorStop[] = [
 
 export class RelativeHumidity extends ModelLayer {
   readonly name = 'לחות יחסית';
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   readonly parameters = [Parameter.RelativeHumidity];
+  protected readonly quantity = Quantity.RelativeHumidity;
+  protected readonly unit = Unit.Percent;
   readonly looks = [
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => grids[0]),
         { stops: RELATIVE_HUMIDITY_PALETTE, style: 'smooth' },
-        (value) => format(value, Quantity.RelativeHumidity, Unit.Percent),
+        this.label,
       ),
       name: 'צבעים',
       checked: true,
@@ -35,15 +38,11 @@ export class RelativeHumidity extends ModelLayer {
       look: new Contours(
         new Provider((grids: Grid[]) => grids[0]),
         levelsEvery(10),
-        (value) => format(value, Quantity.RelativeHumidity, Unit.Percent),
+        this.label,
         '#4ade80',
       ),
       name: 'קונטורים',
       checked: true,
     },
   ];
-
-  hover(grids: Grid[], lon: number, lat: number): string {
-    return format(grids[0].valueAt(lon, lat, 'bilinear'), Quantity.RelativeHumidity, Unit.Percent);
-  }
 }

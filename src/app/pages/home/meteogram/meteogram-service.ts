@@ -3,11 +3,11 @@ import { Service, computed, inject, linkedSignal, signal, untracked } from '@ang
 import { modelAtPoint } from '../../../layers/model/model-layer';
 import { layers } from '../../../layers/registry';
 import { MeteogramData } from '../../../objects/meteogram-data';
+import { Sounding, SoundingLevel } from '../../../objects/sounding';
 import { TimeRange, TimeService } from '../../../services/time-service';
 import { PointEvents } from '../../../types/polygons';
-import { AirColumnTime, AirLevelData } from '../../../types/sounding';
+import { AirColumnTime } from '../../../types/sounding';
 import { hoursToMs } from '../../../utils/time';
-import { Unit, convertBetween } from '../../../utils/units';
 import { PointService } from '../point-menu/point-service';
 
 export enum MeteogramTab {
@@ -68,15 +68,14 @@ export class MeteogramService {
   }
 
   private columnOf(columns: AirColumnTime[]): MeteogramColumn {
+    const soundings = columns.map((column) => Sounding.fromAirColumn(column));
     const heightsFt = Array.from({ length: this.topFt / 1000 + 1 }, (_, index) => index * 1000);
-    const section = (valueOf: (level: AirLevelData) => number) =>
-      MeteogramData.fromAirColumns(columns, heightsFt, valueOf);
-    const windMs = (level: AirLevelData) =>
-      convertBetween(level.windStr, Unit.Knots, Unit.MetersPerSecond);
+    const section = (valueOf: (level: SoundingLevel) => number) =>
+      MeteogramData.fromSoundings(soundings, heightsFt, valueOf);
     return {
       temperature: section((level) => level.temperature),
-      u: section((level) => windMs(level) * Math.cos(level.windDir)),
-      v: section((level) => windMs(level) * Math.sin(level.windDir)),
+      u: section((level) => level.u),
+      v: section((level) => level.v),
     };
   }
 

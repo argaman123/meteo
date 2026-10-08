@@ -16,6 +16,7 @@ export const buttonVariants = cva(
         secondary:
           'bg-secondary text-secondary-foreground aria-expanded:bg-secondary aria-expanded:text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]',
         soft: 'bg-secondary/50 text-secondary-foreground hover:bg-secondary',
+        chip: 'rounded-full border-border bg-muted/30 tabular-nums hover:bg-muted dark:hover:bg-muted/50',
         ghost: 'hover:bg-muted hover:text-foreground dark:hover:bg-muted/50',
         destructive:
           'bg-destructive/10 hover:bg-destructive/20 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/20 text-destructive focus-visible:border-destructive/40 dark:hover:bg-destructive/30',
@@ -33,6 +34,7 @@ export const buttonVariants = cva(
         'icon-sm':
           'size-8 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-md',
         'icon-lg': 'size-10',
+        chip: 'h-5 min-w-9 px-1.5 text-xs',
       },
     },
     defaultVariants: {

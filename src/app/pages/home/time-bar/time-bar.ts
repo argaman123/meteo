@@ -1,37 +1,22 @@
 import { Dir } from '@angular/cdk/bidi';
 import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import {
-  lucideChevronLeft,
-  lucideChevronRight,
-  lucidePause,
-  lucidePlay,
-  lucideSkipBack,
-  lucideSkipForward,
-} from '@ng-icons/lucide';
+import { lucideChevronLeft, lucideChevronRight } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { LayersService } from '../../../layers/layers-service';
-import { LoopPlayer } from '../../../services/loop-player';
+import { PlayerService } from '../../../services/player-service';
 import { TimeRange, TimeService } from '../../../services/time-service';
 import { clampToRange, formatLocalHour, formatLocalTime, timelineTicks } from '../../../utils/time';
 import { pointerFraction } from '../../../utils/pointer';
+import { LoopPill } from '../loop-pill/loop-pill';
 import { TimeBarService } from './time-bar-service';
 
 // TODO: UNVERIFIED CODE BELOW
 @Component({
   selector: 'app-time-bar',
-  imports: [Dir, HlmButton, HlmTooltip, NgIcon],
-  viewProviders: [
-    provideIcons({
-      lucideChevronLeft,
-      lucideChevronRight,
-      lucidePause,
-      lucidePlay,
-      lucideSkipBack,
-      lucideSkipForward,
-    }),
-  ],
+  imports: [Dir, HlmButton, HlmTooltip, LoopPill, NgIcon],
+  viewProviders: [provideIcons({ lucideChevronLeft, lucideChevronRight })],
   templateUrl: './time-bar.html',
   host: {
     class: 'block',
@@ -42,8 +27,8 @@ import { TimeBarService } from './time-bar-service';
 export class TimeBar {
   protected time = inject(TimeService);
   private timeBar = inject(TimeBarService);
-  protected layers = inject(LayersService);
-  protected player = inject(LoopPlayer);
+  protected layersService = inject(LayersService);
+  private player = inject(PlayerService);
   private scrubTime = signal<number | null>(null);
   private hoverTime = signal<number | null>(null);
   private drag: { mode: 'pending' | 'pan' | 'scrub'; startX: number; view: TimeRange } | null =
@@ -155,12 +140,5 @@ export class TimeBar {
   private timeAt(event: PointerEvent): number {
     const { start: earliest, end: latest } = this.time.window();
     return clampToRange(this.timeBar.timeInView(pointerFraction(event).x), earliest, latest);
-  }
-
-  private readonly speeds = [0.5, 1, 2, 4];
-
-  protected cycleSpeed(): void {
-    const index = this.speeds.indexOf(this.player.speed());
-    this.player.speed.set(this.speeds[(index + 1) % this.speeds.length]);
   }
 }

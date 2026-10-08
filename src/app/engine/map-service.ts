@@ -3,11 +3,19 @@ import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { Subject } from 'rxjs';
 import { Bounds } from '../types/wrap';
-import { Overlay } from './overlay';
+import { OverlayService } from './overlay-service';
 
 export type BasemapId = 'dark' | 'light' | 'colorful';
 
 export const basemapBright = signal(false);
+
+export function inkColor(): string {
+  return basemapBright() ? '#212429' : '#ffffff';
+}
+
+export const OUTLINE_COLOR = '#0f172a';
+
+export const MAP_FONT = "'Source Sans 3', 'Heebo', sans-serif";
 
 export interface MarkerDrag {
   element: HTMLElement;
@@ -23,7 +31,7 @@ export interface MapClick {
 
 @Service()
 export class MapService {
-  private overlay = inject(Overlay);
+  private overlay = inject(OverlayService);
   private map: maplibregl.Map | null = null;
   private markers = new Map<HTMLElement, maplibregl.Marker>();
 

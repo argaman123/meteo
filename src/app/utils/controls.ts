@@ -20,7 +20,7 @@ export type OptionsControl<T> = WritableSignal<T> & {
   label?: string;
   presentation: OptionsPresentation;
 };
-export type PercentControl = WritableSignal<number> & { type: ControlType.Percent };
+export type PercentControl = WritableSignal<number> & { type: ControlType.Percent; label?: string };
 export type ToggleControl = WritableSignal<boolean> & {
   type: ControlType.Toggle;
   label?: string;
@@ -28,6 +28,7 @@ export type ToggleControl = WritableSignal<boolean> & {
 export interface ColorControl {
   type: ControlType.Color;
   color: string;
+  label?: string;
 }
 export type Control = OptionsControl<unknown> | PercentControl | ColorControl | ToggleControl;
 

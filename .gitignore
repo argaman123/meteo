@@ -31,7 +31,6 @@ public/fixtures/ecmwf-download/
 .idea/
 *.swp
 .playwright-mcp/
-tools/repro/repro-bundle.js
 
 # Loose reference photos / scratch images dropped in the repo root (real assets live in public/)
 /*.jpg

@@ -7,6 +7,7 @@ import { Model, Parameter } from '../../types/parameter';
 import { Bounds, ModelWrapInfo, Wrap } from '../../types/wrap';
 import { contains, containsBounds } from '../../utils/geo';
 import { hoursToMs, snapToStep } from '../../utils/time';
+import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs, Layer } from '../base/layer';
 
 export const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
@@ -17,8 +18,9 @@ export function modelAtPoint(lon: number, lat: number): Model {
 
 export abstract class ModelLayer extends Layer<Grid<ModelWrapInfo>[]> {
   abstract readonly parameters: Parameter[];
+  protected abstract readonly quantity: Quantity;
+  protected abstract readonly unit: Unit;
   override readonly staticLevel: boolean = false;
-  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   protected readonly reduction: number | null = null;
   private readonly pressureStepHours = 3;
   private readonly fullResolutionPaddingDeg = 0.25;
@@ -26,6 +28,13 @@ export abstract class ModelLayer extends Layer<Grid<ModelWrapInfo>[]> {
     [Parameter.Temperature]: Parameter.SurfaceTemperature,
     [Parameter.RelativeHumidity]: Parameter.SurfaceRelativeHumidity,
   };
+
+  protected readonly label = (value: number): string => format(value, this.quantity, this.unit);
+
+  hover(grids: Grid[], lon: number, lat: number): string | null {
+    const value = grids[0].valueAt(lon, lat, 'bilinear');
+    return Number.isNaN(value) ? null : this.label(value);
+  }
 
   relevanceOf(grids: Grid<ModelWrapInfo>[]): TimeRange {
     const relevanceMs = hoursToMs(1.5);

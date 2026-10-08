@@ -74,10 +74,9 @@ export class SatelliteLayer extends LoopLayer<SatelliteFrame> {
     },
   ];
 
-  hover([loop]: SatelliteLoop[], lon: number, lat: number): string {
+  hover([loop]: SatelliteLoop[], lon: number, lat: number): string | null {
     const { grays, display, bounds } = loop.shown;
-    if (!grays) return '—';
-    if (!contains(bounds, lon, lat)) return '—';
+    if (!grays || !contains(bounds, lon, lat)) return null;
     const [west, south, east, north] = bounds;
     const { width, height } = display;
     const column = Math.min(width - 1, Math.floor(((lon - west) / (east - west)) * width));

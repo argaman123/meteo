@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injector, Signal, computed } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { LegendType } from '../../engine/base/look';
+import { gradientLegend } from '../../engine/base/look';
 import { SvgIcons } from '../../engine/looks/svg-icons';
 import { Provider } from '../../objects/provider';
 import { LightningObservation } from '../../types/lightning';
@@ -71,23 +71,26 @@ export class LightningLayer extends LoopLayer<LightningFrame> {
         })),
         'bolt',
         14,
-        computed(() => ({
-          type: LegendType.Gradient,
-          stops: AGE_PALETTE.map(({ value, color }) => ({
-            color,
-            label: format(value * this.durationMinutes(), Quantity.Age, Unit.Minutes),
-          })),
-        })),
+        computed(() =>
+          gradientLegend(
+            AGE_PALETTE.map(({ value, color }) => ({
+              value: value * this.durationMinutes(),
+              color,
+            })),
+            Quantity.Age,
+            Unit.Minutes,
+          ),
+        ),
       ),
       name: 'סמלים',
       checked: true,
     },
   ];
 
-  hover(loops: LightningLoop[], lon: number, lat: number): string {
+  hover(loops: LightningLoop[], lon: number, lat: number): string | null {
     const lightnings = loops.flatMap((loop) => loop.shown.lightnings);
     const nearest = nearestPoint(lightnings, lon, lat, 0.05);
-    if (!nearest) return '—';
+    if (!nearest) return null;
     const current = formatSignedNumber(
       nearest.current,
       Quantity.LightningCurrent,

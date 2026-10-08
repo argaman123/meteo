@@ -4,7 +4,7 @@ import { VectorField } from '../../objects/grid';
 import { rgba } from '../../utils/color-scale';
 import { AnimatedLayer, AnimatedState } from '../base/animated-layer';
 import { Look, LookKind } from '../base/look';
-import { basemapBright } from '../map-service';
+import { inkColor } from '../map-service';
 
 export class WaveCrests extends Look<VectorField> {
   readonly kind = LookKind.Particles;
@@ -46,7 +46,7 @@ class WaveCrestLayer extends AnimatedLayer<VectorField> {
   }
 
   override renderLayers(): DeckLayer {
-    const ink = basemapBright() ? '#212429' : '#ffffff';
+    const ink = inkColor();
     const { tick } = this.state;
     return new IconLayer<Crest>(this.getSubLayerProps({ id: 'crests' }), {
       data: this.state.crests,

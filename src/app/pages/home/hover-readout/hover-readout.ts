@@ -9,14 +9,14 @@ import { LayersService } from '../../../layers/layers-service';
 })
 export class HoverReadout {
   private map = inject(MapService);
-  private layerService = inject(LayersService);
+  private layersService = inject(LayersService);
 
   protected pointer = signal<{ x: number; y: number } | null>(null);
   protected lines = computed(() => {
     const cursor = this.map.cursor();
     if (!cursor) return [];
-    const result: { name: string; value: string }[] = [];
-    for (const [layer, dataSignal] of this.layerService.activeLayers()) {
+    const result: { name: string; value: string | null }[] = [];
+    for (const [layer, dataSignal] of this.layersService.activeLayers()) {
       const data = dataSignal();
       if (data !== undefined && data !== null) {
         result.push({ name: layer.name, value: layer.hover(data, cursor[0], cursor[1]) });

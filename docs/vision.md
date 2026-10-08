@@ -1,10 +1,5 @@
 # Product Context
 
-> Trimmed 2026-07-06 (lead): the old "complete capability inventory" and pillar roadmap are
-> deleted — they mixed the lead's actual intent with extrapolation and drove planning he never
-> asked for. What remains here is context that is *true*, not a plan. The forward plan is rebuilt
-> with the lead, feature by feature (see CLAUDE.md §11 working mode).
-
 A **specialized meteorological viewer** for a closed/secure internal network: a map layered with
 colorful, animated weather data. It resembles Windy on the surface but exists for reasons
 off-the-shelf tools can't satisfy.

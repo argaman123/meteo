@@ -1,6 +1,6 @@
 import { Radar } from '../../engine/looks/radar';
 import { Provider } from '../../objects/provider';
-import { Quantity, Unit, format } from '../../utils/units';
+import { Quantity, Unit } from '../../utils/units';
 import { RadarLayer, RadarLoop } from './radar-layer';
 
 const RAIN_PALETTE = [
@@ -15,11 +15,13 @@ export class RainRadar extends RadarLayer {
   override readonly timeWindow = { backHours: 24, forwardHours: 0, stepHours: 1 };
   protected readonly loopMinutes = 30;
   protected readonly timesRoute = '/radar/get_time_range_to_live_radars';
-  private readonly minimumRain = 0.1;
-  private readonly radar = new Radar(
+  protected readonly minimumValue = 0.1;
+  protected readonly quantity = Quantity.Rain;
+  protected readonly unit = Unit.MillimetersPerHour;
+  protected readonly radar = new Radar(
     new Provider((radars: RadarLoop[]) => radars.map((radar) => radar.shown.map)),
     RAIN_PALETTE,
-    this.minimumRain,
+    this.minimumValue,
   );
   readonly looks = [
     {
@@ -28,14 +30,4 @@ export class RainRadar extends RadarLayer {
       checked: true,
     },
   ];
-
-  hover(radars: RadarLoop[], lon: number, lat: number): string {
-    const values = radars
-      .map((radar) => radar.shown.map.valueAt(lon, lat, 'nearest'))
-      .map((value) => (this.radar.noise() ? Math.abs(value) : value))
-      .filter((value) => !Number.isNaN(value));
-    const most = Math.max(...values);
-    if (most < this.minimumRain) return '—';
-    return format(most, Quantity.Rain, Unit.MillimetersPerHour);
-  }
 }

@@ -19,7 +19,7 @@ import { coordinateFormat, unitControls } from './settings-controls';
   templateUrl: './settings-panel.html',
 })
 export class SettingsPanel {
-  protected readonly layersService = inject(LayersService);
+  protected layersService = inject(LayersService);
   protected readonly coordinates = layers.coordinates;
   protected readonly coordinateFormat = coordinateFormat;
   protected readonly units = Object.values(unitControls);

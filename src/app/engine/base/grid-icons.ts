@@ -1,8 +1,9 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
 import { VectorField } from '../../objects/grid';
-import { basemapBright } from '../map-service';
-import { LabelIcon, Look, LookKind } from './look';
+import { Look, LookKind } from './look';
+import { SpriteCache } from './sprite-cache';
+import { inkColor } from '../map-service';
 
 export interface GridIcon {
   key: string;
@@ -18,16 +19,16 @@ interface PlacedIcon {
 export abstract class GridIcons extends Look<VectorField> {
   readonly kind = LookKind.Icons;
   protected abstract readonly sizeFactor: number;
-  private readonly icons = new Map<string, LabelIcon>();
+  private readonly sprites = new SpriteCache();
 
   protected abstract iconAt(eastward: number, northward: number, lat: number): GridIcon;
 
   override release(): void {
-    this.icons.clear();
+    this.sprites.clear();
   }
 
   deckLayer(id: string, { u, v }: VectorField): DeckLayer {
-    const ink = basemapBright() ? '#212429' : '#ffffff';
+    const ink = inkColor();
     const [west, south, east, north] = u.bounds;
     const stride = Math.max(1, Math.round(u.width / 35));
     const cellWidth = (east - west) / (u.width - 1);
@@ -50,7 +51,8 @@ export abstract class GridIcons extends Look<VectorField> {
       id,
       data: placed,
       getPosition: (point) => point.position,
-      getIcon: (point) => this.rendered(point.icon, ink),
+      getIcon: (point) =>
+        this.sprites.spriteOf(`${point.icon.key} ${ink}`, () => this.createIcon(point.icon, ink)),
       getAngle: (point) => -point.icon.angle,
       getSize:
         (Math.min(stride * cellWidth, stride * cellHeight, (east - west) / 35) / 360) *
@@ -61,26 +63,14 @@ export abstract class GridIcons extends Look<VectorField> {
     });
   }
 
-  private rendered(icon: GridIcon, ink: string): LabelIcon {
-    const key = `${icon.key} ${ink}`;
-    const cached = this.icons.get(key);
-    if (cached) return cached;
-    const size = 128;
+  private createIcon(icon: GridIcon, ink: string): HTMLCanvasElement {
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = 128;
+    canvas.height = 128;
     const context = canvas.getContext('2d')!;
     context.fillStyle = ink;
     context.strokeStyle = ink;
     icon.draw(context);
-    const rendered = {
-      url: canvas.toDataURL(),
-      width: size,
-      height: size,
-      anchorX: size / 2,
-      anchorY: size / 2,
-    };
-    this.icons.set(key, rendered);
-    return rendered;
+    return canvas;
   }
 }

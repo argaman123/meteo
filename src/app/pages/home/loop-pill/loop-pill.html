@@ -1,0 +1,32 @@
+@if (player.loopTime() !== null) {
+  <div dir="ltr"
+       class="absolute bottom-full start-1/2 mb-17 flex -translate-x-1/2 flex-col gap-2 rounded-xl border bg-background/70 px-3 pt-2 pb-2.5 shadow-float backdrop-blur-lg"
+       animate.enter="animate-pop-in" animate.leave="animate-pop-out">
+    <div class="flex items-center justify-center gap-1.5">
+      <button hlmBtn variant="soft" class="size-7 rounded-full px-0" aria-label="תמונה קודמת"
+              hlmTooltip="תמונה קודמת" position="top" (click)="player.stepFrame(-1)">
+        <ng-icon name="lucideSkipBack"/>
+      </button>
+      <button hlmBtn variant="secondary" class="size-8 rounded-full px-0"
+              [attr.aria-label]="player.playing() ? 'השהיה' : 'ניגון'"
+              [hlmTooltip]="player.playing() ? 'השהיה' : 'ניגון'" position="top"
+              (click)="player.playing() ? player.pause() : player.play()">
+        <ng-icon [name]="player.playing() ? 'lucidePause' : 'lucidePlay'"/>
+      </button>
+      <button hlmBtn variant="soft" class="size-7 rounded-full px-0" aria-label="תמונה הבאה"
+              hlmTooltip="תמונה הבאה" position="top" (click)="player.stepFrame(1)">
+        <ng-icon name="lucideSkipForward"/>
+      </button>
+      <span class="mx-1 h-4 w-px shrink-0 bg-border"></span>
+      <button hlmBtn variant="chip" size="chip" class="h-6 w-10 px-0"
+              aria-label="מהירות" hlmTooltip="מהירות" position="top" (click)="cycleSpeed()">
+        ×{{ player.speed() }}
+      </button>
+    </div>
+    @if (player.loopProgress() !== null) {
+      <span class="h-[3px] w-full overflow-hidden rounded-full bg-border">
+        <span class="block h-full rounded-full bg-primary" [style.width.%]="player.loopProgress()! * 100"></span>
+      </span>
+    }
+  </div>
+}

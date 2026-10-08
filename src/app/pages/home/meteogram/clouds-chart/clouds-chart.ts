@@ -1,4 +1,5 @@
 import { Component, computed, inject, viewChild } from '@angular/core';
+import { MAP_FONT } from '../../../../engine/map-service';
 import { PolygonStyle } from '../../../../engine/looks/polygons';
 import {
   DrawnEvent,
@@ -41,7 +42,7 @@ export class CloudsChart {
   protected forecasts = this.meteogram.clouds;
 
   constructor() {
-    this.textMeasure.font = "500 10px 'Source Sans 3', 'Heebo', sans-serif";
+    this.textMeasure.font = `500 10px ${MAP_FONT}`;
   }
 
   private blocks = computed(() => {
@@ -142,7 +143,7 @@ export class CloudsChart {
     return {
       left,
       width: blockWidth,
-      color: `rgb(${r} ${g} ${b} / ${(alpha ?? 255) / 255})`,
+      color: `rgb(${r} ${g} ${b} / ${alpha / 255})`,
       text: (blockWidth / 100) * width >= this.textMeasure.measureText(text).width + 8 ? text : '',
     };
   }

@@ -4,7 +4,7 @@ import { levelsEvery } from '../../utils/contours';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
-import { Quantity, Unit, format } from '../../utils/units';
+import { Quantity, Unit } from '../../utils/units';
 import { ColorStop } from '../../utils/color-scale';
 import { ModelLayer } from './model-layer';
 
@@ -22,25 +22,24 @@ export const TEMPERATURE_PALETTE: ColorStop[] = [
 
 export class Temperature extends ModelLayer {
   readonly name = 'טמפרטורה';
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   readonly parameters = [Parameter.Temperature];
+  protected readonly quantity = Quantity.Temperature;
+  protected readonly unit = Unit.Celsius;
   readonly looks = [
     {
       look: new Colormap(
         new Provider((grids: Grid[]) => grids[0]),
         { stops: TEMPERATURE_PALETTE, style: 'smooth' },
-        (value) => format(value, Quantity.Temperature, Unit.Celsius),
+        this.label,
       ),
       name: 'צבעים',
       checked: true,
     },
     {
-      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(5), (value) => format(value, Quantity.Temperature, Unit.Celsius), '#f43f5e'),
+      look: new Contours(new Provider((grids: Grid[]) => grids[0]), levelsEvery(5), this.label, '#f43f5e'),
       name: 'קונטורים',
       checked: false,
     },
   ];
-
-  hover(grids: Grid[], lon: number, lat: number): string {
-    return format(grids[0].valueAt(lon, lat, 'bilinear'), Quantity.Temperature, Unit.Celsius);
-  }
 }

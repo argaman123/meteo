@@ -1,10 +1,12 @@
 import { HttpClient, httpResource } from '@angular/common/http';
 import { Injector, Signal, computed } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import { Radar } from '../../engine/looks/radar';
 import { Grid } from '../../objects/grid';
 import { RadarEntity, RadarTimeRange } from '../../types/radar';
 import { RadarWrapInfo, Wrap } from '../../types/wrap';
 import { minutesToMs, msToSeconds, secondsToMs } from '../../utils/time';
+import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs } from '../base/layer';
 import { FrameRequest, Loop, LoopLayer } from '../base/loop-layer';
 
@@ -18,7 +20,20 @@ export type RadarLoop = Loop<RadarFrame>;
 
 export abstract class RadarLayer extends LoopLayer<RadarFrame> {
   protected abstract readonly timesRoute: string;
+  protected abstract readonly radar: Radar;
+  protected abstract readonly minimumValue: number;
+  protected abstract readonly quantity: Quantity;
+  protected abstract readonly unit: Unit;
   protected override readonly loopIdOf = (frame: RadarFrame) => frame.name;
+
+  hover(radars: RadarLoop[], lon: number, lat: number): string | null {
+    const values = radars
+      .map((radar) => radar.shown.map.valueAt(lon, lat, 'nearest'))
+      .map((value) => (this.radar.noise() ? Math.abs(value) : value))
+      .filter((value) => !Number.isNaN(value));
+    const most = Math.max(...values);
+    return most < this.minimumValue ? null : format(most, this.quantity, this.unit);
+  }
 
   protected frameRequests(
     on: Inputs,

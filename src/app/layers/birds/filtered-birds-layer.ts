@@ -72,11 +72,10 @@ export class FilteredBirdsLayer extends LoopLayer<FilteredBirdsFrame> {
     },
   ];
 
-  hover(radars: FilteredBirdsLoop[], lon: number, lat: number): string {
+  hover(radars: FilteredBirdsLoop[], lon: number, lat: number): string | null {
     const birds = radars.flatMap((radar) => radar.shown.birds);
     const nearest = nearestPoint(birds, lon, lat, 0.05);
-    if (!nearest) return '—';
-    return format(nearest.height, Quantity.BirdHeight, Unit.Meters);
+    return nearest ? format(nearest.height, Quantity.BirdHeight, Unit.Meters) : null;
   }
 
   protected frameRequests(

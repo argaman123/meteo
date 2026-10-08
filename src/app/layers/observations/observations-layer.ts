@@ -67,12 +67,11 @@ export class ObservationsLayer extends LoopLayer<ObservationsFrame> {
           const points = loops.flatMap((loop) => loop.shown.points);
           return {
             points: points.map((point) => {
-              const { r, g, b } = colorScale(valueOf(point));
               return {
                 lon: point.lon,
                 lat: point.lat,
                 text: textOf(point),
-                color: `rgb(${r} ${g} ${b})`,
+                color: colorScale(valueOf(point)).formatHex(),
               };
             }),
           };
@@ -84,11 +83,10 @@ export class ObservationsLayer extends LoopLayer<ObservationsFrame> {
     },
   ];
 
-  hover(loops: ObservationsLoop[], lon: number, lat: number): string {
+  hover(loops: ObservationsLoop[], lon: number, lat: number): string | null {
     const points = loops.flatMap((loop) => loop.shown.points);
     const nearest = nearestPoint(points, lon, lat, 0.35);
-    if (!nearest) return '—';
-    return this.currentParameter().textOf(nearest);
+    return nearest ? this.currentParameter().textOf(nearest) : null;
   }
 
   protected frameRequests(

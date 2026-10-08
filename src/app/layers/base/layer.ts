@@ -28,7 +28,7 @@ export abstract class Layer<D> {
   readonly staticLevel: boolean = true;
   forcedTimes: Signal<number[]> | null = null;
 
-  abstract hover(data: D, lon: number, lat: number): string;
+  abstract hover(data: D, lon: number, lat: number): string | null;
 
   abstract relevanceOf(data: D): TimeRange | true;
 

@@ -1,22 +1,23 @@
 import type { Layer as DeckLayer } from '@deck.gl/core';
 import { IconLayer } from '@deck.gl/layers';
-import { LabelIcon, Look } from './look';
+import { Look } from './look';
+import { SpriteCache } from './sprite-cache';
 
 export interface PointIcon {
   key: string;
-  paint: () => HTMLCanvasElement;
+  create: () => HTMLCanvasElement;
 }
 
 export abstract class PointIcons<P extends { lon: number; lat: number }> extends Look<{
   points: P[];
 }> {
   protected abstract readonly size: number;
-  private readonly icons = new Map<string, LabelIcon>();
+  private readonly sprites = new SpriteCache();
 
   protected abstract iconOf(point: P): PointIcon;
 
   override release(): void {
-    this.icons.clear();
+    this.sprites.clear();
   }
 
   deckLayer(id: string, input: { points: P[] }): DeckLayer {
@@ -24,24 +25,12 @@ export abstract class PointIcons<P extends { lon: number; lat: number }> extends
       id,
       data: input.points,
       getPosition: (point) => [point.lon, point.lat],
-      getIcon: (point) => this.rendered(this.iconOf(point)),
+      getIcon: (point) => {
+        const icon = this.iconOf(point);
+        return this.sprites.spriteOf(icon.key, icon.create);
+      },
       getSize: this.size,
       sizeUnits: 'pixels',
     });
-  }
-
-  private rendered(icon: PointIcon): LabelIcon {
-    const cached = this.icons.get(icon.key);
-    if (cached) return cached;
-    const canvas = icon.paint();
-    const rendered = {
-      url: canvas.toDataURL(),
-      width: canvas.width,
-      height: canvas.height,
-      anchorX: canvas.width / 2,
-      anchorY: canvas.height / 2,
-    };
-    this.icons.set(icon.key, rendered);
-    return rendered;
   }
 }

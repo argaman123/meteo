@@ -5,12 +5,15 @@ import { Provider } from '../../objects/provider';
 import { Parameter } from '../../types/parameter';
 import { levelsEvery } from '../../utils/contours';
 import { Control, OptionsPresentation, options } from '../../utils/controls';
-import { Quantity, Unit, format, formatNumber } from '../../utils/units';
+import { Quantity, Unit, formatNumber } from '../../utils/units';
 import { ModelLayer } from './model-layer';
 
 export class SeaLevelPressure extends ModelLayer {
   readonly name = 'לחץ מפלס ים';
+  override readonly timeWindow = { backHours: 24, forwardHours: 96, stepHours: 1 };
   readonly parameters = [Parameter.SeaLevelPressure];
+  protected readonly quantity = Quantity.Pressure;
+  protected readonly unit = Unit.Millibars;
   override readonly staticLevel = true;
   protected override readonly reduction = 1;
   readonly smoothed = options(
@@ -28,7 +31,7 @@ export class SeaLevelPressure extends ModelLayer {
       look: new Contours(
         new Provider((grids: Grid[]) => this.pressureGrid(grids)),
         levelsEvery(2),
-        (value) => format(value, Quantity.Pressure, Unit.Millibars),
+        this.label,
         '#e5e7eb',
       ),
       name: 'קונטורים',
@@ -42,7 +45,7 @@ export class SeaLevelPressure extends ModelLayer {
             .map(({ lon, lat, kind }) => ({
               lon,
               lat,
-              text: `${kind === 'maximum' ? 'H' : 'L'} ${formatNumber(grids[0].valueAt(lon, lat, 'bilinear'), Quantity.Pressure, Unit.Millibars)}`,
+              text: `${kind === 'maximum' ? 'H' : 'L'} ${formatNumber(grids[0].valueAt(lon, lat, 'bilinear'), this.quantity, this.unit)}`,
               color: kind === 'maximum' ? '#f87171' : '#60a5fa',
             })),
         })),
@@ -51,10 +54,6 @@ export class SeaLevelPressure extends ModelLayer {
       checked: true,
     },
   ];
-
-  hover(grids: Grid[], lon: number, lat: number): string {
-    return format(grids[0].valueAt(lon, lat, 'bilinear'), Quantity.Pressure, Unit.Millibars);
-  }
 
   private pressureGrid(grids: Grid[]): Grid {
     return this.smoothed() ? this.overviewGrid(grids) : grids[0];

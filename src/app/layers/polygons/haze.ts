@@ -17,12 +17,12 @@ export class Haze implements EventAppearance<HazeEvent> {
     return {
       fill: rgba(surface ? '#ff9800' : '#ffe33f', alpha),
       pattern: PolygonPattern.Solid,
-      text: [`${haze_min_vis}-${haze_max_vis} km`],
+      text: [visibilityText(haze_min_vis, haze_max_vis)],
     };
   }
 
   hoverText(event: HazeEvent): string {
-    return `${this.name(event)} · ${visibilityText(event.parameters.haze_min_vis, event.parameters.haze_max_vis)}`;
+    return `${this.name(event)} · ראות ${visibilityText(event.parameters.haze_min_vis, event.parameters.haze_max_vis)}`;
   }
 
   private isSurface(event: HazeEvent): boolean {

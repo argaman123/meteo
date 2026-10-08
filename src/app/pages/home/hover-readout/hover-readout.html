@@ -1,14 +1,14 @@
 @if (lines().length > 0) {
   @if (pointer(); as at) {
     <div
-      class="pointer-events-none fixed z-50 flex flex-col gap-0.5 rounded-xl border bg-background/70 backdrop-blur-lg px-2 py-1 text-xs font-medium shadow-[0_0_8px_rgb(0_0_0/0.45)]"
+      class="pointer-events-none fixed z-50 flex flex-col gap-0.5 rounded-xl border bg-background/70 backdrop-blur-lg px-2 py-1 text-xs font-medium shadow-float-sm"
       [style.left.px]="at.x + 14"
       [style.top.px]="at.y + 14"
     >
       @for (line of lines(); track line.name) {
         <div class="flex items-baseline justify-between gap-3">
           <span class="text-muted-foreground">{{ line.name }}</span>
-          <span dir="auto" class="tabular-nums whitespace-pre-line">{{ line.value }}</span>
+          <span dir="auto" class="tabular-nums whitespace-pre-line">{{ line.value ?? '—' }}</span>
         </div>
       }
     </div>

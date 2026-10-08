@@ -3,6 +3,7 @@ import { PathStyleExtension, PathStyleExtensionProps } from '@deck.gl/extensions
 import { PathLayer } from '@deck.gl/layers';
 import { rgba } from '../../utils/color-scale';
 import { Look, LookKind } from '../base/look';
+import { OUTLINE_COLOR } from '../map-service';
 
 export interface PathInput {
   points: [number, number][];
@@ -15,10 +16,10 @@ export class Path extends Look<PathInput> {
   deckLayer(id: string, input: PathInput): DeckLayer[] {
     return [
       new PathLayer<PathInput>({
-        id: `${id}-casing`,
+        id: `${id}-outline`,
         data: [input],
         getPath: (path) => path.points,
-        getColor: rgba('#0f172a', 200),
+        getColor: rgba(OUTLINE_COLOR, 200),
         getWidth: 5,
         widthUnits: 'pixels',
       }),
