@@ -36,9 +36,4 @@ export class MeasureService {
   hideMeasure(): void {
     if (this.active()) this.layersService.hideLayer(this.measurement);
   }
-
-  toggleMeasure(): void {
-    if (this.active()) this.hideMeasure();
-    else this.showMeasure();
-  }
 }

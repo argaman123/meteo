@@ -12,6 +12,9 @@ turn it into deck layers. Read before adding or changing a look.
 - `init(container)` awaits `document.fonts.ready` (canvas sprites must never bake a fallback font),
   registers pmtiles + the vendored RTL text plugin. Map: mercator only, no rotation/pitch, keyboard
   off, MSAA `antialias: true` (deck draws into maplibre's context — a GPU-cost flag for weak PCs).
+- Low quality (the איכות setting, read at map creation): antialias off and `fadeDuration` 0.
+  maplibre re-renders every frame for ~0.3 s after any repaint while label fades are on, so an
+  animation capped below the screen rate only caps the map with the fade off.
 - `showMarker`/`hideMarker` exist for the `MapPin` directive only. A shown marker only
   `setLngLat`s (re-`addTo` removes it first and kills a drag in progress).
 - `basemapBright` is a module-level signal (looks are `new`ed outside DI, so they can't inject),
@@ -96,11 +99,13 @@ turn it into deck layers. Read before adding or changing a look.
 ## Animated looks (`engine/base/animated-layer.ts`)
 
 - `AnimatedLayer` = a deck CompositeLayer with its own rAF loop: `step(dt)` then
-  `setState({ tick })`; `rebuild()` on props change; `finalizeState` cancels the loop.
+  `setState({ tick })`; `rebuild()` on props change; `finalizeState` cancels the loop. Low quality
+  skips ticks under 30 ms (≈30 fps); `dt` stays real time, so motion keeps its speed.
 - deck creates a new layer instance on every props change and hands `state` over, but the rAF
   closure stays bound to the FIRST instance → `step()` may read only `state` (and props that never
   change). Store data in state inside `rebuild()`.
 - On identity-stable data, every accessor that changes per frame needs `updateTriggers`.
+- Every per-frame effect (fade, step) scales by `dt`: a look is identical at 30, 60 or 120 fps.
 - HMR leaves orphan rAF loops (refresh); production teardown is correct.
 
 ## Wind particles (`engine/looks/wind-particles.ts`)
@@ -114,11 +119,13 @@ Order in the file, most important first: `WindParticles` look → `WindParticleL
   range: calm visible, jets not huge).
 - `TrailRenderer`: ping-pong framebuffers; per frame a fade pass then the newest segments as
   instanced quads (perpendicular-expanded, smoothstep edges); its texture feeds a BitmapLayer.
-  Texture = the bounds' screen footprint × dpr, clamped 256–4096.
+  Texture = the bounds' screen footprint × dpr (half that on low quality, line width scaled to
+  match), clamped 256–4096.
 - Tuning knobs at the top of the file (the one lead-approved knob block): `COUNT` 2000, `DECAY`
-  0.94, `LINE_WIDTH` 2.5 css px (× dpr in the shader).
+  0.94 per 1/120 s (the lead's 120 Hz screen; the fade uniform is `DECAY^(dt·120)`, so trail length
+  is the same at any frame rate), `LINE_WIDTH` 2.5 css px (× dpr in the shader).
 - Shader rules: the fade decays alpha only with rgb pinned to the ink (multiplying rgba grays old
-  trails); decay is floored at 8-bit (`floor(a·DECAY·255)/255`) or low alphas round back up and
+  trails); decay is floored at 8-bit (`floor(a·decay·255)/255`) or low alphas round back up and
   leave permanent residue on the map.
 - Ink is baked into the shaders; a basemap flip rebuilds (old GPU resources destroyed a frame
   later).

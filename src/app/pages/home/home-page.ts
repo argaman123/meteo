@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, ElementRef, OnDestroy, inject, signal, viewChild } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, signal, viewChild } from '@angular/core';
 import { PerfHud } from '../../dev/perf-hud/perf-hud';
 import { MapService } from '../../engine/map-service';
 import { LayersService } from '../../layers/layers-service';
@@ -6,8 +6,10 @@ import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { LegendBar } from './legend-bar/legend-bar';
 import { LevelBar } from './level-bar/level-bar';
+import { Measure } from './measure/measure';
 import { Meteogram } from './meteogram/meteogram';
 import { PointMenu } from './point-menu/point-menu';
+import { Quality, quality } from './settings-panel/settings-controls';
 import { SoundingTable } from './sounding-table/sounding-table';
 import { TimeBar } from './time-bar/time-bar';
 import { TopBar } from './top-bar/top-bar';
@@ -21,18 +23,20 @@ import { layers } from '../../layers/registry';
     LayerBar,
     LegendBar,
     LevelBar,
+    Measure,
     Meteogram,
     PointMenu,
     SoundingTable,
     TimeBar,
     TopBar,
   ],
-  host: { class: 'block h-full' },
+  host: { class: 'block h-full', '[class.low-quality]': 'lowQuality()' },
   templateUrl: './home-page.html',
 })
 export class HomePage implements AfterViewInit, OnDestroy {
   private map = inject(MapService);
   private layersService = inject(LayersService);
+  protected readonly lowQuality = computed(() => quality() === Quality.Low);
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
   private timeBar = viewChild.required(TimeBar, { read: ElementRef });
   protected timeBarHeight = signal('3.625rem');

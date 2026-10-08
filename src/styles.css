@@ -211,3 +211,8 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+:root:has(.low-quality) .backdrop-blur-lg {
+  backdrop-filter: none;
+  background-color: color-mix(in oklab, var(--background) 90%, transparent);
+}

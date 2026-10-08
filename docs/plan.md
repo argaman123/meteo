@@ -20,7 +20,6 @@ pool; its current state goes into the area doc.
 | Observations at real scale | Looks | Low | Draw-everything model holds (5,000 stations at 120 fps measured); the reverted `sameData` equal (layers.md) if a mini-PC dips |
 | Sounding table: beyond v1 | Interaction | Low | Wait for ask 3; confirm the תיקון sign; whether RH comes from the backend |
 | Skew-T (parked) | Interaction | Low | Branch `skew-t` (91292d5) waits for a professional: CIN, virtual-temperature CAPE, mixing-ratio labels, Hebrew name, 150 mb top. Resume: rebase on main, drop its `utils/wind-barbs.ts` (now in `utils/wind.ts`), expect conflicts in point-menu/home-page/units/thermodynamics |
-| Low-quality mode | Chrome | Low | One settings toggle for weak PCs; what it lowers is open (not fewer particles — candidates: texture caps, dpr cap, antialias off, blur off) |
 | Settings panel: more | Chrome | Low | More quantities as the lead asks (one `options()` each) |
 | Units: switchable conventions | Units/Geo | Low | °F, NM, inHg…; contour level sets are display-unit literals and must follow |
 | Boot draw cost | Engine | Low | First draw blocks ~450 ms (contours + raster + sprites); split if boot feel matters |

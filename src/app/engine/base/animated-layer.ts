@@ -1,4 +1,5 @@
 import { CompositeLayer, UpdateParameters } from '@deck.gl/core';
+import { Quality, quality } from '../../pages/home/settings-panel/settings-controls';
 
 export interface AnimatedState {
   [key: string]: unknown;
@@ -29,10 +30,11 @@ export abstract class AnimatedLayer<PropsT extends object> extends CompositeLaye
   }
 
   private animate = (now: number): void => {
+    this.state.raf = requestAnimationFrame(this.animate);
+    if (quality() === Quality.Low && now - this.state.lastTime < 30) return;
     const deltaSeconds = Math.min(0.1, (now - this.state.lastTime) / 1000 || 0.016);
     this.state.lastTime = now;
     this.step(deltaSeconds);
     this.setState({ tick: this.state.tick + 1 });
-    this.state.raf = requestAnimationFrame(this.animate);
   };
 }

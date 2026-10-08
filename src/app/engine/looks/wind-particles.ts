@@ -6,6 +6,7 @@ import { Grid, VectorField } from '../../objects/grid';
 import { Bounds } from '../../types/wrap';
 import { Control, options } from '../../utils/controls';
 import { MercatorBand, contains } from '../../utils/geo';
+import { Quality, quality } from '../../pages/home/settings-panel/settings-controls';
 import { basemapBright } from '../map-service';
 import { AnimatedLayer, AnimatedState } from '../base/animated-layer';
 import { Look, LookKind } from '../base/look';
@@ -48,12 +49,20 @@ class WindParticleLayer extends AnimatedLayer<ParticleProps> {
     const cssSpan = Math.abs(
       viewport.project([east, midLat])[0] - viewport.project([west, midLat])[0],
     );
-    const width = Math.max(256, Math.min(4096, Math.round(cssSpan * devicePixelRatio)));
+    const pixelRatio = quality() === Quality.Low ? devicePixelRatio / 2 : devicePixelRatio;
+    const width = Math.max(256, Math.min(4096, Math.round(cssSpan * pixelRatio)));
     const height = Math.max(2, Math.round((width * (north - south)) / (east - west)));
     const previous = this.state.trails;
     this.setState({
       sim: new ParticleSim(this.props.u, this.props.v),
-      trails: new TrailRenderer(this.context.device, this.props.u.bounds, width, height, basemapBright()),
+      trails: new TrailRenderer(
+        this.context.device,
+        this.props.u.bounds,
+        width,
+        height,
+        pixelRatio,
+        basemapBright(),
+      ),
     });
     if (previous) requestAnimationFrame(() => previous.destroy());
   }
@@ -69,7 +78,7 @@ class WindParticleLayer extends AnimatedLayer<ParticleProps> {
   step(deltaSeconds: number): void {
     if (this.state.trails.bright !== basemapBright()) this.rebuild();
     this.state.sim.advance(deltaSeconds * this.props.speed());
-    this.state.trails.paint(this.state.sim.segments);
+    this.state.trails.paint(this.state.sim.segments, deltaSeconds);
   }
 
   override finalizeState(): void {
@@ -171,21 +180,22 @@ function fadeFs(bright: boolean): string {
   return `#version 300 es
 precision highp float;
 uniform sampler2D previousFrame;
+uniform float decay;
 in vec2 uv;
 out vec4 fragColor;
 void main() {
-  float alpha = floor(texture(previousFrame, uv).a * ${DECAY} * 255.0) / 255.0;
+  float alpha = floor(texture(previousFrame, uv).a * decay * 255.0) / 255.0;
   fragColor = vec4(${inkOf(bright)}, alpha);
 }`;
 }
 
-function lineVs(width: number, height: number): string {
+function lineVs(width: number, height: number, pixelRatio: number): string {
   return `#version 300 es
 in vec2 corner;
 in vec4 segment;
 out float edge;
 const vec2 resolution = vec2(${width}.0, ${height}.0);
-const float halfWidth = float(${LINE_WIDTH * devicePixelRatio}) / 2.0;
+const float halfWidth = float(${LINE_WIDTH * pixelRatio}) / 2.0;
 void main() {
   edge = corner.y;
   vec2 from = segment.xy * resolution;
@@ -212,6 +222,7 @@ class TrailRenderer {
   private readonly lonSpan: number;
   private readonly band: MercatorBand;
   private readonly normalized = new Float32Array(COUNT * 4);
+  private readonly fadeUniforms = { decay: DECAY };
   private readonly framebuffers: Framebuffer[];
   private flip = 0;
   private readonly segmentBuffer: Buffer;
@@ -225,6 +236,7 @@ class TrailRenderer {
     bounds: Bounds,
     width: number,
     height: number,
+    pixelRatio: number,
     readonly bright: boolean,
   ) {
     const [west, south, east, north] = bounds;
@@ -239,6 +251,7 @@ class TrailRenderer {
       id: 'wind-trail-fade',
       vs: FADE_VS,
       fs: fadeFs(bright),
+      uniforms: this.fadeUniforms,
       topology: 'triangle-strip',
       vertexCount: 4,
       bufferLayout: [{ name: 'corner', format: 'float32x2' }],
@@ -247,7 +260,7 @@ class TrailRenderer {
     this.fade.setAttributes({ corner: this.fadeCornerBuffer });
     this.lines = new Model(device, {
       id: 'wind-trail-lines',
-      vs: lineVs(width, height),
+      vs: lineVs(width, height, pixelRatio),
       fs: lineFs(bright),
       topology: 'triangle-strip',
       vertexCount: 4,
@@ -275,7 +288,7 @@ class TrailRenderer {
     return this.framebuffers[this.flip].colorAttachments[0].texture;
   }
 
-  paint(geoSegments: Float32Array): void {
+  paint(geoSegments: Float32Array, deltaSeconds: number): void {
     for (let i = 0; i < COUNT; i++) {
       this.normalized[i * 4] = (geoSegments[i * 4] - this.west) / this.lonSpan;
       this.normalized[i * 4 + 1] = this.band.fractionOf(geoSegments[i * 4 + 1]);
@@ -283,6 +296,7 @@ class TrailRenderer {
       this.normalized[i * 4 + 3] = this.band.fractionOf(geoSegments[i * 4 + 3]);
     }
     this.segmentBuffer.write(this.normalized);
+    this.fadeUniforms.decay = Math.pow(DECAY, deltaSeconds * 120);
     const target = this.framebuffers[1 - this.flip];
     this.fade.setBindings({ previousFrame: this.texture });
     const pass = this.device.beginRenderPass({ framebuffer: target, clearColor: [0, 0, 0, 0] });

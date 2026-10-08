@@ -29,7 +29,8 @@ by ~25 rotating juniors over 6 years — a mess. The Python backend is being reb
   (Kotlin-flavored names welcome). An approved option does not approve assumptions in its
   description: behavioral edge cases get their own question with a concrete example.
 - Domain questions in plain words (he isn't a meteorologist); when he delegates, anchor on the
-  real-world thing he named and state the pick. Expert-only features → offer to park them.
+  real-world thing he named and state the pick. Expert-only features → offer to park them. A
+  visual trade-off is described as what he'd see on screen, never in engine terms.
 - Flag an unconventional ask once ("most teams do X, because Y"), then follow his call. Stack
   recommendations state maturity and risk, not just strengths.
 - Voice every concern in one honest sentence, but never let it gate or water down the work. Never

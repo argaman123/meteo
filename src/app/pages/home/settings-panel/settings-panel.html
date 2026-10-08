@@ -39,5 +39,19 @@
         }
       </div>
     </div>
+    <h2 class="px-1 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70">תצוגה</h2>
+    <div class="flex items-center gap-2 px-1 py-1 text-sm">
+      <span class="grow">{{ quality.label }}</span>
+      <div class="flex gap-1">
+        @for (choice of quality.choices; track choice.value) {
+          <button hlmBtn size="sm" class="h-6 px-2 text-xs"
+                  [variant]="choice.value === quality() ? 'default' : 'ghost'"
+                  [attr.aria-pressed]="choice.value === quality()"
+                  (click)="setQuality(choice.value)">
+            {{ choice.label }}
+          </button>
+        }
+      </div>
+    </div>
   </hlm-popover-content>
 </hlm-popover>

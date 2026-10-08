@@ -35,3 +35,19 @@ export const coordinateFormat: OptionsControl<CoordinateFormat> = options(
   OptionsPresentation.Table,
 );
 registerSettings({ format: coordinateFormat }, 'coordinates');
+
+export enum Quality {
+  Normal = 'normal',
+  Low = 'low',
+}
+
+export const quality: OptionsControl<Quality> = options(
+  Quality.Normal,
+  [
+    { value: Quality.Normal, label: 'רגילה' },
+    { value: Quality.Low, label: 'נמוכה' },
+  ],
+  'איכות',
+  OptionsPresentation.Table,
+);
+registerSettings({ quality }, 'display');

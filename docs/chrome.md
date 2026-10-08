@@ -17,7 +17,7 @@ Code: `src/app/pages/home/` and the vendored spartan copies in `src/spartan/`.
 
 ## Top bar (`pages/home/top-bar/`)
 
-Wordmark (מטאו + tracked-caps METEO) at the start; at the end: measure ruler, basemap picker
+Wordmark (מטאו + tracked-caps METEO) at the start; at the end: basemap picker
 (dropdown of full-bleed thumbnail rows), settings gear, perf HUD toggle (ghost when off — the page
 hands the HUD in as an input). Icon
 buttons are `secondary` when inactive; tooltips use the vendored spartan tooltip (`position` per
@@ -54,10 +54,14 @@ Cursor-following frosted chip, one line per active layer with data: name · `lay
 
 ## Settings panel (`pages/home/settings-panel/`)
 
-Gear popover (`align="end"`), one יחידות list of Table controls: רוח kt / m/s, גובה גיאופוטנציאלי
-m / ft, קואורדינטות כבוי / DD / DMS (כבוי hides the coordinates layer). A new setting = one
-`options()` entry in `settings-controls.ts` (unit choices go into `unitControls`, which the Units
-module reads). Other quantities are fixed by the lead (°C, km, mb…; bird heights forced to m).
+Gear popover (`align="end"`), Table controls in two sections. יחידות: רוח kt / m/s, גובה
+גיאופוטנציאלי m / ft, קואורדינטות כבוי / DD / DMS (כבוי hides the coordinates layer). תצוגה:
+איכות רגילה / נמוכה — low quality de-frosts the floating windows and, at map creation, turns
+off antialiasing and label fades, runs animations at 30 fps and paints wind trails at half
+resolution (docs/engine.md). A change reloads the page; clicking the selected choice doesn't. A new
+setting = one `options()` entry in `settings-controls.ts` (unit choices go into `unitControls`,
+which the Units module reads). Other quantities are fixed by the lead (°C, km, mb…; bird heights
+forced to m).
 
 ## Level bar (`pages/home/level-bar/`)
 
@@ -92,7 +96,10 @@ Ctrl+Alt+P or the top-bar button toggles it.
   per-glyph fallback. Canvas sprites use the same stack.
 - Docked chrome is solid `bg-card` (no blur, no seams). Floating windows (legend, level rail, loop
   pill, hover chip, HUD, settings popover) are `bg-background/70 backdrop-blur-lg`, `rounded-xl`,
-  `shadow-float` (`shadow-float-sm` on small chips) — theme tokens in `styles.css`.
+  `shadow-float` (`shadow-float-sm` on small chips) — theme tokens in `styles.css`. Low quality
+  (`.low-quality` on the home page host) swaps that frost for a 90% tint through one unlayered
+  `styles.css` rule keyed on `backdrop-blur-lg` (`:root:has()` so portaled popovers follow) — keep
+  the class name when adding a floating window.
 - Value chips are `hlmBtn variant="chip" size="chip"` (menu values, ×N speed; the kft/mb toggle is
   a hand-sized sibling).
 - Buttons: main rows and top-bar icons `secondary` when inactive; tiny value chips and chevrons
@@ -126,4 +133,5 @@ Ctrl+Alt+P or the top-bar button toggles it.
   showing the resolved value.
 - Wrap-box or behind-the-button panels for expanded layers.
 - Lucide mountain or hand-drawn hills for the surface icon.
-- Per-knob quality settings — one low-quality toggle (plan).
+- Per-knob quality settings — one איכות setting.
+- A measure ruler in the top bar — measuring starts from the chooser.

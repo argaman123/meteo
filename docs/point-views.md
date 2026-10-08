@@ -71,9 +71,9 @@
 
 ## Measure (`pages/home/measure/`)
 
-- Distance only. Started by the top-bar ruler (filled while on) or the chooser's מדידת מרחק (that
-  spot = the first point). Left-clicks add points; handles drag (MapPin); a right-click, Esc or the
-  button clears and ends. Double-click zoom is off while measuring.
+- Distance only. Started by the chooser's מדידת מרחק (that spot = the first point). Left-clicks
+  add points; handles drag (MapPin); a right-click or Esc clears and ends. Double-click zoom is off
+  while measuring. The `Measure` component (handles + Esc) mounts on the home page.
 - Measuring is a layer (`layers/general/measurement.ts`) so shared code stays generic: data =
   `{ points, cursor }`; looks = Path (legs + a dashed live leg to the cursor) and Labels (each leg's
   distance at its midpoint); hover = the running total to the cursor.

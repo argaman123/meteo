@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { Subject } from 'rxjs';
 import { Bounds } from '../types/wrap';
+import { Quality, quality } from '../pages/home/settings-panel/settings-controls';
 import { OverlayService } from './overlay-service';
 
 export type BasemapId = 'dark' | 'light' | 'colorful';
@@ -65,7 +66,8 @@ export class MapService {
       ],
       minZoom: Math.max(0, Math.log2(container.clientWidth / 512)),
       attributionControl: false,
-      canvasContextAttributes: { antialias: true },
+      canvasContextAttributes: { antialias: quality() !== Quality.Low },
+      fadeDuration: quality() === Quality.Low ? 0 : 300,
       dragRotate: false,
       pitchWithRotate: false,
       touchPitch: false,
