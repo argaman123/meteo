@@ -50,4 +50,19 @@ export const quality: OptionsControl<Quality> = options(
   'איכות',
   OptionsPresentation.Table,
 );
-registerSettings({ quality }, 'display');
+
+export enum Projection {
+  Flat = 'flat',
+  Globe = 'globe',
+}
+
+export const projection: OptionsControl<Projection> = options(
+  Projection.Flat,
+  [
+    { value: Projection.Flat, label: 'שטוחה' },
+    { value: Projection.Globe, label: 'כדור' },
+  ],
+  'מפה',
+  OptionsPresentation.Table,
+);
+registerSettings({ quality, projection }, 'display');

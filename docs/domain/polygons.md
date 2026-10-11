@@ -31,7 +31,7 @@ Implementation: [../layers.md](../layers.md) (Polygons) and [../engine.md](../en
 
 - Default outline white (we use the adaptive map ink), default label white with a black outline.
 - Precip ramp `#d85283 #e12d5d #e40e0e #c30000 #800000`; precip label outline navy `#001d59`.
-- An OLD preset and an `EDITING` style also exist there (we only display).
+- An OLD preset and an `EDITING` style also exist there (`EDITING` matters for authoring).
 
 Stand-ins (correct when real values surface): the visibility bands (5–10 / 1–5 / 0.5–1 / 0.2–0.5 /
 0–0.2 km), linear severity formulas, the precip ramp direction.

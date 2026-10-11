@@ -127,9 +127,7 @@ hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-
   → levels like `AirLevelData` + `time` (−9999 = null; a real 0 also becomes −9999). Stations:
   `/places/get-sonde-stations`.
 
-## Open (confirm on live data)
+## Open
 
-Local ECMWF coverage box · model grid row order (ECMWF flipud) · air-column wind direction
-convention · polygon coordinate order · polygon map validity (±1.5 h stand-in) · obs cloud color
-(max layer cover) · whether real IR arrives inverted · bird-radar cell unit · `height` wire param in
-feet · תיקון sign convention · marked isotach values (25/45 kt).
+Everything waiting on the backend team or real data (routes, data, confirmations) is one list:
+[backend-asks.md](backend-asks.md).

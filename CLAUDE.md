@@ -47,7 +47,8 @@ by ~25 rotating juniors over 6 years — a mess. The Python backend is being reb
 - His code is his: suggest, never redesign it. He edits mid-review — re-read before editing, adopt
   his renames, never revert. Prettier only on files you created; match his hand formatting.
 - `// TODO: UNVERIFIED CODE BELOW` marks code he hasn't read — never remove or move it (extend it
-  over new dense code beneath). Otherwise no code comments yet.
+  over new dense code beneath). Otherwise no code comments yet, except one line on a library-bug
+  workaround (issue number, remove once fixed).
 - He names an old commit or a reference image as the target → reproduce it exactly (port the old
   algorithm verbatim; describe the image's structure first; trace geometry programmatically).
 - Big code drops scare him: offer the lean version — simplify the feature, not just the code.
@@ -64,8 +65,8 @@ by ~25 rotating juniors over 6 years — a mess. The Python backend is being reb
 ## 3. Stack (locked — rationale in docs/decisions.md)
 
 Angular 22 (standalone, zoneless, signals-first, SPA) · spartan/ui on CDK + Tailwind · one signal
-`@Service` per domain · MapLibre GL + deck.gl + luma.gl with first-party looks (2D only; globe
-deferred) · Turf.js, d3-scale/color/interpolate · no i18n framework, RTL mandatory · Chrome 112
+`@Service` per domain · MapLibre GL + deck.gl + luma.gl with first-party looks (flat; globe as a
+setting) · Turf.js, d3-scale/color/interpolate · no i18n framework, RTL mandatory · Chrome 112
 floor · light/manual testing + strict TS + ESLint/Prettier, no committed tests · open internet in
 development, closed network at delivery (all runtime assets self-hosted, deps vendored at cutover).
 
@@ -100,8 +101,8 @@ src/app/
                      #   meteogram (+ MeteogramService, frame, colormap, one folder per chart),
                      #   sounding-table (+ service), measure (+ MeasureService)
   services/          # cross-domain services: TimeService, PlayerService, LevelService
-  engine/            # map-service.ts, overlay-service.ts, base/ (Look, AnimatedLayer, GridIcons,
-                     #   PointIcons, sprite-cache), looks/ (one file per look)
+  engine/            # map-service.ts, overlay-service.ts, globe-occlusion.ts, base/ (Look,
+                     #   AnimatedLayer, GridIcons, PointIcons, sprite-cache), looks/ (one per look)
   layers/            # layers-service.ts, registry.ts, base/ (Layer, LoopLayer, LayerGroup,
                      #   Shortcut), one folder per kind: model/, polygons/, satellite/, radar/,
                      #   birds/, lightning/, observations/, general/ (coordinates, measurement)
@@ -198,8 +199,9 @@ data completeness before polish — never hide a needed value for a prettier lay
 - Tier it: renames, refactors and one-line tuning with a certain outcome → `ng build` only;
   behavior changes → build + one live probe; wire/fetch/reactivity → build + live probe + console.
   During rapid review, batch and verify at pauses.
-- `ng build` is the type gate (tsc skips templates). `ng serve` keeps serving the last good bundle
-  after a failed rebuild — check its logs before trusting a live check; restart it after file moves.
+- `ng build` is the type gate (tsc skips templates; its bundle-budget warning doesn't matter).
+  `ng serve` keeps serving the last good bundle after a failed rebuild — check its logs before
+  trusting a live check; restart it after file moves and dependency changes.
 - Use the lead's dev server on :4200 (`attach` in `.claude/launch.json`); start your own only when
   it's down, and stop it after.
 - Map visuals: Playwright MCP renders WebGL headless. The embedded browser pane can't composite,

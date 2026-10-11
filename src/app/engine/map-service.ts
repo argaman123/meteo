@@ -3,7 +3,12 @@ import maplibregl from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { Subject } from 'rxjs';
 import { Bounds } from '../types/wrap';
-import { Quality, quality } from '../pages/home/settings-panel/settings-controls';
+import {
+  Projection,
+  Quality,
+  projection,
+  quality,
+} from '../pages/home/settings-panel/settings-controls';
 import { OverlayService } from './overlay-service';
 
 export type BasemapId = 'dark' | 'light' | 'colorful';
@@ -110,6 +115,11 @@ export class MapService {
     void this.applyStyle(id);
   }
 
+  setProjection(value: Projection): void {
+    projection.set(value);
+    this.map?.setProjection(this.projectionSpecification());
+  }
+
   flyTo(center: [number, number], zoom?: number): void {
     this.map?.flyTo({ center, zoom });
   }
@@ -163,6 +173,10 @@ export class MapService {
     this.zoom.set(this.map.getZoom());
   }
 
+  private projectionSpecification(): maplibregl.ProjectionSpecification {
+    return { type: projection() === Projection.Globe ? 'globe' : 'mercator' };
+  }
+
   private async applyStyle(id: BasemapId): Promise<void> {
     const style = await this.loadBasemapStyle(id);
     this.map?.setStyle(style);
@@ -177,6 +191,7 @@ export class MapService {
     if (style.glyphs?.startsWith('/')) {
       style.glyphs = location.origin + style.glyphs;
     }
+    style.projection = this.projectionSpecification();
     for (const source of Object.values(style.sources)) {
       if ('url' in source && source.url?.startsWith('pmtiles:///')) {
         source.url = `pmtiles://${location.origin}/${source.url.slice('pmtiles:///'.length)}`;

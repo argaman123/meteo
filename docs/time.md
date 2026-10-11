@@ -10,6 +10,9 @@
 - `windows` (pushed by LayersService from active layers' `timeWindow`) → `window` = the max
   back/forward around `now` rounded to 5 min (default 24/96 with no layers). It carries a value
   `equal` — object-identity churn would silently re-trigger resource loads.
+- Known rare boot bug (not seen since Angular 22.1.3): `syncTime` never runs its first time → a
+  permanent 24/96 band. Fix if it returns: push `windows` from showLayer/hideLayer, keep an effect
+  only for forced times.
 - `timeStops`: the forced times when any layer publishes them (they override — never a union with
   grid stops), else the step grids of the active windows (default 3 h). `snapJump` = nearest stop;
   `jumpTo` / `jumpBy` / `stepForward` / `stepBack` / `jumpToNow`.

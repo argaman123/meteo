@@ -10,8 +10,10 @@ turn it into deck layers. Read before adding or changing a look.
   `cursor` (`null` off-map), `basemap`. Events: `clicks`, `rightClicks`, `markerDrags` — plain
   public `Subject`s.
 - `init(container)` awaits `document.fonts.ready` (canvas sprites must never bake a fallback font),
-  registers pmtiles + the vendored RTL text plugin. Map: mercator only, no rotation/pitch, keyboard
+  registers pmtiles + the vendored RTL text plugin. Map: flat (mercator) or globe, no rotation/pitch, keyboard
   off, MSAA `antialias: true` (deck draws into maplibre's context — a GPU-cost flag for weak PCs).
+- Projection (the מפה setting): `setProjection` switches live; `loadBasemapStyle` writes it into
+  every style, so a basemap change keeps it.
 - Low quality (the איכות setting, read at map creation): antialias off and `fadeDuration` 0.
   maplibre re-renders every frame for ~0.3 s after any repaint while label fades are on, so an
   animation capped below the screen rate only caps the map with the fade off.
@@ -25,11 +27,18 @@ turn it into deck layers. Read before adding or changing a look.
 
 ## OverlayService (`engine/overlay-service.ts`)
 
-- deck `MapboxOverlay`, interleaved. `draw(look, data)` = `look.deckLayer(id, look.provider.provide(data))`;
+- deck `MapLibreOverlay` (`@deck.gl/maplibre`), interleaved. `draw(look, data)` = `look.deckLayer(id, look.provider.provide(data))`;
   `remove(look)` calls `look.release()`.
 - Draw order = `LookKind` rank: Image < Colormap < Radar < Borders < Contours < Particles < Polygons
   < Icons < Lines < Points. Looks ranked below Borders are cloned with `beforeId: 'coastline'`, so
   the basemap's black border block draws above the colors (deck 9 layer groups).
+- Every layer is cloned with `globeParameters` (depth test off, no face culling): on the globe,
+  depth hides colors and particles and dots the lines, and deck's GlobeView `cullMode: 'back'`
+  default hides every IconLayer (deck #10519). Layer-level, since view parameters beat deck-level
+  ones. With depth off, the far side would show through, so every layer also gets the
+  `GlobeOcclusion` extension (`engine/globe-occlusion.ts`, deck #10750), which discards what faces
+  away from the camera. Both workarounds carry a one-line comment; remove them when deck fixes
+  the issues.
 
 ## The look contract (`engine/base/look.ts`)
 
@@ -149,9 +158,6 @@ Order in the file, most important first: `WindParticles` look → `WindParticleL
 
 ## Rejected (don't re-offer)
 
-- Globe/3D now — deck's interleaved overlay renders our looks broken on maplibre's globe (deck
-  9.3–9.4α). Retest on new deck majors; fallback: colormap/particle canvases as maplibre raster
-  sources.
 - WeatherLayers GL — replaced by first-party looks.
 - Canvas2D wind trails — 30 fps on hi-res screens. A core + outline trail.
 - deck `TextLayer` (sdf) labels — their outlines looked wrong.

@@ -10,7 +10,8 @@ import {
 } from '@spartan-ng/helm/popover';
 import { LayersService } from '../../../layers/layers-service';
 import { layers } from '../../../layers/registry';
-import { Quality, coordinateFormat, quality, unitControls } from './settings-controls';
+import { MapService } from '../../../engine/map-service';
+import { Quality, coordinateFormat, projection, quality, unitControls } from './settings-controls';
 
 @Component({
   selector: 'app-settings-panel',
@@ -20,10 +21,12 @@ import { Quality, coordinateFormat, quality, unitControls } from './settings-con
 })
 export class SettingsPanel {
   protected layersService = inject(LayersService);
+  protected map = inject(MapService);
   protected readonly coordinates = layers.coordinates;
   protected readonly coordinateFormat = coordinateFormat;
   protected readonly units = Object.values(unitControls);
   protected readonly quality = quality;
+  protected readonly projection = projection;
 
   protected setQuality(value: Quality): void {
     if (value === quality()) return;

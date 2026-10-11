@@ -20,11 +20,12 @@ Wide spectrum — **defense/military, aviation & maritime, emergency & public, a
 served by **one shared deployment**. Per-group differences ride on **presets/config**, not roles or
 logins (access is network-trusted).
 
-## It is a viewer, not an authoring tool
+## Two sites: clients and meteorologists
 
-A separate team of weathermen authors products in a **different** app. This app **publishes and
-visualizes** those products alongside model data and observations. We do **not** build
-authoring/editing here.
+The client site **visualizes** model data, observations and the meteorologists' published products.
+A meteorologist site (later) looks different and adds **authoring** — drawing and editing polygon
+maps — on the same layers, services and engine. Supporting the second site must change as little
+TypeScript as possible: new pages, never forks of shared code.
 
 ## Dominant usage
 

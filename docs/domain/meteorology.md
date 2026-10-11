@@ -20,13 +20,13 @@ request classified detail.** Specifics marked *(TBD)* are filled in iteratively 
 - **Vertical:** surface + standard **pressure levels** + heights in **kilofeet** (aviation). Users
   switch levels via a level selector.
 
-## Forecaster-authored content (authored elsewhere, displayed here)
+## Forecaster-authored content
 
-A separate team of weathermen authors, in a different tool:
+Meteorologists author (today in the old app; later on our meteorologist site):
 - **Polygons** — forecast-event maps, shown here as a map layer (see `polygons.md`).
 - **Timeline tables** of data — shown here in the tables/reports subsystem.
 
-This app only **displays** these published products; it does not author them.
+The client site only **displays** these published products.
 
 ## Warnings
 
@@ -35,11 +35,10 @@ This app only **displays** these published products; it does not author them.
 - The corresponding **warning polygons** are their own map layer (a different feature from the forecast polygons).
 - **Active notifications** fire (via polling) when warnings appear or change.
 
-## Areas of interest (AOIs)
+## Flight areas
 
-- **Predefined per group** (e.g. a Navy group's operating areas), configured per deployment/preset.
-- **User-defined on the fly** (drawn/selected in the moment).
-- A **"frame AOI" action** flies to the AOI (primarily to set up a clean screenshot).
+Predefined drawings of areas stored in the backend (e.g. an airport's airstrip). Users pick any
+number of them to show on top of all layers. No fly-to, no user-drawn areas.
 
 ## Layer types and what they mean
 
@@ -60,7 +59,8 @@ This app only **displays** these published products; it does not author them.
 Clicking a point (or drawing a line) can produce — **user chooses, not all at once**:
 - **Meteogram** — time series of parameters at a point.
 - **Vertical sounding (Skew-T)** — vertical profile at a point/time.
-- **Cross-section** — vertical slice along a drawn line.
+- **Cross-section** — one colored line per active parameter at the selected level, over time.
+- **Flight route** — a route clicked on the map → the weather along it (clouds met, wind…).
 
 Plus an always-on **hover readout**: the values of all active layers at the cursor (toggleable).
 

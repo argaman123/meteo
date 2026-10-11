@@ -8,7 +8,7 @@ Locked unless the lead reopens them. Each: the decision and why.
 | State | One `@Service` per domain holding its signals + the methods that change them; no NgRx, no stores layer | The mainstream Angular pattern (cf. ngx-maplibre-gl's MapService); one inject per domain |
 | Map engine | MapLibre GL + deck.gl (interleaved), first-party looks, all behind `engine/` | Popular and learnable, light on 8 GB machines, custom WebGL headroom; the boundary is the lock-in hedge |
 | Weather rendering | First-party looks on deck.gl primitives (WeatherLayers GL removed 2026-06) | Customization, readability, no vendor risk — a vendor globe bug drew false data |
-| Globe / 3D | Deferred; 2D mercator only | deck's interleaved overlay renders our looks broken on maplibre's globe; a path that can show false data is unacceptable |
+| Globe / 3D | Flat by default; globe as a setting (deck 9.4 + `@deck.gl/maplibre`, depth and culling overridden per layer); no 3D terrain/pitch | Every look checked on the globe; flat stays the solid floor |
 | Components | spartan/ui (brain from npm + Helm copied into `src/spartan/`) on CDK + Tailwind | shadcn model: in-repo code, junior-readable, RTL/theme-fixable, trivially vendored |
 | Styling | Tailwind utilities + spartan's CSS-variable theme; dark default | Control-room norm; one color system |
 | i18n | No translation framework; each element authored in its language; bidi/RTL mandatory | Mixed Hebrew/English per element, no live toggle |
@@ -32,8 +32,9 @@ Locked unless the lead reopens them. Each: the decision and why.
 
 ## Stack maturity (honest record)
 
-The 2D path of MapLibre + deck.gl is mature and widely deployed. The globe path is young and
-currently broken with deck's interleaved overlay. Treat 2D as the solid floor. Any future
+The 2D path of MapLibre + deck.gl is mature and widely deployed. The globe path is young: it
+works on deck 9.4 only with our per-layer depth/culling override, and deck's globe fixes are still
+landing. Treat 2D as the solid floor. Any future
 stack-level recommendation states its maturity and risk, not just strengths.
 
 ## Engine alternatives considered

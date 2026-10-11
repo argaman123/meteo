@@ -58,7 +58,8 @@ Gear popover (`align="end"`), Table controls in two sections. יחידות: רו
 גיאופוטנציאלי m / ft, קואורדינטות כבוי / DD / DMS (כבוי hides the coordinates layer). תצוגה:
 איכות רגילה / נמוכה — low quality de-frosts the floating windows and, at map creation, turns
 off antialiasing and label fades, runs animations at 30 fps and paints wind trails at half
-resolution (docs/engine.md). A change reloads the page; clicking the selected choice doesn't. A new
+resolution (docs/engine.md); a change reloads the page, clicking the selected choice doesn't. מפה
+שטוחה / כדור switches the projection live (flat by default). A new
 setting = one `options()` entry in `settings-controls.ts` (unit choices go into `unitControls`,
 which the Units module reads). Other quantities are fixed by the lead (°C, km, mb…; bird heights
 forced to m).
@@ -126,7 +127,7 @@ Ctrl+Alt+P or the top-bar button toggles it.
 
 - Full-bleed map with floating frosted cards — the map is a rounded window in solid chrome.
 - Heebo's Latin, Manrope, DM Sans, Rubik, Space Grotesk, Inter, Plex, B612 — Source Sans 3.
-- A dark/light theme toggle — later, with presets.
+- A dark/light theme toggle.
 - A coordinates button in the top bar — it lives in settings.
 - Readout color dots, a count badge on שכבות, a zoom pill, a keyboard-help overlay,
   prefers-reduced-motion, per-basemap border ink, static pressure labels on the rail, אוטו chips
