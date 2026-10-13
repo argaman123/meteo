@@ -21,7 +21,7 @@ import { Quality, coordinateFormat, projection, quality, unitControls } from './
 })
 export class SettingsPanel {
   protected layersService = inject(LayersService);
-  protected map = inject(MapService);
+  protected mapService = inject(MapService);
   protected readonly coordinates = layers.coordinates;
   protected readonly coordinateFormat = coordinateFormat;
   protected readonly units = Object.values(unitControls);

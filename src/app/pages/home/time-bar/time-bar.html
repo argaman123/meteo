@@ -2,31 +2,31 @@
   <div dir="ltr" class="flex shrink-0 flex-col gap-1 self-end px-2">
     <div class="flex items-center gap-1">
       <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="אחורה 3 שעות"
-              hlmTooltip="אחורה 3 שעות" position="top" (click)="time.jumpBy(-3)">
+              hlmTooltip="אחורה 3 שעות" position="top" (click)="timeService.jumpBy(-3)">
         <ng-icon name="lucideChevronLeft"/>3h
       </button>
       <span class="h-4 w-px shrink-0 bg-border"></span>
       <button hlmBtn variant="ghost" size="sm" class="h-6 px-1" aria-label="מפה קודמת"
-              hlmTooltip="מפה קודמת (חץ שמאלה)" position="top" (click)="time.stepBack()">
+              hlmTooltip="מפה קודמת (חץ שמאלה)" position="top" (click)="timeService.stepBack()">
         <ng-icon name="lucideChevronLeft"/>
       </button>
       <button hlmBtn variant="ghost" size="sm" class="h-6 px-1" aria-label="מפה הבאה"
-              hlmTooltip="מפה הבאה (חץ ימינה)" position="top" (click)="time.stepForward()">
+              hlmTooltip="מפה הבאה (חץ ימינה)" position="top" (click)="timeService.stepForward()">
         <ng-icon name="lucideChevronRight"/>
       </button>
       <span class="h-4 w-px shrink-0 bg-border"></span>
       <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="קדימה 3 שעות"
-              hlmTooltip="קדימה 3 שעות" position="top" (click)="time.jumpBy(3)">
+              hlmTooltip="קדימה 3 שעות" position="top" (click)="timeService.jumpBy(3)">
         3h<ng-icon name="lucideChevronRight"/>
       </button>
     </div>
     <div class="flex gap-1">
       <button hlmBtn variant="ghost" size="sm" class="h-6 flex-1 px-1.5 text-xs" aria-label="אחורה 24 שעות"
-              hlmTooltip="אחורה 24 שעות" position="top" (click)="time.jumpBy(-24)">
+              hlmTooltip="אחורה 24 שעות" position="top" (click)="timeService.jumpBy(-24)">
         <ng-icon name="lucideChevronLeft"/>24h
       </button>
       <button hlmBtn variant="ghost" size="sm" class="h-6 flex-1 px-1.5 text-xs" aria-label="קדימה 24 שעות"
-              hlmTooltip="קדימה 24 שעות" position="top" (click)="time.jumpBy(24)">
+              hlmTooltip="קדימה 24 שעות" position="top" (click)="timeService.jumpBy(24)">
         24h<ng-icon name="lucideChevronRight"/>
       </button>
     </div>
@@ -71,7 +71,7 @@
         <button hlmBtn size="sm" dir="rtl" aria-label="חזרה לעכשיו"
                 class="h-auto min-h-8 flex-col gap-0 py-1 text-sm font-medium tabular-nums shadow-float"
                 [class.animate-pulse]="layersService.isLoading()"
-                [variant]="isLive() ? 'default' : 'secondary'" (click)="time.jumpToNow()">
+                [variant]="isLive() ? 'default' : 'secondary'" (click)="timeService.jumpToNow()">
           <span>{{ timeLabel() }}</span>
           @if (playingLine(); as line) {
             <span class="text-xs leading-4 font-normal opacity-80">{{ line }}</span>

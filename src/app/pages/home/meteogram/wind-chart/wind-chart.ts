@@ -24,8 +24,8 @@ import { TimeBarService } from '../../time-bar/time-bar-service';
   host: { class: 'block h-full' },
 })
 export class WindChart {
-  private meteogram = inject(MeteogramService);
-  private timeBar = inject(TimeBarService);
+  private meteogramService = inject(MeteogramService);
+  private timeBarService = inject(TimeBarService);
   private frame = viewChild(MeteogramFrame);
   private arrowCanvas = viewChild.required<ElementRef<HTMLCanvasElement>>('arrowCanvas');
 
@@ -41,7 +41,7 @@ export class WindChart {
     ],
   };
 
-  protected column = this.meteogram.column;
+  protected column = this.meteogramService.column;
   protected colorScale = colorScale(WIND_SPEED_PALETTE, 'smooth');
 
   protected speed = computed(() =>
@@ -73,7 +73,7 @@ export class WindChart {
     const canvas = this.arrowCanvas().nativeElement;
     canvas.width = width * devicePixelRatio;
     canvas.height = height * devicePixelRatio;
-    const { start, end } = this.timeBar.view();
+    const { start, end } = this.timeBarService.view();
     const pixelsPerHour = width / msToHours(end - start);
     const stepHours = this.arrowStepsHours.find(
       (step) => step * pixelsPerHour >= this.arrowSpacingPx,
@@ -94,7 +94,7 @@ export class WindChart {
         const degrees = this.directionAt(time, (1 - y / height) * topFt);
         if (Number.isNaN(degrees)) continue;
         context.save();
-        context.translate((this.timeBar.positionInView(time) / 100) * width, y);
+        context.translate((this.timeBarService.positionInView(time) / 100) * width, y);
         context.rotate(((degrees + 180) * Math.PI) / 180);
         context.beginPath();
         context.moveTo(0, 6);

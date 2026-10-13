@@ -38,15 +38,15 @@ import { layers } from '../../layers/registry';
   templateUrl: './home-page.html',
 })
 export class HomePage implements AfterViewInit, OnDestroy {
-  private map = inject(MapService);
+  private mapService = inject(MapService);
   private layersService = inject(LayersService);
-  private time = inject(TimeService);
-  private player = inject(PlayerService);
-  private screenshot = inject(ScreenshotService);
+  private timeService = inject(TimeService);
+  private playerService = inject(PlayerService);
+  private screenshotService = inject(ScreenshotService);
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private mapWindow = viewChild.required<ElementRef<HTMLDivElement>>('mapWindow');
   protected readonly screenshotTime = computed(() =>
-    formatLocalTime(this.player.nearestFrameTime() ?? this.time.displayTime()),
+    formatLocalTime(this.playerService.nearestFrameTime() ?? this.timeService.displayTime()),
   );
   protected readonly lowQuality = computed(() => quality() === Quality.Low);
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
@@ -71,11 +71,11 @@ export class HomePage implements AfterViewInit, OnDestroy {
     this.timeBarObserver.disconnect();
     this.soundingTableObserver.disconnect();
     for (const layer of this.layersService.activeLayers().keys()) this.layersService.hideLayer(layer);
-    this.map.destroy();
+    this.mapService.destroy();
   }
 
   protected takeScreenshot(): void {
-    void this.screenshot.takeScreenshot(
+    void this.screenshotService.takeScreenshot(
       this.mapWindow().nativeElement,
       `מפה ${this.screenshotTime().replaceAll(':', '')}`,
       this.host.nativeElement,
@@ -83,7 +83,7 @@ export class HomePage implements AfterViewInit, OnDestroy {
   }
 
   private async start(): Promise<void> {
-    await this.map.init(this.container().nativeElement);
+    await this.mapService.init(this.container().nativeElement);
     this.layersService.showLayer(layers.coordinates);
   }
 }

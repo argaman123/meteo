@@ -27,9 +27,9 @@ import { HoverReadout } from '../../home/hover-readout/hover-readout';
   templateUrl: './forecast-map.html',
 })
 export class ForecastMap implements AfterViewInit, OnDestroy {
-  private map = inject(MapService);
+  private mapService = inject(MapService);
   private layersService = inject(LayersService);
-  private time = inject(TimeService);
+  private timeService = inject(TimeService);
   private readonly polygons = new PolygonsLayer();
   private reloadHandle = 0;
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
@@ -37,10 +37,10 @@ export class ForecastMap implements AfterViewInit, OnDestroy {
   readonly forecastTime = input.required<number>();
   readonly sector = input.required<Sector>();
 
-  private followForecastTime = effect(() => this.time.setExactTime(this.forecastTime()));
+  private followForecastTime = effect(() => this.timeService.setExactTime(this.forecastTime()));
   private followSector = effect(() => {
     this.polygons.sector.set(this.sector());
-    this.map.fixView(SECTORS[this.sector()]);
+    this.mapService.fixView(SECTORS[this.sector()]);
   });
 
   protected readonly hour = computed(() => formatLocalHour(this.forecastTime()));
@@ -56,11 +56,11 @@ export class ForecastMap implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     clearInterval(this.reloadHandle);
     this.layersService.hideLayer(this.polygons);
-    this.map.destroy();
+    this.mapService.destroy();
   }
 
   private async start(): Promise<void> {
-    await this.map.init(this.container().nativeElement, SECTORS[this.sector()]);
+    await this.mapService.init(this.container().nativeElement, SECTORS[this.sector()]);
     this.layersService.showLayer(this.polygons);
     this.reloadHandle = window.setInterval(
       () => this.layersService.reloadLayer(this.polygons),

@@ -5,17 +5,17 @@ import { layers } from '../../../layers/registry';
 
 @Service()
 export class MeasureService {
-  private map = inject(MapService);
+  private mapService = inject(MapService);
   private layersService = inject(LayersService);
   private measurement = layers.measurement;
   readonly active = computed(() => this.layersService.isLayerActive(this.measurement));
   readonly points = computed(() => (this.active() ? this.measurement.points() : []));
 
-  private syncDoubleClickZoom = effect(() => this.map.setDoubleClickZoom(!this.active()));
+  private syncDoubleClickZoom = effect(() => this.mapService.setDoubleClickZoom(!this.active()));
 
   constructor() {
-    this.map.clicks.subscribe((click) => this.addPoint([click.lon, click.lat]));
-    this.map.rightClicks.subscribe(() => this.hideMeasure());
+    this.mapService.clicks.subscribe((click) => this.addPoint([click.lon, click.lat]));
+    this.mapService.rightClicks.subscribe(() => this.hideMeasure());
   }
 
   showMeasure(start?: [number, number]): void {

@@ -13,9 +13,9 @@ import { MeteogramColormap, MeteogramContours } from '../meteogram-colormap/mete
   host: { class: 'block h-full' },
 })
 export class TemperatureChart {
-  private meteogram = inject(MeteogramService);
+  private meteogramService = inject(MeteogramService);
 
-  protected column = this.meteogram.column;
+  protected column = this.meteogramService.column;
   protected colorScale = colorScale(TEMPERATURE_PALETTE, 'smooth');
   protected readonly contours: MeteogramContours = {
     faintStep: 5,

@@ -24,20 +24,20 @@ export interface MeteogramColumn {
 
 @Service()
 export class MeteogramService {
-  private time = inject(TimeService);
-  private points = inject(PointService);
+  private timeService = inject(TimeService);
+  private pointService = inject(PointService);
 
   readonly topFt = 45_000;
   readonly tab = signal(MeteogramTab.Temperature);
   private openedTabs = linkedSignal({
-    source: this.points.point,
+    source: this.pointService.point,
     computation: () => [untracked(this.tab)],
   });
 
   readonly range = computed<TimeRange>(
     () => {
       const { backHours, forwardHours } = layers.temperature.timeWindow;
-      const hour = Math.floor(this.time.now() / hoursToMs(1)) * hoursToMs(1);
+      const hour = Math.floor(this.timeService.now() / hoursToMs(1)) * hoursToMs(1);
       return { start: hour - hoursToMs(backHours), end: hour + hoursToMs(forwardHours) };
     },
     { equal: (a, b) => a.start === b.start && a.end === b.end },
@@ -54,7 +54,7 @@ export class MeteogramService {
   }
 
   private columnRequest(): HttpResourceRequest | undefined {
-    const point = this.points.point();
+    const point = this.pointService.point();
     const opened = this.openedTabs();
     if (!point || !(opened.includes(MeteogramTab.Temperature) || opened.includes(MeteogramTab.Wind))) {
       return undefined;
@@ -80,7 +80,7 @@ export class MeteogramService {
   }
 
   private cloudsRequest(): HttpResourceRequest | undefined {
-    const point = this.points.point();
+    const point = this.pointService.point();
     if (!point || !this.openedTabs().includes(MeteogramTab.Clouds)) return undefined;
     const [lon, lat] = point;
     const { start, end } = this.range();

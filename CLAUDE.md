@@ -135,8 +135,8 @@ they watch. A derived value is a `computed`, never a method or getter. Resources
 non-reactive context. Use framework idioms at the call site (`r.hasValue() ? r.value() : …`) —
 no wrappers that only rename an API. Built-in pipes over formatting methods. Visuals live in
 templates, not in DOM or class strings built in TS. Every `@Service` class ends in `Service`; an
-injected field is the class name without it (`time`, `map`, `player`) — `layersService`, since
-`layers` is the registry — and injected fields carry no `readonly`. App policy (startup layers)
+injected field is the service's clearest short name plus `Service` (`timeService`, `pointService`,
+`forecastService` for `DailyForecastService`) and carries no `readonly`. App policy (startup layers)
 stays in pages; services expose verbs; no inject-just-to-initialize services. Follow the documented
 convention by default; a deviation needs a stated reason up front.
 

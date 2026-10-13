@@ -30,7 +30,7 @@ import { SettingsPanel } from '../settings-panel/settings-panel';
   templateUrl: './top-bar.html',
 })
 export class TopBar {
-  protected map = inject(MapService);
+  protected mapService = inject(MapService);
   readonly perfHud = input.required<PerfHud>();
   readonly screenshotClicked = output();
 }

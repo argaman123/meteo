@@ -8,7 +8,7 @@ import { addLocalHours, atLocalHour, hoursToMs, localHourOf } from '../../utils/
 
 @Service()
 export class DailyForecastService {
-  private time = inject(TimeService);
+  private timeService = inject(TimeService);
   private readonly dayStartHour = 8;
   private readonly selectedTime = signal<number | null>(null);
 
@@ -24,7 +24,7 @@ export class DailyForecastService {
   readonly canShowNextTimes = computed(
     () =>
       addLocalHours(this.startTime(), 12) <=
-      this.time.now() + hoursToMs(layers.polygons.timeWindow.forwardHours),
+      this.timeService.now() + hoursToMs(layers.polygons.timeWindow.forwardHours),
   );
 
   showNextTimes(): void {
@@ -40,7 +40,7 @@ export class DailyForecastService {
   }
 
   private findLiveTime(): number {
-    const latestValidTime = mapValidity(this.time.now()).end;
+    const latestValidTime = mapValidity(this.timeService.now()).end;
     const hour = localHourOf(latestValidTime);
     return atLocalHour(latestValidTime, hour - ((hour - this.dayStartHour + 24) % 12));
   }
@@ -50,6 +50,6 @@ export class DailyForecastService {
   }
 
   private hasPassed(forecastTime: number): boolean {
-    return mapValidity(forecastTime).end <= this.time.now();
+    return mapValidity(forecastTime).end <= this.timeService.now();
   }
 }

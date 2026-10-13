@@ -54,15 +54,15 @@ import { SoundingTableService } from './sounding-table-service';
   host: { class: 'block' },
 })
 export class SoundingTable {
-  private soundingTable = inject(SoundingTableService);
-  protected points = inject(PointService);
+  private soundingTableService = inject(SoundingTableService);
+  protected pointService = inject(PointService);
   private scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
   private readonly stepFeet = 1000;
   private readonly temperatureScale = colorScale(TEMPERATURE_PALETTE, 'smooth');
   protected readonly highestFirst = signal(true);
 
-  protected response = httpResource(() => this.soundingTable.request(), {
+  protected response = httpResource(() => this.soundingTableService.request(), {
     parse: (column) => Sounding.fromAirColumn(column as AirColumnTime),
   });
 
@@ -72,10 +72,10 @@ export class SoundingTable {
       value ?? (this.response.isLoading() ? (previous?.value ?? null) : null),
   });
 
-  protected active = computed(() => this.points.view() === PointView.SoundingTable);
+  protected active = computed(() => this.pointService.view() === PointView.SoundingTable);
 
   protected coordinates = computed(() => {
-    const point = this.points.point();
+    const point = this.pointService.point();
     return point ? formatCoordinates(point[0], point[1], coordinateFormat()) : '';
   });
 

@@ -5,9 +5,9 @@ import { MeasureService } from './measure-service';
 @Component({
   selector: 'app-measure',
   imports: [MapPin],
-  host: { '(window:keydown.escape)': 'measure.hideMeasure()' },
+  host: { '(window:keydown.escape)': 'measureService.hideMeasure()' },
   templateUrl: './measure.html',
 })
 export class Measure {
-  protected measure = inject(MeasureService);
+  protected measureService = inject(MeasureService);
 }

@@ -13,7 +13,7 @@
         </span>
       </div>
       <span class="h-6.5 w-px self-center bg-border"></span>
-      <hlm-tabs [tab]="meteogram.tab()" (tabActivated)="selectTab($event)">
+      <hlm-tabs [tab]="meteogramService.tab()" (tabActivated)="selectTab($event)">
         <hlm-tabs-list variant="browser" aria-label="מטאוגרמה">
           @for (entry of tabNames; track entry.tab) {
             <button [hlmTabsTrigger]="entry.tab">
@@ -56,14 +56,14 @@
           size="sm"
           class="size-8 px-0"
           aria-label="סגירת מטאוגרמה"
-          (click)="points.hideView()"
+          (click)="pointService.hideView()"
         >
           <ng-icon name="lucideX" />
         </button>
       </div>
     </div>
     <div class="min-h-0 flex-1 py-1.5">
-      @switch (meteogram.tab()) {
+      @switch (meteogramService.tab()) {
         @case (tabs.Temperature) {
           <app-temperature-chart />
         }

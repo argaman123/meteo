@@ -1,7 +1,7 @@
 <div class="h-full w-full" [hlmContextMenuTrigger]="menu">
   <ng-content />
 </div>
-@if (points.point(); as point) {
+@if (pointService.point(); as point) {
   <div
     [appMapPin]="point"
     class="size-4 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"

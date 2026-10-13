@@ -35,20 +35,20 @@ import { ForecastMap } from './forecast-map/forecast-map';
   templateUrl: './daily-forecast-page.html',
 })
 export class DailyForecastPage {
-  protected forecast = inject(DailyForecastService);
-  private screenshot = inject(ScreenshotService);
+  protected forecastService = inject(DailyForecastService);
+  private screenshotService = inject(ScreenshotService);
   protected readonly legend = POLYGONS_LEGEND.stops;
   protected readonly lowQuality = computed(() => quality() === Quality.Low);
   private screenshotArea = viewChild.required<ElementRef<HTMLDivElement>>('screenshotArea');
 
   protected readonly twoRows = computed(
-    () => this.forecast.sector() === Sector.Big && this.forecast.forecastTimes().length > 2,
+    () => this.forecastService.sector() === Sector.Big && this.forecastService.forecastTimes().length > 2,
   );
-  protected readonly dateLabel = computed(() => formatLocalDay(this.forecast.times()[0]));
+  protected readonly dateLabel = computed(() => formatLocalDay(this.forecastService.times()[0]));
 
   protected takeScreenshot(): void {
-    const dayOrNight = this.forecast.isNight() ? 'לילה' : 'יום';
-    void this.screenshot.takeScreenshot(
+    const dayOrNight = this.forecastService.isNight() ? 'לילה' : 'יום';
+    void this.screenshotService.takeScreenshot(
       this.screenshotArea().nativeElement,
       `תחזית יומית ${this.dateLabel()} ${dayOrNight}`,
     );

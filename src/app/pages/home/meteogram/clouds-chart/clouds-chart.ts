@@ -33,13 +33,13 @@ interface ShownBlock {
   host: { class: 'block h-full' },
 })
 export class CloudsChart {
-  private meteogram = inject(MeteogramService);
-  private timeBar = inject(TimeBarService);
+  private meteogramService = inject(MeteogramService);
+  private timeBarService = inject(TimeBarService);
 
   private textMeasure = new OffscreenCanvas(1, 1).getContext('2d')!;
   private frame = viewChild(MeteogramFrame);
 
-  protected forecasts = this.meteogram.clouds;
+  protected forecasts = this.meteogramService.clouds;
 
   constructor() {
     this.textMeasure.font = `500 10px ${MAP_FONT}`;
@@ -84,7 +84,7 @@ export class CloudsChart {
 
   protected topFt = computed(() => {
     const clouds = this.clouds();
-    if (!clouds.length) return this.meteogram.topFt;
+    if (!clouds.length) return this.meteogramService.topFt;
     return Math.max(
       10_000,
       Math.ceil(Math.max(...clouds.map((block) => block.topFt)) / 5000) * 5000,
@@ -136,8 +136,8 @@ export class CloudsChart {
 
   private shownBlock(block: EventBlock): ShownBlock {
     const width = this.frame()?.size().width ?? 0;
-    const left = this.timeBar.positionInView(block.start);
-    const blockWidth = this.timeBar.positionInView(block.end) - left;
+    const left = this.timeBarService.positionInView(block.start);
+    const blockWidth = this.timeBarService.positionInView(block.end) - left;
     const text = block.style.text.join(' ');
     const [r, g, b, alpha] = block.style.fill;
     return {

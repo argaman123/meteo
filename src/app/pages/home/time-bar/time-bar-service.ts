@@ -4,12 +4,12 @@ import { clampToRange, daysToMs, hoursToMs } from '../../../utils/time';
 
 @Service()
 export class TimeBarService {
-  private time = inject(TimeService);
+  private timeService = inject(TimeService);
 
   readonly view = signal<TimeRange>(this.paddedWindow());
 
   private keepDisplayTimeInView = effect(() => {
-    const current = this.time.displayTime();
+    const current = this.timeService.displayTime();
     untracked(() => {
       const { start, end } = this.view();
       if (current >= start && current <= end) return;
@@ -53,9 +53,9 @@ export class TimeBarService {
   }
 
   private paddedWindow(): TimeRange {
-    const { start, end } = this.time.window();
+    const { start, end } = this.timeService.window();
     const span = (end - start) * 1.2;
-    const center = this.time.now();
+    const center = this.timeService.now();
     return { start: center - span / 2, end: center + span / 2 };
   }
 }

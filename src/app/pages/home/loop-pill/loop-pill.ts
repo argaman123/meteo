@@ -13,11 +13,11 @@ import { PlayerService } from '../../../services/player-service';
   templateUrl: './loop-pill.html',
 })
 export class LoopPill {
-  protected player = inject(PlayerService);
+  protected playerService = inject(PlayerService);
   private readonly speeds = [0.5, 1, 2, 4];
 
   protected cycleSpeed(): void {
-    const index = this.speeds.indexOf(this.player.speed());
-    this.player.speed.set(this.speeds[(index + 1) % this.speeds.length]);
+    const index = this.speeds.indexOf(this.playerService.speed());
+    this.playerService.speed.set(this.speeds[(index + 1) % this.speeds.length]);
   }
 }

@@ -21,11 +21,11 @@ import { Shortcut } from './base/shortcut';
 @Service()
 export class LayersService {
   private injector = inject(EnvironmentInjector);
-  private overlay = inject(OverlayService);
-  private map = inject(MapService);
-  private time = inject(TimeService);
-  private level = inject(LevelService);
-  private player = inject(PlayerService);
+  private overlayService = inject(OverlayService);
+  private mapService = inject(MapService);
+  private timeService = inject(TimeService);
+  private levelService = inject(LevelService);
+  private playerService = inject(PlayerService);
   private layerInjectors = new Map<Layer<unknown>, EnvironmentInjector>();
   private readonly exclusiveKinds = new Set([LookKind.Colormap, LookKind.Particles, LookKind.Icons]);
 
@@ -37,13 +37,13 @@ export class LayersService {
   );
 
   private inputs: Inputs = {
-    bbox: () => this.map.settledBbox(),
-    displayTime: () => this.time.displayTime(),
-    exactTime: () => this.time.exactTime(),
-    window: () => this.time.window(),
-    zoom: () => this.map.settledZoom() ?? 0,
-    level: () => this.level.activeLevel(),
-    cursor: () => this.map.cursor(),
+    bbox: () => this.mapService.settledBbox(),
+    displayTime: () => this.timeService.displayTime(),
+    exactTime: () => this.timeService.exactTime(),
+    window: () => this.timeService.window(),
+    zoom: () => this.mapService.settledZoom() ?? 0,
+    level: () => this.levelService.activeLevel(),
+    cursor: () => this.mapService.cursor(),
   };
 
   private syncLoops = effect(() => {
@@ -61,13 +61,13 @@ export class LayersService {
       loopTimes.push(layer.loopTimesOf(value as Loop[]));
     }
     if (loadingLayers > 0 && loopTimes.length === 0) return;
-    this.player.setTimes(...loopTimes);
+    this.playerService.setTimes(...loopTimes);
   });
 
   private syncTime = effect(() => {
     const layers = [...this.activeLayers().keys()];
-    this.time.windows.set(layers.map((layer) => layer.timeWindow).filter((window) => window !== null));
-    this.time.setForcedTimes(...layers.map((layer) => layer.forcedTimes?.() ?? []));
+    this.timeService.windows.set(layers.map((layer) => layer.timeWindow).filter((window) => window !== null));
+    this.timeService.setForcedTimes(...layers.map((layer) => layer.forcedTimes?.() ?? []));
   });
 
   isLayerActive(layer: Layer<unknown>): boolean {
@@ -138,11 +138,11 @@ export class LayersService {
     const data = dataSignal();
     if (data === undefined) return;
     if (data === null) {
-      for (const entry of layer.looks) this.overlay.remove(entry.look);
+      for (const entry of layer.looks) this.overlayService.remove(entry.look);
       return;
     }
     for (const entry of layer.looks) {
-      if (this.activeLooks().has(entry)) this.overlay.draw(entry.look, data);
+      if (this.activeLooks().has(entry)) this.overlayService.draw(entry.look, data);
     }
   }
 
@@ -173,7 +173,7 @@ export class LayersService {
   }
 
   private removeLook(entry: LookEntry): void {
-    this.overlay.remove(entry.look);
+    this.overlayService.remove(entry.look);
     this.activeLooks.update((current) => {
       const next = new Set(current);
       next.delete(entry);
@@ -187,7 +187,7 @@ export class LayersService {
       if (value === undefined || value === null) return value;
       const range = layer.relevanceOf(value);
       if (range === true) return value;
-      const time = this.time.exactTime();
+      const time = this.timeService.exactTime();
       return time < range.start || time > range.end ? null : value;
     });
   }
@@ -195,7 +195,7 @@ export class LayersService {
   private playLoop(layer: LoopLayer, data: Signal<unknown>): Signal<unknown> {
     return computed(() => {
       const value = data();
-      const playing = this.player.loopTime();
+      const playing = this.playerService.loopTime();
       if (value === undefined || value === null || playing === null) return value;
       return layer.atTime(value as Loop[], playing);
     });

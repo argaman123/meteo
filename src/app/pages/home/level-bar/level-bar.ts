@@ -17,7 +17,7 @@ import { Quantity, Unit, format, formatNumber } from '../../../utils/units';
   },
 })
 export class LevelBar {
-  protected level = inject(LevelService);
+  protected levelService = inject(LevelService);
   private layersService = inject(LayersService);
   private readonly dragIndex = signal<number | null>(null);
   private readonly hoverIndex = signal<number | null>(null);
@@ -27,18 +27,18 @@ export class LevelBar {
   );
 
   protected shownIndex = computed(
-    () => this.dragIndex() ?? this.level.levels().indexOf(this.level.activeLevel()),
+    () => this.dragIndex() ?? this.levelService.levels().indexOf(this.levelService.activeLevel()),
   );
 
   protected positionPercent = computed(() =>
-    this.stopPercent(this.level.levels()[this.shownIndex()]),
+    this.stopPercent(this.levelService.levels()[this.shownIndex()]),
   );
 
   protected stopPercent(level: Level | null): number {
-    return (this.level.feetOf(level) / this.level.feetOf(this.maxLevel())) * 100;
+    return (this.levelService.feetOf(level) / this.levelService.feetOf(this.maxLevel())) * 100;
   }
 
-  protected shownLabel = computed(() => this.label(this.level.levels()[this.shownIndex()]));
+  protected shownLabel = computed(() => this.label(this.levelService.levels()[this.shownIndex()]));
 
   protected label(level: Level | null): string {
     if (level === null) return 'קרקע';
@@ -46,7 +46,7 @@ export class LevelBar {
     return format(level, Quantity.Altitude, Unit.Feet);
   }
 
-  protected readonly maxLevel = computed(() => this.level.levels()[this.level.levels().length - 1]);
+  protected readonly maxLevel = computed(() => this.levelService.levels()[this.levelService.levels().length - 1]);
 
   protected topLabel(level: Level | null): string {
     if (level === null) return 'קרקע';
@@ -63,8 +63,8 @@ export class LevelBar {
   protected onArrow(event: Event, direction: 1 | -1): void {
     if (!this.visible()) return;
     event.preventDefault();
-    if (direction === 1) this.level.stepUp();
-    else this.level.stepDown();
+    if (direction === 1) this.levelService.stepUp();
+    else this.levelService.stepDown();
   }
 
   protected onPointerDown(event: PointerEvent): void {
@@ -88,14 +88,14 @@ export class LevelBar {
   protected onPointerUp(): void {
     const index = this.dragIndex();
     if (index === null) return;
-    this.level.setLevel(this.level.levels()[index]);
+    this.levelService.setLevel(this.levelService.levels()[index]);
     this.dragIndex.set(null);
   }
 
   protected hoverChip = computed(() => {
     const index = this.hoverIndex();
     if (index === null || this.dragIndex() !== null || index === this.shownIndex()) return null;
-    const level = this.level.levels()[index];
+    const level = this.levelService.levels()[index];
     return { percent: this.stopPercent(level), label: this.label(level) };
   });
 
@@ -103,13 +103,13 @@ export class LevelBar {
     const track = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const fraction = 1 - (event.clientY - track.top) / track.height;
     const clamped = Math.min(1, Math.max(0, fraction));
-    const levels = this.level.levels();
-    const targetFeet = clamped * this.level.feetOf(this.maxLevel());
+    const levels = this.levelService.levels();
+    const targetFeet = clamped * this.levelService.feetOf(this.maxLevel());
     let nearest = 0;
     for (let index = 1; index < levels.length; index++) {
       if (
-        Math.abs(this.level.feetOf(levels[index]) - targetFeet) <
-        Math.abs(this.level.feetOf(levels[nearest]) - targetFeet)
+        Math.abs(this.levelService.feetOf(levels[index]) - targetFeet) <
+        Math.abs(this.levelService.feetOf(levels[nearest]) - targetFeet)
       ) {
         nearest = index;
       }

@@ -8,12 +8,12 @@ import { LayersService } from '../../../layers/layers-service';
   host: { '(window:mousemove)': 'onMove($event)' },
 })
 export class HoverReadout {
-  private map = inject(MapService);
+  private mapService = inject(MapService);
   private layersService = inject(LayersService);
 
   protected pointer = signal<{ x: number; y: number } | null>(null);
   protected lines = computed(() => {
-    const cursor = this.map.cursor();
+    const cursor = this.mapService.cursor();
     if (!cursor) return [];
     const result: { name: string; value: string | null }[] = [];
     for (const [layer, dataSignal] of this.layersService.activeLayers()) {

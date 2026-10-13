@@ -40,7 +40,7 @@ export interface MapClick {
 
 @Service()
 export class MapService {
-  private overlay = inject(OverlayService);
+  private overlayService = inject(OverlayService);
   private map: maplibregl.Map | null = null;
   private fixedBounds: Bounds | null = null;
   private markers = new Map<HTMLElement, maplibregl.Marker>();
@@ -98,7 +98,7 @@ export class MapService {
     this.map.on('contextmenu', (event) => this.rightClicks.next(this.mapClickOf(event)));
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
     this.fitFixedView();
-    this.overlay.attach(this.map);
+    this.overlayService.attach(this.map);
     this.publish();
     this.settledBbox.set(this.bbox());
     this.settledZoom.set(this.zoom());
@@ -106,7 +106,7 @@ export class MapService {
 
   destroy(): void {
     for (const element of [...this.markers.keys()]) this.hideMarker(element);
-    this.overlay.detach();
+    this.overlayService.detach();
     this.map?.remove();
     this.map = null;
     this.bbox.set(null);

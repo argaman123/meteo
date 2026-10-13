@@ -60,7 +60,7 @@
           <button hlmBtn size="sm" class="h-6 px-2 text-xs"
                   [variant]="choice.value === projection() ? 'default' : 'ghost'"
                   [attr.aria-pressed]="choice.value === projection()"
-                  (click)="map.setProjection(choice.value)">
+                  (click)="mapService.setProjection(choice.value)">
             {{ choice.label }}
           </button>
         }

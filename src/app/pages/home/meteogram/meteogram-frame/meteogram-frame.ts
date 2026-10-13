@@ -22,12 +22,12 @@ import { TimeBarService } from '../../time-bar/time-bar-service';
   host: { class: 'block h-full' },
 })
 export class MeteogramFrame {
-  private time = inject(TimeService);
-  private timeBar = inject(TimeBarService);
-  private meteogram = inject(MeteogramService);
+  private timeService = inject(TimeService);
+  private timeBarService = inject(TimeBarService);
+  private meteogramService = inject(MeteogramService);
 
   readonly hoverText = input.required<(time: number, heightFt: number) => string>();
-  readonly topFt = input(this.meteogram.topFt);
+  readonly topFt = input(this.meteogramService.topFt);
   readonly loading = input(false);
   readonly message = input<string | null>(null);
 
@@ -45,8 +45,8 @@ export class MeteogramFrame {
     inject(DestroyRef).onDestroy(() => observer.disconnect());
   }
 
-  protected nowPosition = computed(() => this.timeBar.positionInView(this.time.now()));
-  protected mapTimePosition = computed(() => this.timeBar.positionInView(this.time.displayTime()));
+  protected nowPosition = computed(() => this.timeBarService.positionInView(this.timeService.now()));
+  protected mapTimePosition = computed(() => this.timeBarService.positionInView(this.timeService.displayTime()));
 
   protected heightLabels = computed(() => {
     const topFt = this.topFt();
@@ -64,7 +64,7 @@ export class MeteogramFrame {
   protected hover = computed(() => {
     const pointer = this.pointer();
     if (!pointer) return null;
-    const time = this.timeBar.timeInView(pointer.x);
+    const time = this.timeBarService.timeInView(pointer.x);
     const heightFt = (1 - pointer.y) * this.topFt();
     const top = Number.isNaN(pointer.y) ? 1 : pointer.y;
     const away = 'calc(-100% - 0.75rem)';
@@ -80,13 +80,13 @@ export class MeteogramFrame {
 
   protected onWheel(event: WheelEvent): void {
     event.preventDefault();
-    if (event.shiftKey) this.timeBar.shiftView(event.deltaY);
-    else this.timeBar.zoomView(pointerFraction(event).x, event.deltaY);
+    if (event.shiftKey) this.timeBarService.shiftView(event.deltaY);
+    else this.timeBarService.zoomView(pointerFraction(event).x, event.deltaY);
   }
 
   protected onPointerDown(event: PointerEvent): void {
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    this.drag = { startX: event.clientX, view: this.timeBar.view(), panning: false };
+    this.drag = { startX: event.clientX, view: this.timeBarService.view(), panning: false };
   }
 
   protected onPointerHover(event: PointerEvent): void {
@@ -103,7 +103,7 @@ export class MeteogramFrame {
     if (!drag?.panning) return;
     this.pointer.set(null);
     const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    this.timeBar.panView(drag.view, (drag.startX - event.clientX) / box.width);
+    this.timeBarService.panView(drag.view, (drag.startX - event.clientX) / box.width);
   }
 
   protected onPointerLeave(): void {
@@ -113,6 +113,6 @@ export class MeteogramFrame {
   protected onPointerUp(event: PointerEvent): void {
     const drag = this.drag;
     this.drag = null;
-    if (drag && !drag.panning) this.time.jumpTo(this.timeBar.timeInView(pointerFraction(event).x));
+    if (drag && !drag.panning) this.timeService.jumpTo(this.timeBarService.timeInView(pointerFraction(event).x));
   }
 }

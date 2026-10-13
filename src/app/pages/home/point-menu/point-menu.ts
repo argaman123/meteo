@@ -17,22 +17,22 @@ import { PointService, PointView } from './point-service';
   templateUrl: './point-menu.html',
 })
 export class PointMenu {
-  private map = inject(MapService);
-  protected points = inject(PointService);
-  private measure = inject(MeasureService);
+  private mapService = inject(MapService);
+  protected pointService = inject(PointService);
+  private measureService = inject(MeasureService);
   private clickedPoint: [number, number] | null = null;
   protected readonly views = PointView;
 
   constructor() {
-    this.map.rightClicks.pipe(takeUntilDestroyed()).subscribe((click) => this.pickPoint(click));
+    this.mapService.rightClicks.pipe(takeUntilDestroyed()).subscribe((click) => this.pickPoint(click));
   }
 
   protected showView(view: PointView): void {
-    if (this.clickedPoint) this.points.showView(view, this.clickedPoint);
+    if (this.clickedPoint) this.pointService.showView(view, this.clickedPoint);
   }
 
   protected showMeasure(): void {
-    if (this.clickedPoint) this.measure.showMeasure(this.clickedPoint);
+    if (this.clickedPoint) this.measureService.showMeasure(this.clickedPoint);
   }
 
   private pickPoint(click: MapClick): void {

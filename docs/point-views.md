@@ -84,7 +84,7 @@
 
 - A left-click chooser — it reopened on the closing click.
 - A disabled-while-open chooser, right-click-moves-the-point — one rule per gesture.
-- Per-view pins, or `meteogram.point() ?? soundingTable.point()` — one PointService.
+- Per-view pins, or `meteogramService.point() ?? soundingTableService.point()` — one PointService.
 - Meteogram as a side column, a replacement panel, a floating card, or folder tabs over the map.
 - Pressure-scaled height axis — linear, consistent distances.
 - Hatch patterns, label backgrounds, outlines or collision placement in the clouds tab; day lines;

@@ -27,7 +27,7 @@ export interface MeteogramContours {
   host: { class: 'absolute inset-0' },
 })
 export class MeteogramColormap {
-  private timeBar = inject(TimeBarService);
+  private timeBarService = inject(TimeBarService);
   private frame = inject(MeteogramFrame);
 
   readonly data = input.required<MeteogramData>();
@@ -79,7 +79,7 @@ export class MeteogramColormap {
     canvas.width = width;
     canvas.height = height;
     const cols = Array.from({ length: width }, (_, x) =>
-      data.timeIndex(this.timeBar.timeInView((x + 0.5) / width)),
+      data.timeIndex(this.timeBarService.timeInView((x + 0.5) / width)),
     );
     const topFt = this.frame.topFt();
     const rows = Array.from({ length: height }, (_, y) =>
@@ -125,7 +125,7 @@ export class MeteogramColormap {
       context.beginPath();
       for (const [time, heightFt] of line.path) {
         context.lineTo(
-          (this.timeBar.positionInView(time) / 100) * width,
+          (this.timeBarService.positionInView(time) / 100) * width,
           (1 - heightFt / topFt) * height,
         );
       }

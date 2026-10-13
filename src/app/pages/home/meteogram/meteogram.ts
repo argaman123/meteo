@@ -41,8 +41,8 @@ import { WindChart } from './wind-chart/wind-chart';
   host: { class: 'block' },
 })
 export class Meteogram {
-  protected meteogram = inject(MeteogramService);
-  protected points = inject(PointService);
+  protected meteogramService = inject(MeteogramService);
+  protected pointService = inject(PointService);
   protected readonly tabs = MeteogramTab;
   protected readonly LegendType = LegendType;
   protected readonly tabNames = [
@@ -66,19 +66,19 @@ export class Meteogram {
     },
   ];
 
-  protected active = computed(() => this.points.view() === PointView.Meteogram);
+  protected active = computed(() => this.pointService.view() === PointView.Meteogram);
 
   protected legend = computed(() =>
-    this.tabNames.find((entry) => entry.tab === this.meteogram.tab())!.legend(),
+    this.tabNames.find((entry) => entry.tab === this.meteogramService.tab())!.legend(),
   );
 
   protected coordinates = computed(() => {
-    const point = this.points.point();
+    const point = this.pointService.point();
     return point ? formatCoordinates(point[0], point[1], coordinateFormat()) : '';
   });
 
   protected selectTab(tab: string): void {
-    this.meteogram.showTab(tab as MeteogramTab);
+    this.meteogramService.showTab(tab as MeteogramTab);
   }
 
   protected gradientBackground(legend: GradientLegend): string {
