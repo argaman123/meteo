@@ -1,7 +1,13 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideSettings } from '@ng-icons/lucide';
+import { lucideChevronDown, lucideSettings } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
+import {
+  HlmDropdownMenu,
+  HlmDropdownMenuRadio,
+  HlmDropdownMenuRadioIndicator,
+  HlmDropdownMenuTrigger,
+} from '@spartan-ng/helm/dropdown-menu';
 import {
   HlmPopover,
   HlmPopoverContent,
@@ -15,8 +21,19 @@ import { Quality, coordinateFormat, projection, quality, unitControls } from './
 
 @Component({
   selector: 'app-settings-panel',
-  imports: [HlmButton, HlmPopover, HlmPopoverContent, HlmPopoverPortal, HlmPopoverTrigger, NgIcon],
-  viewProviders: [provideIcons({ lucideSettings })],
+  imports: [
+    HlmButton,
+    HlmDropdownMenu,
+    HlmDropdownMenuRadio,
+    HlmDropdownMenuRadioIndicator,
+    HlmDropdownMenuTrigger,
+    HlmPopover,
+    HlmPopoverContent,
+    HlmPopoverPortal,
+    HlmPopoverTrigger,
+    NgIcon,
+  ],
+  viewProviders: [provideIcons({ lucideChevronDown, lucideSettings })],
   templateUrl: './settings-panel.html',
 })
 export class SettingsPanel {
@@ -27,6 +44,12 @@ export class SettingsPanel {
   protected readonly units = Object.values(unitControls);
   protected readonly quality = quality;
   protected readonly projection = projection;
+
+  protected coordinateFormatLabel = computed(() =>
+    this.layersService.isLayerActive(this.coordinates)
+      ? coordinateFormat.choices.find((choice) => choice.value === coordinateFormat())?.label
+      : 'כבוי',
+  );
 
   protected setQuality(value: Quality): void {
     if (value === quality()) return;

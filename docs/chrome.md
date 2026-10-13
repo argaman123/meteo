@@ -76,7 +76,8 @@ Cursor-following frosted chip, one line per active layer with data: name · `lay
 ## Settings panel (`pages/home/settings-panel/`)
 
 Gear popover (`align="end"`), Table controls in two sections. יחידות: רוח kt / m/s, גובה
-גיאופוטנציאלי m / ft, קואורדינטות כבוי / DD / DMS (כבוי hides the coordinates layer). תצוגה:
+גיאופוטנציאלי m / ft, קואורדינטות — a dropdown of כבוי / DD / DMS / UTM / גריד מבצעי (כבוי hides the
+coordinates layer). תצוגה:
 איכות רגילה / נמוכה — low quality de-frosts the floating windows and, at map creation, turns
 off antialiasing and label fades, runs animations at 30 fps and paints wind trails at half
 resolution (docs/engine.md); a change reloads the page, clicking the selected choice doesn't. מפה
@@ -139,6 +140,8 @@ Ctrl+Alt+P or the top-bar button toggles it.
 - Buttons: main rows and top-bar icons `secondary` when inactive; tiny value chips and chevrons
   `ghost`; selection lists switch `variant` (`default` ↔ `ghost`) + `aria-pressed`. A conditional
   style on `hlmBtn` = per-key `[class.x]` bindings or a new variant, never a `[class]` string.
+- Settings rows: a few choices = a button row; many choices = a dropdown whose trigger looks like
+  the row's selected button plus a `lucideChevronDown` icon (glyphs are icons, never text characters).
 - Motion: Angular `animate.enter` / `animate.leave` with keyframe tokens in `styles.css`
   (unfold/fold, expand/collapse, pop-in/out, rise/sink, widen/narrow). Legend bodies don't
   animate.
@@ -162,6 +165,7 @@ Ctrl+Alt+P or the top-bar button toggles it.
 - Heebo's Latin, Manrope, DM Sans, Rubik, Space Grotesk, Inter, Plex, B612 — Source Sans 3.
 - A dark/light theme toggle.
 - A coordinates button in the top bar — it lives in settings.
+- A `chip`-variant trigger, a plain-text trigger or an outlined box for a settings dropdown.
 - Readout color dots, a count badge on שכבות, a zoom pill, a keyboard-help overlay,
   prefers-reduced-motion, per-basemap border ink, static pressure labels on the rail, אוטו chips
   showing the resolved value.

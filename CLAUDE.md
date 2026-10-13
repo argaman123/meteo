@@ -212,7 +212,7 @@ data completeness before polish — never hide a needed value for a prettier lay
   Playwright instance degrades (frozen CSS transitions, ~1 fps, screenshot timeouts): restart it
   before blaming the app.
 - UI options are mocked by restyling the live app in Playwright (about 4 variants a round, sent as
-  files), never crude widget mockups (backdrop blur stalls headless screenshots — mock frost with
+  files), never described in a question's text, never crude widget mockups (backdrop blur stalls headless screenshots — mock frost with
   an opaque tint). Measure alignment in the live DOM to ≤ 0.5 px before showing
   any table or layout.
 - No committed tests; temporary Vitest checks for hazard logic (conversions), deleted after.

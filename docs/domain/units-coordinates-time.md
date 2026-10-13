@@ -19,10 +19,16 @@ Design notes:
 |---|---|
 | **Lat/Lon decimal** | default machine-readable form |
 | **Lat/Lon DMS** | degrees/minutes/seconds for display/input |
-| **MGRS** | military grid reference system — display, **input**, and a **grid overlay** on the map |
+| **UTM** | display and **input** |
+| **גריד מבצעי** | the military grid — display, **input**, and a **grid overlay** on the map |
 
 Design notes:
-- The Geo module owns parsing + formatting for all three, and the MGRS grid overlay.
+- The Geo module owns parsing + formatting for all four, and the גריד מבצעי overlay.
+- גריד מבצעי is the old app's algorithm (not MGRS): 1° squares lettered by floored lat/lon over
+  29–34°N × 33–36°E, read "lat-minutes lon-minutes square" with floored whole minutes (`04 46 ג`),
+  left to right; outside the table it shows DMS.
+- UTM reads `36S 667996E 3550689N` (zone + band, whole meters, geodesy); DMS past 84°N / 80°S.
+- The ruler's degrees part shows decimal degrees under UTM and גריד מבצעי.
 - Search & locate accepts any of these formats as input.
 
 ## Time

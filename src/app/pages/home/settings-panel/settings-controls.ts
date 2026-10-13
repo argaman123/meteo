@@ -30,9 +30,11 @@ export const coordinateFormat: OptionsControl<CoordinateFormat> = options(
   [
     { value: CoordinateFormat.Decimal, label: 'DD' },
     { value: CoordinateFormat.DegreesMinutesSeconds, label: 'DMS' },
+    { value: CoordinateFormat.Utm, label: 'UTM' },
+    { value: CoordinateFormat.OperationalGrid, label: 'גריד מבצעי' },
   ],
   'קואורדינטות',
-  OptionsPresentation.Table,
+  OptionsPresentation.Select,
 );
 registerSettings({ format: coordinateFormat }, 'coordinates');
 

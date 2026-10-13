@@ -21,23 +21,30 @@
       </div>
     }
     <div class="flex items-center gap-2 px-1 py-1 text-sm">
-      <span class="grow">קואורדינטות</span>
-      <div dir="ltr" class="flex gap-1">
-        <button hlmBtn size="sm" class="h-6 px-2 text-xs"
-                [variant]="!layersService.isLayerActive(coordinates) ? 'default' : 'ghost'"
-                [attr.aria-pressed]="!layersService.isLayerActive(coordinates)"
-                (click)="layersService.hideLayer(coordinates)">
-          כבוי
-        </button>
-        @for (choice of coordinateFormat.choices; track choice.value) {
-          <button hlmBtn size="sm" class="h-6 px-2 text-xs"
-                  [variant]="layersService.isLayerActive(coordinates) && coordinateFormat() === choice.value ? 'default' : 'ghost'"
-                  [attr.aria-pressed]="layersService.isLayerActive(coordinates) && coordinateFormat() === choice.value"
-                  (click)="layersService.isLayerActive(coordinates) || layersService.showLayer(coordinates); coordinateFormat.set(choice.value)">
-            {{ choice.label }}
+      <span class="grow">{{ coordinateFormat.label }}</span>
+      <button hlmBtn size="sm" class="h-6 px-2 text-xs" [attr.aria-label]="coordinateFormat.label"
+              [hlmDropdownMenuTrigger]="coordinateFormatMenu">
+        {{ coordinateFormatLabel() }}
+        <ng-icon name="lucideChevronDown" class="text-xs opacity-70"/>
+      </button>
+      <ng-template #coordinateFormatMenu>
+        <hlm-dropdown-menu>
+          <button hlmDropdownMenuRadio [checked]="!layersService.isLayerActive(coordinates)"
+                  [keepOpen]="false" (triggered)="layersService.hideLayer(coordinates)">
+            <hlm-dropdown-menu-radio-indicator/>
+            כבוי
           </button>
-        }
-      </div>
+          @for (choice of coordinateFormat.choices; track choice.value) {
+            <button hlmDropdownMenuRadio
+                    [checked]="layersService.isLayerActive(coordinates) && coordinateFormat() === choice.value"
+                    [keepOpen]="false"
+                    (triggered)="layersService.isLayerActive(coordinates) || layersService.showLayer(coordinates); coordinateFormat.set(choice.value)">
+              <hlm-dropdown-menu-radio-indicator/>
+              {{ choice.label }}
+            </button>
+          }
+        </hlm-dropdown-menu>
+      </ng-template>
     </div>
     <h2 class="px-1 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70">תצוגה</h2>
     <div class="flex items-center gap-2 px-1 py-1 text-sm">
