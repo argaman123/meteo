@@ -31,7 +31,7 @@
       </button>
     </div>
   </div>
-  <app-loop-pill />
+  <app-loop-pill data-screenshot-skip />
   <div class="relative flex-1">
     <ng-content />
     <div dir="ltr" class="relative h-12 cursor-grab overflow-hidden select-none active:cursor-grabbing [mask-image:linear-gradient(to_right,transparent,black_1.5rem,black_calc(100%-1.5rem),transparent)]"
@@ -67,7 +67,7 @@
       </div>
     </div>
     @if (isHandleInView()) {
-      <div class="absolute bottom-full mb-3 -translate-x-1/2" [style.left.%]="labelPosition()">
+      <div data-screenshot-skip class="absolute bottom-full mb-3 -translate-x-1/2" [style.left.%]="labelPosition()">
         <button hlmBtn size="sm" dir="rtl" aria-label="חזרה לעכשיו"
                 class="h-auto min-h-8 flex-col gap-0 py-1 text-sm font-medium tabular-nums shadow-float"
                 [class.animate-pulse]="layersService.isLoading()"
@@ -78,7 +78,7 @@
           }
         </button>
       </div>
-      <span class="absolute bottom-full h-3 w-0.5 -translate-x-1/2 bg-primary" [style.left.%]="handlePosition()"></span>
+      <span data-screenshot-skip class="absolute bottom-full h-3 w-0.5 -translate-x-1/2 bg-primary" [style.left.%]="handlePosition()"></span>
     }
   </div>
 </div>

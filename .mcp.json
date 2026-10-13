@@ -7,6 +7,10 @@
     "spartan-ui": {
       "command": "npx",
       "args": ["-y", "@spartan-ng/mcp"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["@playwright/mcp@latest", "--headless"]
     }
   }
 }

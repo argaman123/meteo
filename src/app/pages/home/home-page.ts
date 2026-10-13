@@ -2,6 +2,10 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, computed, inject, sign
 import { PerfHud } from '../../dev/perf-hud/perf-hud';
 import { MapService } from '../../engine/map-service';
 import { LayersService } from '../../layers/layers-service';
+import { PlayerService } from '../../services/player-service';
+import { ScreenshotService } from '../../services/screenshot-service';
+import { TimeService } from '../../services/time-service';
+import { formatLocalTime } from '../../utils/time';
 import { HoverReadout } from './hover-readout/hover-readout';
 import { LayerBar } from './layer-bar/layer-bar';
 import { LegendBar } from './legend-bar/legend-bar';
@@ -36,6 +40,14 @@ import { layers } from '../../layers/registry';
 export class HomePage implements AfterViewInit, OnDestroy {
   private map = inject(MapService);
   private layersService = inject(LayersService);
+  private time = inject(TimeService);
+  private player = inject(PlayerService);
+  private screenshot = inject(ScreenshotService);
+  private host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private mapWindow = viewChild.required<ElementRef<HTMLDivElement>>('mapWindow');
+  protected readonly screenshotTime = computed(() =>
+    formatLocalTime(this.player.nearestFrameTime() ?? this.time.displayTime()),
+  );
   protected readonly lowQuality = computed(() => quality() === Quality.Low);
   private container = viewChild.required<ElementRef<HTMLDivElement>>('mapContainer');
   private timeBar = viewChild.required(TimeBar, { read: ElementRef });
@@ -58,7 +70,16 @@ export class HomePage implements AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.timeBarObserver.disconnect();
     this.soundingTableObserver.disconnect();
+    for (const layer of this.layersService.activeLayers().keys()) this.layersService.hideLayer(layer);
     this.map.destroy();
+  }
+
+  protected takeScreenshot(): void {
+    void this.screenshot.takeScreenshot(
+      this.mapWindow().nativeElement,
+      `מפה ${this.screenshotTime().replaceAll(':', '')}`,
+      this.host.nativeElement,
+    );
   }
 
   private async start(): Promise<void> {

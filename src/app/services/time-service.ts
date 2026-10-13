@@ -73,6 +73,11 @@ export class TimeService {
     this.exactTime.set(this.snapJump(unixTime));
   }
 
+  setExactTime(unixTime: number): void {
+    this.live.set(false);
+    this.exactTime.set(unixTime);
+  }
+
   jumpBy(hours: number): void {
     this.jumpTo(this.displayTime() + hoursToMs(hours));
   }

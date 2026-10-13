@@ -10,7 +10,6 @@ the old site.
 
 | Task | Area | Priority | What's left |
 |---|---|---|---|
-| Briefing | Chrome | High | Next. A separate full-screen UI: four polygon maps side by side, 3 h apart at fixed Israel times (08 11 14 17, then 20 23 02 05); clicks jump 12 h. Live: a map whose time has passed leaves the screen; when all are gone it moves to the next 12 h scene; maps reload every few seconds in case meteorologists changed them |
 | Flight route | Interaction | High | Click a route on the map → the weather along it (clouds met, wind strength…). Study the old app's feature and MagenS (`flight_limit`, `points_data_between_heights_and_times_in_feet`, `data_by_route_edge`) first; the Python route becomes a backend ask |
 | Cross-section | Interaction | High | Right-click menu item → a graph rising like the meteogram: one colored line per active parameter at the level-rail level, along the time line |
 | Skew-T (parked) | Interaction | High | Branch `skew-t` (91292d5); the lead checks it at the old site on his next visit: CIN, virtual-temperature CAPE, mixing-ratio labels, Hebrew name, 150 mb top. Resume: rebase on main, drop its `utils/wind-barbs.ts` (now in `utils/wind.ts`), expect conflicts in point-menu/home-page/units/thermodynamics |

@@ -3,13 +3,20 @@
 <div dir="rtl" class="flex min-h-full flex-col gap-1.5 p-1.5 px-3">
   <h2 class="px-2 py-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70">קיצורים</h2>
   @for (shortcut of shortcuts; track shortcut) {
-    <button hlmBtn class="justify-start gap-2 border-border font-semibold"
-            [variant]="layersService.isShortcutActive(shortcut) ? 'default' : 'secondary'"
-            [attr.aria-pressed]="layersService.isShortcutActive(shortcut)"
-            (click)="layersService.toggleShortcut(shortcut)">
-      <ng-icon [name]="shortcut.icon" class="opacity-70"/>
-      {{ shortcut.name }}
-    </button>
+    @if (shortcut.type === ShortcutType.Link) {
+      <a hlmBtn variant="secondary" class="justify-start gap-2 border-border font-semibold" [routerLink]="shortcut.url">
+        <ng-icon [name]="shortcut.icon" class="opacity-70"/>
+        {{ shortcut.name }}
+      </a>
+    } @else {
+      <button hlmBtn class="justify-start gap-2 border-border font-semibold"
+              [variant]="layersService.isShortcutActive(shortcut) ? 'default' : 'secondary'"
+              [attr.aria-pressed]="layersService.isShortcutActive(shortcut)"
+              (click)="layersService.toggleShortcut(shortcut)">
+        <ng-icon [name]="shortcut.icon" class="opacity-70"/>
+        {{ shortcut.name }}
+      </button>
+    }
   }
   <button class="mt-2 flex items-center justify-between border-t px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70 hover:text-foreground"
           [attr.aria-expanded]="layersExpanded()" (click)="layersExpanded.set(!layersExpanded())">

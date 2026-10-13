@@ -39,6 +39,18 @@
   >
     <ng-icon name="lucidePalette" />
   </button>
+  <button
+    hlmBtn
+    variant="secondary"
+    size="sm"
+    class="w-9 px-0"
+    aria-label="צילום מסך"
+    hlmTooltip="צילום מסך"
+    position="bottom"
+    (click)="screenshotClicked.emit()"
+  >
+    <ng-icon name="lucideCamera" />
+  </button>
   <app-settings-panel />
   <button
     hlmBtn

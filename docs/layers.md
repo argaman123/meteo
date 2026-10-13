@@ -35,6 +35,8 @@ niche need means simplify the requirement first; a new member is the lead's call
 
 - State: `activeLayers: Map<Layer, Signal<data>>`, `activeLooks: Set<LookEntry>`. Actions are
   show/hide verbs (`showLayer`, `hideLook`, `toggleShortcut`); state uses "active".
+- `reloadLayer` re-runs `fetch` in a fresh injector without removing the looks — the old drawing
+  stays until the new data arrives (no blink).
 - `showLayer` creates a per-activation `EnvironmentInjector` (resources live and die with it),
   wraps the data in `keepIfRelevant` (exactTime vs `relevanceOf` → `null`), then for loop layers
   `playLoop` (`atTime(data, loopTime)`), adds one draw effect per activation (a playhead flip
@@ -42,7 +44,8 @@ niche need means simplify the requirement first; a new member is the lead's call
 - Exclusive look kinds: Colormap, Particles, Icons — one active look per kind, the newest wins.
 - Effects: `syncTime` pushes active windows + forced times into TimeService; `syncLoops` pushes
   loop times into PlayerService (and holds while a loop layer is loading with no times yet).
-- Startup policy lives in the page: the home page shows only `coordinates`.
+- Startup policy lives in the page: the home page shows only `coordinates`, and hides every layer
+  when left (a return starts fresh).
 - 195 lines and still coherent; propose a split when it next grows (seams: loop glue, shortcuts).
 
 ## Registry (`layers/registry.ts`)
@@ -54,7 +57,9 @@ niche need means simplify the requirement first; a new member is the lead's call
   with an exclusive Table toggle (birds: מסונן | גולמי). Layers never know about the menu.
 - `shortcuts` — bundles `{ layer, looks: LookKind[] }[]` + a lucide icon. Pressing applies the
   exact look set; pressed = every member layer active. **Shortcuts are the primary UX**; the layer
-  rows are the expert drawer. Ask which bundles a new layer joins.
+  rows are the expert drawer. Ask which bundles a new layer joins. A `ShortcutLink` (name, url,
+  icon) is a shortcut row that navigates to another page (תחזית יומית); the menu picks the row by
+  `ShortcutType`.
 
 ## Controls & settings (`utils/controls.ts`, `utils/settings.ts`)
 

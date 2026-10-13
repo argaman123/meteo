@@ -4,6 +4,7 @@
   [style.--sounding-table-width]="soundingTableWidth()"
 >
   <div
+    #mapWindow
     class="absolute top-12 bottom-(--time-bar-height) start-48 end-(--sounding-table-width) overflow-hidden rounded-xl"
   >
     <app-point-menu>
@@ -12,18 +13,29 @@
     <div
       class="pointer-events-none absolute inset-0 rounded-xl border border-white/10 shadow-[inset_0_0_12px_rgb(0_0_0/0.35)]"
     ></div>
+    <div
+      data-screenshot-only
+      class="invisible absolute start-3 top-3 rounded-xl border bg-background/70 px-2.5 py-1 font-semibold whitespace-nowrap shadow-float-sm backdrop-blur-lg"
+    >
+      {{ screenshotTime() }}
+    </div>
   </div>
-  <app-top-bar class="absolute inset-x-0 top-0" [perfHud]="perfHud" />
+  <app-top-bar
+    class="absolute inset-x-0 top-0"
+    [perfHud]="perfHud"
+    (screenshotClicked)="takeScreenshot()"
+  />
   <app-legend-bar
+    data-screenshot-skip
     class="absolute end-[calc(var(--sounding-table-width)+0.75rem)] bottom-[calc(var(--time-bar-height)+0.875rem)]"
   />
-  <app-level-bar class="absolute start-51 top-15" />
+  <app-level-bar data-screenshot-skip class="absolute start-51 top-15" />
   <app-time-bar #timeBar class="absolute inset-x-0 bottom-0">
     <app-meteogram />
   </app-time-bar>
   <app-layer-bar class="absolute start-0 top-12 bottom-14.5" />
   <app-sounding-table class="absolute end-0 top-12 bottom-(--time-bar-height)" />
   <app-measure />
-  <app-hover-readout />
-  <app-perf-hud #perfHud />
+  <app-hover-readout data-screenshot-skip />
+  <app-perf-hud data-screenshot-skip #perfHud />
 </div>

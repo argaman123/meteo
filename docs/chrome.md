@@ -13,12 +13,33 @@ Code: `src/app/pages/home/` and the vendored spartan copies in `src/spartan/`.
   map well, legend and HUD. The menu is stacked after the time bar so a grown bar never paints over
   it.
 - Root font size is 17 px — rem math, not 16.
-- Each page owns its own top bar; `app.html` is a bare router outlet.
+- Each page owns its own top bar; `app.html` is the router outlet + the app-wide toaster.
+
+## Daily forecast page (`pages/daily-forecast/`, `/daily-forecast`)
+
+- תחזית יומית: a wall-screen and slide-screenshot page, reached by a `ShortcutLink` row in the
+  menu; its own top bar, a `1fr auto 1fr` grid so the middle sits on the page's center: a ghost →
+  חזרה למסך הראשי back link (no wordmark, no title) | one rounded bar: secondary ‹ › arrow buttons at its ends, the date + filled sun/moon on an amber (day) / indigo (night) tint between (large, no hours) + עכשיו |
+  מקומי | אזורי + screenshot. Fixed-view polygon maps, one `ForecastMap` per forecast time, each with its own
+  MapService/OverlayService/LayersService/TimeService/PlayerService and its own `PolygonsLayer`.
+- The shown times = four times 3 h apart from a `startTime` of 08:00 or 20:00 local (DST-safe local-hour math). Each map
+  holds its time unsnapped (`setExactTime`), so it shows the map page's nearest map only when that
+  map's ±1.5 h covers the time — never a far map under a near header; the header always reads the
+  map's own time (08:00, not the drawn map's hour). No map → the basemap + a quiet אין מפה.
+- Live (the current start time, however reached): a map leaves when its ±1.5 h validity ends; when
+  the last leaves the next 12 h start. Back stops at the live start time; forward stops at the polygons'
+  96 h window. Maps reload every 60 s through `reloadLayer`.
+- Layout: מקומי = one row (earliest at the start edge), the rest widen as maps leave. אזורי = 2×2;
+  three left = two on top + one centered below at the same size; two or one grow to fill.
+- Header strip above each map (big hour + small day); one shared swatch legend strip below.
+  Hover works (each map mounts its own HoverReadout).
+- Screenshot (ScreenshotService): headers + maps + legend.
+  The sector choice is session-only (a reload returns to מקומי).
 
 ## Top bar (`pages/home/top-bar/`)
 
 Wordmark (מטאו + tracked-caps METEO) at the start; at the end: basemap picker
-(dropdown of full-bleed thumbnail rows), settings gear, perf HUD toggle (ghost when off — the page
+(dropdown of full-bleed thumbnail rows), screenshot camera, settings gear, perf HUD toggle (ghost when off — the page
 hands the HUD in as an input). Icon
 buttons are `secondary` when inactive; tooltips use the vendored spartan tooltip (`position` per
 placement).
@@ -78,6 +99,17 @@ Ships with the app (dev tooling — build without asking). On by default at the 
 FPS + 60-sample sparkline, JS heap, and each timed layer's validity range (dimmed when `null`).
 Ctrl+Alt+P or the top-bar button toggles it.
 
+## Screenshots (`services/screenshot-service.ts`)
+
+- `takeScreenshot(area, fileName, root = area)`: renders `root` (modern-screenshot; every map
+  keeps its drawing buffer), crops to `area`, copies a PNG to the clipboard or downloads it when
+  the browser refuses (plain-http servers). A copy shows a 'התמונה הועתקה' toast (spartan Sonner,
+  `<hlm-toaster>` mounted once in `app.html`, dark, bottom-center); no state on the service.
+- Map page: the map window cropped from the whole page — the map and a time chip at the top start
+  corner, styled as a floating window, that exists only in the picture (the drawn loop frame's time, else the display time). Controls over the map
+  (legend, level rail, loop pill, time-bar chip, hover chip, perf HUD) carry `data-screenshot-skip`; a
+  picture-only element is `invisible` with `data-screenshot-only`. Frost renders as plain tint.
+
 ## Visual language
 
 - **spartan/ui**: if spartan has the component, use it. Helm components are copied into
@@ -89,7 +121,8 @@ Ctrl+Alt+P or the top-bar button toggles it.
   a component's own `shadow-md`/`bg-*` — register any new theme token there);
   `ghost` lost its `aria-expanded` background; switch, tabs and context-menu selectors translated
   to brain 1.0.4's `data-state` / `data-orientation`; switch thumb in px (`size-[12px]`/`[16px]`);
-  tabs `browser` variant.
+  tabs `browser` variant; the toaster uses the app font (`--brn-sonner-font-family`) and toasts hug their text, centered
+  (`w-fit`, `rounded-xl`, smaller padding).
 - Theme: dark by default (`class="dark"` on `<html>`), neutral-gray dark palette (card
   `oklch(0.195 0.005 260)`, background `0.153`, secondary/muted/accent `0.28`). Light theme
   untouched. In dark mode `primary` is near-white — tinted-primary bands are invisible.

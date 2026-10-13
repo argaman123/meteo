@@ -23,6 +23,9 @@ export const OUTLINE_COLOR = '#0f172a';
 
 export const MAP_FONT = "'Source Sans 3', 'Heebo', sans-serif";
 
+maplibregl.addProtocol('pmtiles', new Protocol().tile);
+void maplibregl.setRTLTextPlugin('/basemaps/rtl/mapbox-gl-rtl-text.js', true);
+
 export interface MarkerDrag {
   element: HTMLElement;
   point: [number, number];
@@ -39,6 +42,7 @@ export interface MapClick {
 export class MapService {
   private overlay = inject(OverlayService);
   private map: maplibregl.Map | null = null;
+  private fixedBounds: Bounds | null = null;
   private markers = new Map<HTMLElement, maplibregl.Marker>();
 
   readonly bbox = signal<Bounds | null>(null);
@@ -56,22 +60,24 @@ export class MapService {
     { id: 'colorful', label: 'צבעוני', bright: true },
   ];
 
-  async init(container: HTMLElement): Promise<void> {
+  async init(container: HTMLElement, fixedBounds: Bounds | null = null): Promise<void> {
     await document.fonts.ready;
-    const protocol = new Protocol();
-    maplibregl.addProtocol('pmtiles', protocol.tile);
-    void maplibregl.setRTLTextPlugin('/basemaps/rtl/mapbox-gl-rtl-text.js', true);
+    this.fixedBounds = fixedBounds;
     const style = await this.loadBasemapStyle(this.basemap());
     this.map = new maplibregl.Map({
       container,
       style,
-      bounds: [
+      bounds: fixedBounds ?? [
         [34.2, 28.7],
         [35.9, 34.1],
       ],
+      interactive: fixedBounds === null,
       minZoom: Math.max(0, Math.log2(container.clientWidth / 512)),
       attributionControl: false,
-      canvasContextAttributes: { antialias: quality() !== Quality.Low },
+      canvasContextAttributes: {
+        antialias: quality() !== Quality.Low,
+        preserveDrawingBuffer: true,
+      },
       fadeDuration: quality() === Quality.Low ? 0 : 300,
       dragRotate: false,
       pitchWithRotate: false,
@@ -80,6 +86,7 @@ export class MapService {
     this.map.keyboard.disable();
     this.map.touchZoomRotate.disableRotation();
     this.map.on('move', () => this.publish());
+    this.map.on('resize', () => this.fitFixedView());
     this.map.on('moveend', () => {
       this.settledBbox.set(this.bbox());
       this.settledZoom.set(this.zoom());
@@ -90,6 +97,7 @@ export class MapService {
     this.map.on('click', (event) => this.clicks.next(this.mapClickOf(event)));
     this.map.on('contextmenu', (event) => this.rightClicks.next(this.mapClickOf(event)));
     this.map.getCanvasContainer().addEventListener('mouseleave', () => this.cursor.set(null));
+    this.fitFixedView();
     this.overlay.attach(this.map);
     this.publish();
     this.settledBbox.set(this.bbox());
@@ -106,7 +114,6 @@ export class MapService {
     this.zoom.set(null);
     this.settledZoom.set(null);
     this.cursor.set(null);
-    maplibregl.removeProtocol('pmtiles');
   }
 
   setBasemap(id: BasemapId): void {
@@ -118,6 +125,16 @@ export class MapService {
   setProjection(value: Projection): void {
     projection.set(value);
     this.map?.setProjection(this.projectionSpecification());
+  }
+
+  fixView(bounds: Bounds): void {
+    this.fixedBounds = bounds;
+    this.fitFixedView();
+  }
+
+  private fitFixedView(): void {
+    if (!this.fixedBounds) return;
+    this.map?.fitBounds(this.fixedBounds, { animate: false, padding: 30 });
   }
 
   flyTo(center: [number, number], zoom?: number): void {
@@ -174,7 +191,8 @@ export class MapService {
   }
 
   private projectionSpecification(): maplibregl.ProjectionSpecification {
-    return { type: projection() === Projection.Globe ? 'globe' : 'mercator' };
+    const globe = projection() === Projection.Globe && this.fixedBounds === null;
+    return { type: globe ? 'globe' : 'mercator' };
   }
 
   private async applyStyle(id: BasemapId): Promise<void> {

@@ -11,7 +11,7 @@ import { LightningLayer } from './lightning/lightning-layer';
 import { RainRadar } from './radar/rain-radar';
 import { SatelliteLayer } from './satellite/satellite-layer';
 import { SeaLevelPressure } from './model/sea-level-pressure';
-import { Shortcut } from './base/shortcut';
+import { Shortcut, ShortcutLink } from './base/shortcut';
 import { Temperature } from './model/temperature';
 import { Waves } from './model/waves';
 import { Wind } from './model/wind';
@@ -101,4 +101,5 @@ export const shortcuts = {
     [{ layer: layers.filteredBirds, looks: [LookKind.Points] }],
     'lucideBird',
   ),
+  dailyForecast: new ShortcutLink('תחזית יומית', '/daily-forecast', 'lucideCalendarDays'),
 };

@@ -1,8 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { NgIcon, provideIcons } from '@ng-icons/core';
 import {
   lucideBinoculars,
   lucideBird,
+  lucideCalendarDays,
   lucideChevronDown,
   lucideCloudSun,
   lucideCloudy,
@@ -14,6 +16,7 @@ import { HlmButton } from '@spartan-ng/helm/button';
 import { HlmCheckbox } from '@spartan-ng/helm/checkbox';
 import { Layer } from '../../../layers/base/layer';
 import { LayerGroup } from '../../../layers/base/layer-group';
+import { ShortcutType } from '../../../layers/base/shortcut';
 import { LayersService } from '../../../layers/layers-service';
 import { menuLayers, shortcuts } from '../../../layers/registry';
 import { ControlType, OptionsPresentation } from '../../../utils/controls';
@@ -21,11 +24,12 @@ import { ControlView } from './control/control';
 
 @Component({
   selector: 'app-layer-bar',
-  imports: [ControlView, HlmButton, HlmCheckbox, NgIcon],
+  imports: [ControlView, HlmButton, HlmCheckbox, NgIcon, RouterLink],
   viewProviders: [
     provideIcons({
       lucideBinoculars,
       lucideBird,
+      lucideCalendarDays,
       lucideChevronDown,
       lucideCloudSun,
       lucideCloudy,
@@ -40,6 +44,7 @@ import { ControlView } from './control/control';
 export class LayerBar {
   protected readonly ControlType = ControlType;
   protected readonly OptionsPresentation = OptionsPresentation;
+  protected readonly ShortcutType = ShortcutType;
 
   protected layersService = inject(LayersService);
   protected readonly menuItems = menuLayers;

@@ -114,15 +114,24 @@ export class LayersService {
   }
 
   showLayer(layer: Layer<unknown>): void {
+    this.fetchLayer(layer);
+    for (const entry of layer.looks) {
+      if (entry.checked) this.showLook(entry);
+    }
+  }
+
+  reloadLayer(layer: Layer<unknown>): void {
+    this.layerInjectors.get(layer)?.destroy();
+    this.fetchLayer(layer);
+  }
+
+  private fetchLayer(layer: Layer<unknown>): void {
     const layerInjector = createEnvironmentInjector([], this.injector);
     this.layerInjectors.set(layer, layerInjector);
     let data = this.keepIfRelevant(layer, layer.fetch(this.inputs, layerInjector));
     if (layer instanceof LoopLayer) data = this.playLoop(layer, data);
     this.activeLayers.update((current) => new Map(current).set(layer, data));
     effect(() => this.drawLayer(layer, data), { injector: layerInjector });
-    for (const entry of layer.looks) {
-      if (entry.checked) this.showLook(entry);
-    }
   }
 
   private drawLayer(layer: Layer<unknown>, dataSignal: Signal<unknown>): void {

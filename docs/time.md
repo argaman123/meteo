@@ -2,6 +2,7 @@
 
 ## TimeService
 
+- `setExactTime` holds a time without snapping (displayTime still snaps) — the daily forecast's maps.
 - `now` ticks every 60 s. `live` starts on; any jump drops it; clicking the time chip re-arms it.
 - **`exactTime`** is the source of truth (a `linkedSignal`: raw `now` while live, the held pick
   otherwise). **`displayTime`** = `snapJump(exactTime)`.

@@ -1,6 +1,6 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, output } from '@angular/core';
 import { NgIcon, provideIcons } from '@ng-icons/core';
-import { lucideActivity, lucidePalette } from '@ng-icons/lucide';
+import { lucideActivity, lucideCamera, lucidePalette } from '@ng-icons/lucide';
 import { HlmButton } from '@spartan-ng/helm/button';
 import {
   HlmDropdownMenu,
@@ -25,11 +25,12 @@ import { SettingsPanel } from '../settings-panel/settings-panel';
     NgIcon,
     SettingsPanel,
   ],
-  viewProviders: [provideIcons({ lucideActivity, lucidePalette })],
+  viewProviders: [provideIcons({ lucideActivity, lucideCamera, lucidePalette })],
   host: { class: 'block' },
   templateUrl: './top-bar.html',
 })
 export class TopBar {
   protected map = inject(MapService);
   readonly perfHud = input.required<PerfHud>();
+  readonly screenshotClicked = output();
 }

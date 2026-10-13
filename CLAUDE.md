@@ -93,14 +93,16 @@ locked conventions win where they differ.
 
 ```
 src/app/
-  app.ts/.html, app.config.ts, app.routes.ts   # bare router outlet; '/' = home page
+  app.ts/.html, app.config.ts, app.routes.ts   # router outlet + toaster; '/' = home page
   pages/home/        # the front page and its features, one folder each: top-bar, loop-pill,
                      #   layer-bar (+ control/), legend-bar, level-bar, hover-readout,
                      #   time-bar (+ TimeBarService), settings-panel (+ settings-controls.ts),
                      #   point-menu (+ PointService),
                      #   meteogram (+ MeteogramService, frame, colormap, one folder per chart),
                      #   sounding-table (+ service), measure (+ MeasureService)
-  services/          # cross-domain services: TimeService, PlayerService, LevelService
+  pages/daily-forecast/  # תחזית יומית: fixed polygon maps per time (forecast-map/) + service
+  services/          # cross-domain services: TimeService, PlayerService, LevelService,
+                     #   ScreenshotService
   engine/            # map-service.ts, overlay-service.ts, globe-occlusion.ts, base/ (Look,
                      #   AnimatedLayer, GridIcons, PointIcons, sprite-cache), looks/ (one per look)
   layers/            # layers-service.ts, registry.ts, base/ (Layer, LoopLayer, LayerGroup,
@@ -170,7 +172,8 @@ splits into one file per kind, unasked. Display state stays out of domain servic
 concept gets one owner service. Premade libraries over hand-rolled for anything standard, except
 60 fps hot loops. No speculative guards, back-compat shims, or handling for cases he says don't
 exist; shelved ideas get a plan.md line. One rule per gesture: simplicity and predictability beat
-convenience branches. Files stay small and single-purpose. Refactors keep behavior and look exact.
+convenience branches. A value with one answer is computed directly (round the hour), never
+searched for among candidates. Files stay small and single-purpose. Refactors keep behavior and look exact.
 
 **Constants and colors.** Tuning numbers inline at the point of use (the wind-particles knob block is
 the one exception); tunables as defaulted parameters; an external library's contract gets a named
@@ -225,7 +228,8 @@ data completeness before polish — never hide a needed value for a prettier lay
 ## 9. Landmines (each already cost a bug)
 
 - A `[class]` string binding on `hlmBtn` drops the variant classes — per-key `[class.x]` or a new
-  variant in our button copy.
+  variant in our button copy. Butted against another surface, `hlmBtn` needs `border-0` (its color
+  stops inside a transparent border) and `active:not-aria-[haspopup]:translate-y-0` (press shift).
 - `AnimatedLayer`: the rAF loop stays bound to the first deck instance — `step()` reads `state`
   only. Per-frame accessors on identity-stable data need `updateTriggers`.
 - `httpResource`/`resource` inside an effect or computed → NG0602.

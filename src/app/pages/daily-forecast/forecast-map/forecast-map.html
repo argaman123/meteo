@@ -1,0 +1,18 @@
+<div class="flex shrink-0 items-baseline gap-2 px-1 pb-1.5">
+  <span class="text-2xl font-semibold tabular-nums">{{ hour() }}</span>
+  <span class="text-sm text-muted-foreground">{{ day() }}</span>
+</div>
+<div class="relative min-h-0 grow overflow-hidden rounded-xl">
+  <div #mapContainer class="h-full w-full"></div>
+  @if (hasNoMap()) {
+    <div class="pointer-events-none absolute inset-0 grid place-items-center">
+      <span class="rounded-md bg-background/70 px-2 py-1 text-sm text-muted-foreground"
+        >אין מפה</span
+      >
+    </div>
+  }
+  <div
+    class="pointer-events-none absolute inset-0 rounded-xl border border-white/10 shadow-[inset_0_0_12px_rgb(0_0_0/0.35)]"
+  ></div>
+</div>
+<app-hover-readout />

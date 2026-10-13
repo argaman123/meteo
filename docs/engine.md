@@ -9,9 +9,16 @@ turn it into deck layers. Read before adding or changing a look.
 - Signals: `bbox`/`zoom` (live), `settledBbox`/`settledZoom` (on moveend — layers fetch by these),
   `cursor` (`null` off-map), `basemap`. Events: `clicks`, `rightClicks`, `markerDrags` — plain
   public `Subject`s.
-- `init(container)` awaits `document.fonts.ready` (canvas sprites must never bake a fallback font),
-  registers pmtiles + the vendored RTL text plugin. Map: flat (mercator) or globe, no rotation/pitch, keyboard
-  off, MSAA `antialias: true` (deck draws into maplibre's context — a GPU-cost flag for weak PCs).
+- One service instance per map: a page with several maps provides `MapService` + `OverlayService`
+  (and LayersService, TimeService, PlayerService) on each map's component. pmtiles and the vendored
+  RTL text plugin register once at module load (maplibre throws on a second RTL registration;
+  removing the protocol would kill the other maps' tiles).
+- `init(container, fixedBounds = null)` awaits `document.fonts.ready` (canvas
+  sprites must never bake a fallback font). Map: flat (mercator) or globe, no rotation/pitch,
+  keyboard off, MSAA `antialias: true` (deck draws into maplibre's context — a GPU-cost flag for
+  weak PCs). `fixedBounds` = a non-interactive, always-flat map that refits those bounds plus a 30 px
+  margin (edge label chips stay whole) on every resize (`fixView` changes them). Every map keeps its drawing buffer (`preserveDrawingBuffer`) so its
+  canvas can be read for screenshots — a small per-frame cost on animated pages, accepted.
 - Projection (the מפה setting): `setProjection` switches live; `loadBasemapStyle` writes it into
   every style, so a basemap change keeps it.
 - Low quality (the איכות setting, read at map creation): antialias off and `fadeDuration` 0.

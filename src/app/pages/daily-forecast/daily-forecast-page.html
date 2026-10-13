@@ -1,0 +1,106 @@
+<div class="flex h-full flex-col bg-card">
+  <header class="grid h-12 shrink-0 grid-cols-[1fr_auto_1fr] items-center px-4">
+    <div class="flex items-center">
+      <a hlmBtn variant="ghost" size="sm" class="-ms-2 gap-1.5" routerLink="/">
+        <ng-icon name="lucideArrowRight" />
+        חזרה למסך הראשי
+      </a>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="flex h-9 items-stretch gap-px overflow-hidden rounded-full">
+        <button
+          hlmBtn
+          variant="secondary"
+          class="h-full w-10 rounded-none border-0 px-0 active:not-aria-[haspopup]:translate-y-0"
+          aria-label="12 שעות אחורה"
+          [disabled]="forecast.isLive()"
+          (click)="forecast.showPreviousTimes()"
+        >
+          <ng-icon name="lucideChevronRight" />
+        </button>
+        @let night = forecast.isNight();
+        <span
+          class="flex min-w-44 items-center justify-center gap-2 ps-3.5 pe-2.5 text-lg font-semibold"
+          [class.bg-amber-400/15]="!night"
+          [class.bg-indigo-300/15]="night"
+        >
+          {{ dateLabel() }}
+          <ng-icon
+            size="20px"
+            [name]="night ? 'matDarkModeRound' : 'matLightModeRound'"
+            [class.text-amber-400]="!night"
+            [class.text-indigo-300]="night"
+          />
+        </span>
+        <button
+          hlmBtn
+          variant="secondary"
+          class="h-full w-10 rounded-none border-0 px-0 active:not-aria-[haspopup]:translate-y-0"
+          aria-label="12 שעות קדימה"
+          [disabled]="!forecast.canShowNextTimes()"
+          (click)="forecast.showNextTimes()"
+        >
+          <ng-icon name="lucideChevronLeft" />
+        </button>
+      </div>
+      <button
+        hlmBtn
+        size="sm"
+        [variant]="forecast.isLive() ? 'default' : 'secondary'"
+        [attr.aria-pressed]="forecast.isLive()"
+        (click)="forecast.showLiveTimes()"
+      >
+        עכשיו
+      </button>
+    </div>
+    <div class="flex items-center justify-end gap-2">
+      <div class="flex gap-0.5 rounded-md bg-secondary/50 p-0.5">
+        @for (choice of forecast.sector.choices; track choice.value) {
+          <button
+            hlmBtn
+            size="sm"
+            class="h-7"
+            [variant]="forecast.sector() === choice.value ? 'default' : 'ghost'"
+            [attr.aria-pressed]="forecast.sector() === choice.value"
+            (click)="forecast.sector.set(choice.value)"
+          >
+            {{ choice.label }}
+          </button>
+        }
+      </div>
+      <button
+        hlmBtn
+        variant="secondary"
+        size="sm"
+        class="w-9 px-0"
+        aria-label="צילום מסך"
+        hlmTooltip="צילום מסך"
+        position="bottom"
+        (click)="takeScreenshot()"
+      >
+        <ng-icon name="lucideCamera" />
+      </button>
+    </div>
+  </header>
+  <div #screenshotArea class="flex min-h-0 grow flex-col gap-3 bg-card px-3 pt-1 pb-3">
+    <div class="flex min-h-0 grow flex-wrap justify-center gap-3">
+      @for (forecastTime of forecast.forecastTimes(); track $index) {
+        <app-forecast-map
+          [class]="
+            twoRows() ? 'h-[calc(50%-0.375rem)] w-[calc(50%-0.375rem)]' : 'h-full min-w-0 flex-1'
+          "
+          [forecastTime]="forecastTime"
+          [sector]="forecast.sector()"
+        />
+      }
+    </div>
+    <div class="flex shrink-0 items-center justify-center gap-5 text-sm">
+      @for (stop of legend; track stop.label) {
+        <span class="flex items-center gap-1.5">
+          <span class="size-3 rounded-sm" [style.background-color]="stop.color"></span>
+          {{ stop.label }}
+        </span>
+      }
+    </div>
+  </div>
+</div>

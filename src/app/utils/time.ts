@@ -7,6 +7,11 @@ const localTimeFormat = new Intl.DateTimeFormat('he-IL', {
 });
 
 const hourFormat = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
+const dayFormat = new Intl.DateTimeFormat('he-IL', {
+  weekday: 'short',
+  day: 'numeric',
+  month: 'numeric',
+});
 const monthFormat = new Intl.DateTimeFormat('he-IL', { month: 'long' });
 const monthYearFormat = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
 const yearFormat = new Intl.DateTimeFormat('he-IL', { year: 'numeric' });
@@ -55,6 +60,23 @@ export function formatLocalTime(unixTime: number): string {
 
 export function formatLocalHour(unixTime: number): string {
   return hourFormat.format(new Date(unixTime));
+}
+
+export function formatLocalDay(unixTime: number): string {
+  return dayFormat.format(new Date(unixTime));
+}
+
+export function localHourOf(unixTime: number): number {
+  return new Date(unixTime).getHours();
+}
+
+export function atLocalHour(unixTime: number, hour: number): number {
+  return new Date(unixTime).setHours(hour, 0, 0, 0);
+}
+
+export function addLocalHours(unixTime: number, hours: number): number {
+  const date = new Date(unixTime);
+  return date.setHours(date.getHours() + hours);
 }
 
 export function mergeTimes(lists: number[][]): number[] {

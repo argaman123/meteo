@@ -56,6 +56,11 @@ export const SECTORS: Record<Sector, Bounds> = {
   [Sector.Big]: [33.3, 26.6, 56.4, 39.8],
 };
 
+export const SECTOR_CHOICES = [
+  { value: Sector.Dev, label: 'מקומי' },
+  { value: Sector.Big, label: 'אזורי' },
+];
+
 interface PolygonsData {
   map: PolygonMap;
   zoom: number;
@@ -76,10 +81,7 @@ export const POLYGONS_LEGEND: SwatchesLegend = {
 export class PolygonsLayer extends Layer<PolygonsData> {
   readonly name = 'עננות ותופעות';
   override readonly timeWindow = { backHours: 3, forwardHours: 96 };
-  readonly sector = options<Sector>(Sector.Dev, [
-    { value: Sector.Dev, label: 'מקומי' },
-    { value: Sector.Big, label: 'אזורי' },
-  ], 'גזרה', OptionsPresentation.Table);
+  readonly sector = options<Sector>(Sector.Dev, SECTOR_CHOICES, 'גזרה', OptionsPresentation.Table);
   override readonly controls: Control[] = [this.sector];
   readonly looks = [
     {
