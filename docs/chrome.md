@@ -39,7 +39,8 @@ Code: `src/app/pages/home/` and the vendored spartan copies in `src/spartan/`.
 ## Top bar (`pages/home/top-bar/`)
 
 A `1fr auto 1fr` grid: wordmark (מטאו + tracked-caps METEO) at the start; the place search
-(`w-105`, docs/point-views.md) in the middle; at the end: basemap picker
+(`w-105`, button height, filled `secondary` with no outline like the icon buttons;
+docs/point-views.md) in the middle; at the end: basemap picker
 (dropdown of full-bleed thumbnail rows), screenshot camera, settings gear, perf HUD toggle (ghost when off — the page
 hands the HUD in as an input). Icon
 buttons are `secondary` when inactive; tooltips use the vendored spartan tooltip (`position` per
