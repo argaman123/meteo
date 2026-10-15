@@ -21,7 +21,7 @@ import { TEMPERATURE_PALETTE } from '../../../layers/model/temperature';
 import { Sounding, SoundingLevel } from '../../../objects/sounding';
 import { AirColumnTime } from '../../../types/sounding';
 import { colorScale } from '../../../utils/color-scale';
-import { formatCoordinates } from '../../../utils/geo';
+import { formatCoordinates } from '../../../utils/coordinates';
 import { feetAtPressure } from '../../../utils/thermodynamics';
 import { formatLocalTime } from '../../../utils/time';
 import {

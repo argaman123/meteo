@@ -1,5 +1,5 @@
 import { OptionsControl, OptionsPresentation, options } from '../../../utils/controls';
-import { CoordinateFormat } from '../../../utils/geo';
+import { CoordinateFormat } from '../../../utils/coordinates';
 import { registerSettings } from '../../../utils/settings';
 import { Quantity, Unit } from '../../../utils/units';
 

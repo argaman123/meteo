@@ -19,6 +19,7 @@ tools/cft/
 tools/.venv/
 public/fixtures/ecmwf/
 public/fixtures/ecmwf-download/
+tools/.places-download/
 .npm-cache/
 
 # Editors

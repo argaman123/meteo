@@ -13,7 +13,7 @@ import { GradientLegend, LegendType, gradientLegend } from '../../../engine/base
 import { TEMPERATURE_PALETTE } from '../../../layers/model/temperature';
 import { WIND_SPEED_PALETTE } from '../../../layers/model/wind';
 import { POLYGONS_LEGEND } from '../../../layers/polygons/polygons-layer';
-import { formatCoordinates } from '../../../utils/geo';
+import { formatCoordinates } from '../../../utils/coordinates';
 import { Quantity, Unit } from '../../../utils/units';
 import { PointService, PointView } from '../point-menu/point-service';
 import { coordinateFormat } from '../settings-panel/settings-controls';

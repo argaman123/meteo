@@ -125,7 +125,7 @@ niche need means simplify the requirement first; a new member is the lead's call
 
 - `PolygonsLayer` — see Polygons below.
 - `Coordinates` (`layers/general/`) — `Layer<true>`, no looks, timeless; hover formats the cursor
-  in the settings panel's format (DD, DMS, UTM, גריד מבצעי — `utils/geo.ts`).
+  in the settings panel's format (DD, DMS, UTM, גריד מבצעי — `utils/coordinates.ts`).
 - `Measurement` (`layers/general/`) — the measure tool's layer, see
   [point-views.md](point-views.md). Registered but not in `menuLayers`.
 

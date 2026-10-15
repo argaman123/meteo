@@ -39,6 +39,7 @@ phone-home/CDN/telemetry) and carried in.
 | Basemap styles (dark/light/colorful) | `public/basemaps/styles/*.json` | Prebuilt style JSON from maps.protomaps.com ("Get style JSON", flavor + lang=he) | Re-download, re-apply the three self-hosting patches below |
 | Map glyphs (PBF font ranges, incl. Hebrew `1280-1535.pbf`) + sprites | `public/basemaps/fonts/`, `public/basemaps/sprites/` | github.com/protomaps/basemaps-assets | Clone and copy `fonts/` + `sprites/` |
 | RTL text plugin | `public/basemaps/rtl/` | `@mapbox/mapbox-gl-rtl-text` (npm, dev-only) | Copy the dist `.js` from `node_modules` |
+| Place names (search) | `public/search/places.json` | GeoNames dumps (CC BY 4.0 — requires attribution) | `npm run places:fetch` (downloads cached in gitignored `tools/.places-download/`) |
 | Satellite fixture frames (dev only) | `public/fixtures/satellite/` | EUMETSAT open WMS GeoColor | `node tools/fetch-satellite.mjs <day>` |
 | ECMWF fixture (dev only, gitignored) | `public/fixtures/ecmwf/` | ECMWF IFS open data (CC-BY 4.0) | `npm run ecmwf:fetch` |
 | `pmtiles` CLI | `tools/bin/pmtiles.exe` (gitignored) | github.com/protomaps/go-pmtiles releases | Download the Windows x86_64 release binary |
@@ -47,6 +48,9 @@ phone-home/CDN/telemetry) and carried in.
 Weather layers render through first-party looks over `@deck.gl/layers` + `@luma.gl` (wind
 trails). `weatherlayers-gl` was removed (2026-06), which also dropped its `geotiff` /
 `@scarf/scarf` install-time telemetry transitive.
+
+`@maskito/core` + `angular` + `kit` (Taiga UI team, Apache-2.0, no telemetry) for the coordinate
+form's input masks.
 
 `d3-scale` (+ `d3-interpolate`, `d3-color`) added during the rebuild (2026-06) for colormap colour
 scaling — pure JS, popular, no runtime telemetry; chosen over the color-specialist `chroma.js`

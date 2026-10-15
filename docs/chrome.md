@@ -38,7 +38,8 @@ Code: `src/app/pages/home/` and the vendored spartan copies in `src/spartan/`.
 
 ## Top bar (`pages/home/top-bar/`)
 
-Wordmark (מטאו + tracked-caps METEO) at the start; at the end: basemap picker
+A `1fr auto 1fr` grid: wordmark (מטאו + tracked-caps METEO) at the start; the place search
+(`w-105`, docs/point-views.md) in the middle; at the end: basemap picker
 (dropdown of full-bleed thumbnail rows), screenshot camera, settings gear, perf HUD toggle (ghost when off — the page
 hands the HUD in as an input). Icon
 buttons are `secondary` when inactive; tooltips use the vendored spartan tooltip (`position` per
@@ -122,7 +123,10 @@ Ctrl+Alt+P or the top-bar button toggles it.
   a component's own `shadow-md`/`bg-*` — register any new theme token there);
   `ghost` lost its `aria-expanded` background; switch, tabs and context-menu selectors translated
   to brain 1.0.4's `data-state` / `data-orientation`; switch thumb in px (`size-[12px]`/`[16px]`);
-  tabs `browser` variant; the toaster uses the app font (`--brn-sonner-font-family`) and toasts hug their text, centered
+  tabs `browser` variant; the autocomplete input reads its text direction from its content
+  (`unicode-bidi: plaintext` — coordinates left to right, Hebrew and the placeholder right to left); the
+  autocomplete's popover has `autoFocus: false` (spartan's popover default moves focus to the first
+  button in the dropdown, so typing missed the box); the toaster uses the app font (`--brn-sonner-font-family`) and toasts hug their text, centered
   (`w-fit`, `rounded-xl`, smaller padding).
 - Theme: dark by default (`class="dark"` on `<html>`), neutral-gray dark palette (card
   `oklch(0.195 0.005 260)`, background `0.153`, secondary/muted/accent `0.28`). Light theme

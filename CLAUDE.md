@@ -82,7 +82,8 @@ locked conventions win where they differ.
 2. **A layer is a definition, not engine code.** A layer of an existing look = one file in
    `layers/` + a registry entry. Layers read platform state only through `Inputs`.
 3. **All values flow through the Units module** (`utils/units.ts`); **all coordinates and times
-   through the Geo/time helpers** (`utils/geo.ts`, `utils/time.ts`). Times are local only.
+   through the coordinates/geo/time helpers** (`utils/coordinates.ts`,
+   `utils/geo.ts`, `utils/time.ts`). Times are local only.
 4. **State lives in one domain service** that co-locates its signals and the methods that change
    them (no stores layer, no data-service + functions-service split).
 5. **Shared code never names a feature** — features plug into a contract (measuring is a layer).
@@ -99,7 +100,8 @@ src/app/
                      #   time-bar (+ TimeBarService), settings-panel (+ settings-controls.ts),
                      #   point-menu (+ PointService),
                      #   meteogram (+ MeteogramService, frame, colormap, one folder per chart),
-                     #   sounding-table (+ service), measure (+ MeasureService)
+                     #   sounding-table (+ service), measure (+ MeasureService),
+                     #   place-search (+ PlaceSearchService)
   pages/daily-forecast/  # תחזית יומית: fixed polygon maps per time (forecast-map/) + service
   services/          # cross-domain services: TimeService, PlayerService, LevelService,
                      #   ScreenshotService
@@ -110,10 +112,11 @@ src/app/
                      #   birds/, lightning/, observations/, general/ (coordinates, measurement)
   directives/        # MapPin
   objects/           # runtime classes built from wire data (Grid, MeteogramData, Sounding,
-                     #   PolygonMap, Provider)
+                     #   PolygonMap, Place, Provider)
   types/             # wire contracts (DAO shapes) mirroring the backend
   utils/             # pure functions; similar ones share a file (units, geo, time, settings,
-                     #   controls, contours, interpolation, color-scale, thermodynamics, wind…)
+                     #   controls, contours, interpolation, color-scale, thermodynamics, wind,
+                     #   coordinates (text formats), text…)
   dev/               # quarantine: fixture backend + perf HUD — product code never imports it
                      #   (pages may mount dev widgets; environment.development.ts registers the
                      #   fixture interceptor, prod swaps the file out)

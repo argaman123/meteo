@@ -23,7 +23,11 @@
       "@spartan-ng/helm/tooltip": ["./src/spartan/tooltip/src/index.ts"],
       "@spartan-ng/helm/tabs": ["./src/spartan/tabs/src/index.ts"],
       "@spartan-ng/helm/context-menu": ["./src/spartan/context-menu/src/index.ts"],
-      "@spartan-ng/helm/sonner": ["./src/spartan/sonner/src/index.ts"]
+      "@spartan-ng/helm/sonner": ["./src/spartan/sonner/src/index.ts"],
+      "@spartan-ng/helm/autocomplete": ["./src/spartan/autocomplete/src/index.ts"],
+      "@spartan-ng/helm/input-group": ["./src/spartan/input-group/src/index.ts"],
+      "@spartan-ng/helm/input": ["./src/spartan/input/src/index.ts"],
+      "@spartan-ng/helm/textarea": ["./src/spartan/textarea/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

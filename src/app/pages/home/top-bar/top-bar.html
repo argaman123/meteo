@@ -1,66 +1,71 @@
-<header class="flex h-12 items-center gap-2 bg-card px-4">
-  <span class="text-lg font-bold tracking-tight">מטאו</span>
-  <span class="text-xs font-medium tracking-[0.25em] text-muted-foreground uppercase">Meteo</span>
-  <ng-template #basemapMenu>
-    <hlm-dropdown-menu>
-      @for (item of mapService.basemaps; track item.id) {
-        <button
-          hlmDropdownMenuRadio
-          class="relative mt-1 h-11 w-44 overflow-hidden first:mt-0"
-          [checked]="mapService.basemap() === item.id"
-          [keepOpen]="false"
-          (triggered)="mapService.setBasemap(item.id)"
-        >
-          <img
-            [src]="'/basemaps/thumbnails/' + item.id + '.png'"
-            alt=""
-            class="absolute inset-0 h-full w-full object-cover"
-          />
-          <span
-            class="absolute inset-0 bg-linear-to-l from-background/90 from-25% to-background/15"
-          ></span>
-          <span class="relative flex items-center gap-1.5 font-medium">
-            <hlm-dropdown-menu-radio-indicator class="static" />
-            {{ item.label }}
-          </span>
-        </button>
-      }
-    </hlm-dropdown-menu>
-  </ng-template>
-  <button
-    hlmBtn
-    variant="secondary"
-    size="sm"
-    class="ms-auto w-9 px-0"
-    aria-label="מפת רקע"
-    hlmTooltip="מפת רקע"
-    position="bottom"
-    [hlmDropdownMenuTrigger]="basemapMenu"
-  >
-    <ng-icon name="lucidePalette" />
-  </button>
-  <button
-    hlmBtn
-    variant="secondary"
-    size="sm"
-    class="w-9 px-0"
-    aria-label="צילום מסך"
-    hlmTooltip="צילום מסך"
-    position="bottom"
-    (click)="screenshotClicked.emit()"
-  >
-    <ng-icon name="lucideCamera" />
-  </button>
-  <app-settings-panel />
-  <button
-    hlmBtn
-    size="sm"
-    class="w-9 px-0"
-    aria-label="חיווי ביצועים"
-    [variant]="perfHud().visible() ? 'default' : 'ghost'"
-    [attr.aria-pressed]="perfHud().visible()"
-    (click)="perfHud().toggle()"
-  >
-    <ng-icon name="lucideActivity" />
-  </button>
+<header class="grid h-12 grid-cols-[1fr_auto_1fr] items-center bg-card px-4">
+  <div class="flex items-center gap-2">
+    <span class="text-lg font-bold tracking-tight">מטאו</span>
+    <span class="text-xs font-medium tracking-[0.25em] text-muted-foreground uppercase">Meteo</span>
+  </div>
+  <app-place-search class="w-105" />
+  <div class="flex items-center justify-end gap-2">
+    <ng-template #basemapMenu>
+      <hlm-dropdown-menu>
+        @for (item of mapService.basemaps; track item.id) {
+          <button
+            hlmDropdownMenuRadio
+            class="relative mt-1 h-11 w-44 overflow-hidden first:mt-0"
+            [checked]="mapService.basemap() === item.id"
+            [keepOpen]="false"
+            (triggered)="mapService.setBasemap(item.id)"
+          >
+            <img
+              [src]="'/basemaps/thumbnails/' + item.id + '.png'"
+              alt=""
+              class="absolute inset-0 h-full w-full object-cover"
+            />
+            <span
+              class="absolute inset-0 bg-linear-to-l from-background/90 from-25% to-background/15"
+            ></span>
+            <span class="relative flex items-center gap-1.5 font-medium">
+              <hlm-dropdown-menu-radio-indicator class="static" />
+              {{ item.label }}
+            </span>
+          </button>
+        }
+      </hlm-dropdown-menu>
+    </ng-template>
+    <button
+      hlmBtn
+      variant="secondary"
+      size="sm"
+      class="w-9 px-0"
+      aria-label="מפת רקע"
+      hlmTooltip="מפת רקע"
+      position="bottom"
+      [hlmDropdownMenuTrigger]="basemapMenu"
+    >
+      <ng-icon name="lucidePalette" />
+    </button>
+    <button
+      hlmBtn
+      variant="secondary"
+      size="sm"
+      class="w-9 px-0"
+      aria-label="צילום מסך"
+      hlmTooltip="צילום מסך"
+      position="bottom"
+      (click)="screenshotClicked.emit()"
+    >
+      <ng-icon name="lucideCamera" />
+    </button>
+    <app-settings-panel />
+    <button
+      hlmBtn
+      size="sm"
+      class="w-9 px-0"
+      aria-label="חיווי ביצועים"
+      [variant]="perfHud().visible() ? 'default' : 'ghost'"
+      [attr.aria-pressed]="perfHud().visible()"
+      (click)="perfHud().toggle()"
+    >
+      <ng-icon name="lucideActivity" />
+    </button>
+  </div>
 </header>

@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
     "basemap:fetch": "powershell -ExecutionPolicy Bypass -File tools/fetch-basemap.ps1",
     "ecmwf:fetch": "python3 -m venv tools/.venv && tools/.venv/bin/pip install -q ecmwf-opendata eccodes numpy && tools/.venv/bin/python tools/fetch-ecmwf.py",
+    "places:fetch": "python3 tools/fetch-places.py",
     "serve:dist": "http-server dist/meteo/browser -p 8080 --silent"
   },
   "private": true,
@@ -28,6 +29,9 @@
     "@deck.gl/extensions": "^9.4.0",
     "@deck.gl/layers": "^9.4.0",
     "@deck.gl/maplibre": "^9.4.0",
+    "@maskito/angular": "^5.6.0",
+    "@maskito/core": "^5.6.0",
+    "@maskito/kit": "^5.6.0",
     "@ng-icons/core": ">=32.0.0 <34.0.0",
     "@ng-icons/lucide": ">=32.0.0 <34.0.0",
     "@ng-icons/material-icons": "^33.4.0",

@@ -11,6 +11,7 @@ import {
 import { HlmTooltip } from '@spartan-ng/helm/tooltip';
 import { PerfHud } from '../../../dev/perf-hud/perf-hud';
 import { MapService } from '../../../engine/map-service';
+import { PlaceSearch } from '../place-search/place-search';
 import { SettingsPanel } from '../settings-panel/settings-panel';
 
 @Component({
@@ -23,6 +24,7 @@ import { SettingsPanel } from '../settings-panel/settings-panel';
     HlmDropdownMenuTrigger,
     HlmTooltip,
     NgIcon,
+    PlaceSearch,
     SettingsPanel,
   ],
   viewProviders: [provideIcons({ lucideActivity, lucideCamera, lucidePalette })],

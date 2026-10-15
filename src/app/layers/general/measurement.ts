@@ -4,7 +4,7 @@ import { Labels } from '../../engine/looks/labels';
 import { Path } from '../../engine/looks/path';
 import { Provider } from '../../objects/provider';
 import { coordinateFormat } from '../../pages/home/settings-panel/settings-controls';
-import { formatDegrees } from '../../utils/geo';
+import { formatDegrees } from '../../utils/coordinates';
 import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs, Layer, LookEntry } from '../base/layer';
 

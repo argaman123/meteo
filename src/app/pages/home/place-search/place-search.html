@@ -1,0 +1,71 @@
+<hlm-autocomplete
+  autoHighlight
+  [(search)]="query"
+  (valueChange)="pickPlace($event)"
+  (closed)="isEnteringCoordinates.set(false)"
+>
+  <hlm-autocomplete-input
+    placeholder="חיפוש"
+    showClear
+    (focusin)="placeSearchService.loadPlaces()"
+    (click)="openSearch()"
+  />
+  <hlm-autocomplete-content *hlmAutocompletePortal>
+    @if (isEnteringCoordinates()) {
+      <app-coordinates-form class="p-3" (entered)="showCoordinates($event)" />
+    } @else {
+      <div hlmAutocompleteList>
+        @for (place of results(); track $index) {
+          <hlm-autocomplete-item [value]="place">
+            <span dir="auto">{{ place.name }}</span>
+            <span class="text-xs text-muted-foreground">{{ place.detail }}</span>
+          </hlm-autocomplete-item>
+        }
+      </div>
+      <div class="border-t p-1">
+        <button
+          hlmBtn
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          (click)="isEnteringCoordinates.set(true)"
+        >
+          <ng-icon name="lucideMapPin" />
+          הזנת נ.צ.
+        </button>
+      </div>
+    }
+  </hlm-autocomplete-content>
+</hlm-autocomplete>
+@for (place of placeSearchService.activePlaces(); track $index) {
+  <div
+    [appMapPin]="place.point"
+    class="pointer-events-none relative flex size-0 items-end justify-center"
+  >
+    <button
+      class="group pointer-events-auto relative flex shrink-0 justify-center"
+      aria-label="הסרה"
+      (click)="placeSearchService.hidePlace(place)"
+    >
+      <svg
+        viewBox="0 0 24 30"
+        class="h-9.5 w-7.5 fill-white stroke-[#0f172a] stroke-[1.5] drop-shadow-[0_1px_4px_rgb(0_0_0/0.6)]"
+      >
+        <path d="M12 29s9-8.6 9-16.5A9 9 0 0 0 3 12.5C3 20.4 12 29 12 29z" />
+        <circle cx="12" cy="12.5" r="3.3" class="fill-[#0f172a] stroke-none" />
+      </svg>
+      <span
+        class="invisible absolute top-[9px] flex size-[16px] items-center justify-center rounded-full bg-destructive text-white group-hover:visible"
+      >
+        <ng-icon name="lucideX" size="11" />
+      </span>
+    </button>
+    @if (place.name) {
+      <span
+        class="absolute top-0.5 text-sm font-semibold whitespace-nowrap text-white [text-shadow:0_0_3px_#0f172a,0_0_3px_#0f172a,0_0_3px_#0f172a]"
+      >
+        <span dir="auto">{{ place.name }}</span>
+      </span>
+    }
+  </div>
+}

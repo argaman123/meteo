@@ -1,4 +1,4 @@
-# Point views — chooser, meteogram, sounding table, measure
+# Point views — chooser, meteogram, sounding table, measure, place search
 
 ## Chooser and point (`pages/home/point-menu/`)
 
@@ -80,11 +80,57 @@
 - Every distance reads `km · arc degrees` (degrees in the coordinates setting's DD/DMS), via
   `@turf/distance`. Nothing persists.
 
+## Place search (`pages/home/place-search/`)
+
+- A spartan autocomplete centered in the top bar (חיפוש placeholder, ✕ clears the text). A click
+  on the box opens the dropdown: place results (names only, 8, first highlighted so Enter picks
+  it), then a הזנת נ.צ. row (a plain button, so arrow keys reach only the results). The places
+  file (`public/search/places.json`, 2.9 MB, 1.2 MB gzipped) loads on the box's first focus.
+- Every pick adds a pin to one session-only list (`activePlaces`); the same place twice = two
+  pins. A pick flies to zoom 11, clears the box and closes the dropdown. A pin is the white drop
+  pin (tip on the point); a named pin has its name centered under the tip as white text with a
+  dark outline, like the map's own labels. Hovering a pin puts a small red ✕ circle (16 px,
+  the `destructive` token) inside the pin's head; clicking removes the pin.
+- הזנת נ.צ. turns the dropdown into `CoordinatesForm`: tabs DD / DMS / UTM / גריד מבצעי (the
+  settings' labels; the last used tab is kept for the session, DD first), a הצג נ.צ. button and
+  ONE masked field per tab (Maskito, `@maskito/angular` + `kit`). `FORMAT_PATTERNS` is the whole
+  spec: `#` = digit, `א` = Hebrew letter, a digit = an editable preset, anything else is fixed
+  text — `##.#### N, ##.#### E`, `##°##'##"N ##°##'##"E`, `36 ######E #######N`, `## ## אא`. The
+  rest of the pattern shows as `_` while typing; typing hops over fixed text. A preset only works
+  at the start (UTM's zone 36): the mask fills left to right, so one in the middle gets pushed
+  along by the typing. Enter shows. The field's text (placeholder
+  removed) goes straight to `parseCoordinates(text, format)` — no gluing. Pasting into the open
+  tab's field works through the mask (it files the digits in); it doesn't switch tabs. 2-digit degrees, N/E only. The point
+  is named by the search box's text when shown (empty = unnamed); the form stays while that text
+  is edited.
+- `parseCoordinates` (`utils/coordinates.ts`) is strict to the app's own display text (variants
+  from other programs get added when someone needs them); DD also takes the form's ` N` / ` E`,
+  UTM's band letter is optional (north).
+- Names: `normalizeForSearch` (`utils/text.ts`) folds case, niqqud, diacritics, quotes/geresh and
+  punctuation. Hebrew, Latin and ICAO names match; starts-with before contains, file order after
+  that — the file is pre-sorted Israel/West Bank/Gaza first, then population.
+- Row = name + a gray detail line: ICAO for airports, else the Latin name (when the row shows a
+  Hebrew name) · the browser's Hebrew country name (`Intl.DisplayNames('he')`); an entered
+  point's detail is its coordinates in the tab's format.
+- `PlaceSearchService`: the places resource, `activePlaces`, `entryFormat`, `findPlaces` /
+  `showPlace` / `hidePlace`. `Place` (`objects/place.ts`) = name, detail,
+  point, lookup names — `fromEntry` for the file, `fromCoordinates` for entered points.
+- Data: `npm run places:fetch` (`tools/fetch-places.py`) — GeoNames: every Israel / West Bank /
+  Gaza settlement, airport and mountain + world towns ≥ 5,000; Hebrew names from GeoNames' `he`
+  names.
+
 ## Rejected (don't re-offer)
 
 - A left-click chooser — it reopened on the closing click.
 - A disabled-while-open chooser, right-click-moves-the-point — one rule per gesture.
 - Per-view pins, or `meteogramService.point() ?? soundingTableService.point()` — one PointService.
+- Place search: town outlines and coordinate boxes on the map — pins; coordinates typed into the
+  search box — they go through הזנת נ.צ.
+- A pin's name beside the pin, or in a frosted chip — outlined text under the tip.
+- Kind labels (שדה תעופה / הר) or hand-made region names (יו״ש / עזה) in a result's detail line.
+- Hand-built coordinate boxes (one input per part, jumping between them) — one masked field.
+- A pin list with ✕ rows in the search dropdown, or a small ✕ beside the pin's name — hovering
+  shows the ✕ inside the pin's head — never larger than the head.
 - Meteogram as a side column, a replacement panel, a floating card, or folder tabs over the map.
 - Pressure-scaled height axis — linear, consistent distances.
 - Hatch patterns, label backgrounds, outlines or collision placement in the clouds tab; day lines;

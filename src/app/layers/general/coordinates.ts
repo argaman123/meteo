@@ -1,6 +1,6 @@
 import { Signal, signal } from '@angular/core';
 import { coordinateFormat } from '../../pages/home/settings-panel/settings-controls';
-import { formatCoordinates } from '../../utils/geo';
+import { formatCoordinates } from '../../utils/coordinates';
 import { Layer, LookEntry } from '../base/layer';
 
 export class Coordinates extends Layer<true> {
