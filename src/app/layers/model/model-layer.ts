@@ -10,7 +10,7 @@ import { hoursToMs, snapToStep } from '../../utils/time';
 import { Quantity, Unit, format } from '../../utils/units';
 import { Inputs, Layer } from '../base/layer';
 
-export const LOCAL_COVERAGE: Bounds = [0, 24, 50, 52];
+export const LOCAL_COVERAGE: Bounds = [19, 19, 55, 46];
 
 export function modelAtPoint(lon: number, lat: number): Model {
   return contains(LOCAL_COVERAGE, lon, lat) ? Model.Local : Model.Wide;

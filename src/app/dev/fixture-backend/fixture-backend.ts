@@ -182,7 +182,7 @@ const ROUTES: Route[] = [
         Number(request.params.get('end')),
         request.params.get('source') ?? '',
         request.params.get('sector') ?? '',
-        Number(request.params.get('sat_id')),
+        request.params.get('sat_id') ?? '',
       ),
   },
   {

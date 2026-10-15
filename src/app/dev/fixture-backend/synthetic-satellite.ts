@@ -39,7 +39,7 @@ export function satImages(
   end: number,
   source: string,
   sector: string,
-  satelliteId: number,
+  satelliteId: string,
 ): SatImage[] {
   const step = minutesToMs(sector === 'noaeq' ? 5 : 15);
   const latest = Math.floor(Date.now() / step) * step;

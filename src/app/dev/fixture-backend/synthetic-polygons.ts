@@ -42,8 +42,8 @@ export function syntheticPolygons(
   if (frameHours % 24 < 9) polygons.push(fogPatch(frameHours));
   for (const shape of polygons) {
     for (const point of shape.coordinates) {
-      point[0] += bounds[1] - SCENE_ORIGIN.lat;
-      point[1] += bounds[0] - SCENE_ORIGIN.lon;
+      point[0] += bounds[0] - SCENE_ORIGIN.lon;
+      point[1] += bounds[1] - SCENE_ORIGIN.lat;
     }
     shape.coordinates.push(shape.coordinates[0]);
   }
@@ -70,7 +70,7 @@ export function syntheticPointEvents(
     if (!state) return [];
     const forecastEvents = state.polygons
       .filter((shape) =>
-        booleanPointInPolygon([lon, lat], polygon([shape.coordinates.map(([la, lo]) => [lo, la])])),
+        booleanPointInPolygon([lon, lat], polygon([shape.coordinates])),
       )
       .flatMap((shape) => shape.forecastEvents);
     return forecastEvents.length ? [{ startTime: state.startTime, forecastEvents }] : [];
@@ -104,25 +104,23 @@ function lowCloud(frameHours: number): ForecastPolygon {
         precip_type: RAIN_TYPES[step % RAIN_TYPES.length],
         precip_prob: 30 + (frameHours % 5) * 10,
       },
-      events:
-        frameHours % 12 >= 6
-          ? [
-              {
-                type: 'CB',
-                parameters: { cb_type: ['SCATTERED', 'CB', 'CLOUDY'][step % 3], cb_prob: 40 },
-                events: [],
-              },
-            ]
-          : [],
+      events: [],
     });
+    if (frameHours % 12 >= 6) {
+      event.events.push({
+        type: 'CB',
+        parameters: { cb_type: ['SCATTERED', 'CB', 'CLOUDY'][step % 3], cb_prob: 40 },
+        events: [],
+      });
+    }
   }
   return shape(
     [
-      [30.3, 31.6],
-      [30.1, east],
-      [31.4, east + 0.7],
-      [32.4, east - 0.3],
-      [32.1, 31.8],
+      [31.6, 30.3],
+      [east, 30.1],
+      [east + 0.7, 31.4],
+      [east - 0.3, 32.4],
+      [31.8, 32.1],
     ],
     [event],
   );
@@ -132,10 +130,10 @@ function midCloud(frameHours: number): ForecastPolygon {
   const west = 33.6 + 0.25 * Math.cos(frameHours / 5);
   return shape(
     [
-      [30.6, west],
-      [30.9, west + 2.6],
-      [32.6, west + 2.2],
-      [32.2, west - 0.4],
+      [west, 30.6],
+      [west + 2.6, 30.9],
+      [west + 2.2, 32.6],
+      [west - 0.4, 32.2],
     ],
     [cloud(10, 18, 2 + (Math.round(frameHours / 3) % 6))],
   );
@@ -145,11 +143,11 @@ function highCloud(frameHours: number): ForecastPolygon {
   const east = 34.72 + 0.3 * Math.sin(frameHours / 4);
   return shape(
     [
-      [30.42, 31.72],
-      [30.22, east],
-      [31.52, east + 0.7],
-      [32.52, east - 0.3],
-      [32.22, 31.92],
+      [31.72, 30.42],
+      [east, 30.22],
+      [east + 0.7, 31.52],
+      [east - 0.3, 32.52],
+      [31.92, 32.22],
     ],
     [cloud(25, 32, 1 + (Math.round(frameHours / 3) % 7))],
   );
@@ -160,10 +158,10 @@ function surfaceHaze(frameHours: number): ForecastPolygon {
   const band = VISIBILITY_BANDS[(1 + Math.round(frameHours / 3)) % VISIBILITY_BANDS.length];
   return shape(
     [
-      [29.2, 32.4],
-      [29.3, 35.9],
-      [north, 35.5],
-      [north - 0.1, 32.8],
+      [32.4, 29.2],
+      [35.9, 29.3],
+      [35.5, north],
+      [32.8, north - 0.1],
     ],
     [
       {
@@ -179,10 +177,10 @@ function highHaze(frameHours: number): ForecastPolygon {
   const band = VISIBILITY_BANDS[Math.round(frameHours / 3) % VISIBILITY_BANDS.length];
   return shape(
     [
-      [31.9, 34.9],
-      [32.1, 36.2],
-      [33.2, 36.0],
-      [33.1, 34.6],
+      [34.9, 31.9],
+      [36.2, 32.1],
+      [36.0, 33.2],
+      [34.6, 33.1],
     ],
     [
       {
@@ -205,10 +203,10 @@ function fogPatch(frameHours: number): ForecastPolygon {
   });
   return shape(
     [
-      [32.5 - size, 33.6 - size],
-      [32.5 - size, 33.6 + size],
-      [32.5 + size, 33.6 + size],
-      [32.5 + size, 33.6 - size],
+      [33.6 - size, 32.5 - size],
+      [33.6 + size, 32.5 - size],
+      [33.6 + size, 32.5 + size],
+      [33.6 - size, 32.5 + size],
     ],
     [event],
   );

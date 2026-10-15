@@ -100,7 +100,7 @@ niche need means simplify the requirement first; a new member is the lead's call
   — the backend interpolates in time, so model layers step hourly. Pressures:
   `/model/data-limited/{model}/MB{mb}|SFC/{param}/{displayTime snapped to 3 h}/params` (exact model
   times only — snap, never interpolate). bbox params `min_lon…max_lat`.
-- Model: `modelOf(bbox)` = `ECMWF` (local) when the bbox fits `LOCAL_COVERAGE` (placeholder box),
+- Model: `modelOf(bbox)` = `ECMWF` (local) when the bbox fits `LOCAL_COVERAGE` (ECMWF01's grid),
   else `BIG_ECMWF`. Waves override it with their own control. `modelAtPoint` serves point views.
 - Surface asks the `SURFACE_` variant where the backend needs it (TMP, RH).
 - `levelOf(level)` maps the rail level to the requested one; `undefined` = no map at this level →
@@ -182,8 +182,8 @@ time. One item is a `Lightning` (never "strike").
 - Relevance = `mapValidity(startTime)` = ±1.5 h (stand-in), shared with the meteogram clouds. It must
   hand over at the midpoint between maps, where the time bar's nearest-stop snap switches —
   otherwise live time shows a blank gap.
-- `PolygonMap` (`objects/`) flips `[lat, lon]` → `[lon, lat]` (order ASSUMED) and clips rings to the
-  sector square (Turf `bboxClip`).
+- `PolygonMap` (`objects/`) clips the wire's `[lon, lat]` rings to the sector square (Turf
+  `bboxClip`).
 - Sector control (Table): `SECTOR-DEV` מקומי / `SECTOR-BIG` אזורי, bounds in `SECTORS` (from
   MagenS).
 - One file per event kind implementing `EventAppearance<E>` (`name`, `style`, `hoverText`), keyed

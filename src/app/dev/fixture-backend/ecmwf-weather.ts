@@ -130,7 +130,6 @@ export class EcmwfWeather {
         param: wireParameter,
         pressure: pressureMb === null ? '-' : `MB${pressureMb}`,
         height: heightFeet === null ? '-' : heightFeet,
-        direction_stack: true,
       },
       values,
     };

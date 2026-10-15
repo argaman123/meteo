@@ -13,8 +13,7 @@ export class PolygonMap {
   static fromState(state: PolygonsState, bounds: Bounds): PolygonMap {
     const areas: ForecastPolygon[] = [];
     for (const shape of state.polygons) {
-      const ring = flipCoordinates(shape.coordinates);
-      for (const clipped of clipToBounds(ring, bounds)) {
+      for (const clipped of clipToBounds(shape.coordinates, bounds)) {
         areas.push({ ...shape, coordinates: clipped });
       }
     }
@@ -27,10 +26,6 @@ export class PolygonMap {
       .filter((area) => booleanPointInPolygon(cursor, polygon([area.coordinates])))
       .flatMap((area) => area.forecastEvents);
   }
-}
-
-function flipCoordinates(coordinates: [number, number][]): [number, number][] {
-  return coordinates.map(([lat, lon]) => [lon, lat]);
 }
 
 function clipToBounds(ring: [number, number][], bounds: Bounds): [number, number][][] {

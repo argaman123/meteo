@@ -17,7 +17,6 @@ export interface ModelWrapInfo {
   param: string;
   pressure: string;
   height: string | number;
-  direction_stack: boolean;
 }
 
 export interface RadarWrapInfo {

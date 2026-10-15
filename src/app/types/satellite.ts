@@ -15,7 +15,7 @@ export interface LimitedSatConf {
 export interface SatImage {
   imgTime: number;
   satelliteType: string;
-  satelliteId: number;
+  satelliteId: string;
   satelliteSector: string;
   satelliteSource: string;
   fileName: string;

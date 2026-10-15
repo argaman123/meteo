@@ -2,7 +2,9 @@
 
 The backend is **hzy-liba** (Python FastAPI, `~/Desktop/code/hzy-liba`) — the standard. **MagenS**
 (Java, `~/Desktop/code/MagenS`, old production) is consulted only for what Python lacks. Paths are
-hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-asks.md).
+hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-asks.md). Real
+responses the lead captured: `~/Desktop/for_argos/<area>/<route>.json` (first line = the request in
+`{{…}}`, sometimes a `post_body:{{{…}}}`, then the body) — the ground truth over code reading.
 
 ## Rules (lead)
 
@@ -50,10 +52,14 @@ hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-
 
 ## Models
 
-- `ModelEnum`: ECMWF (archive ECMWF01 — our "local"), BIG_ECMWF (ECMWF03 — "wide"), UKMET, NCEP,
+- `ModelEnum`: ECMWF (archive ECMWF01 — our "local"), BIG_ECMWF (ECMWF03 — "wide"), UKMET_NEW, NCEP,
   ICON, ICON_IL, ECMWF_WAVE (+ variants), ECMWF_DUST, FLIGHT, CMEMS, MAGEN_* (WRF). No
-  coverage/bounds endpoint and no automatic model choice — the local coverage box is hardcoded in
-  the frontend (placeholder until the lead sends the real one).
+  coverage/bounds endpoint and no automatic model choice — the local box is hardcoded in the
+  frontend (`LOCAL_COVERAGE`). ECMWF01's real grid: 0.1°, lon 19–55, lat 19–46 (lead-confirmed),
+  south-first — from `GET /model/get_data/{model}/{alt}/{param}/{time}/params`, which returns the
+  whole native archive grid (ignores bbox and `reduction`).
+- `wrap_info.param` echoes the archive name (`HGT` → `GH`); `direction_stack` is absent on plain
+  params. `/model/height/{model}` → max height in ft (ECMWF 80000).
 - Params: `TMP` (°C; at SFC ECMWF needs `SURFACE_TMP`), `HGT` (m; at SFC the backend serves MB1000),
   `RH` (at SFC → `SURFACE_RH`), `SLP` (height 0, hPa), `DEWPOINT`, `WIND` (`[speed_kt, dir_rad]`),
   `WINDSTR`/`WINDDIR`. `U`/`V` are ask 1. Waves: `WAVE_HEIGHT` (m) + `WAVE_DIR` (degrees "from") on
@@ -83,22 +89,40 @@ hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-
   snow types we ignore), `precip_prob`; CB `cb_type` SCATTERED / CB / CLOUDY, `cb_prob`; FOG/HAZE
   `*_min_vis` / `*_max_vis` (km), HAZE `haze_base`/`haze_top` (no surface flag). TURBULENCE, WIND,
   SNOW are obsolete.
-- Coordinate order unconfirmed: hzy-liba assumes `[lat, lon]`, MagenS's point query reads
-  `[lon, lat]` — we flip as `[lat, lon]` (ASSUMED until a real archive file is checked).
+- Coordinates are `[lon, lat]`, rings closed (real sample; places and stations are `"[lon, lat]"`
+  strings too).
+- A state: `{ startTime, endTime, sector, status, timeEdited, polygons }`; each polygon carries its
+  own `status`. Real CLOUD also sends `cloud_is_layered`, `cloud_is_layered_in_waves`,
+  `cloud_freezing_level`; PRECIPITATION `precip_frequency` (`LOCAL`, `SOMETIMES`, `INTERMITTENTLY`,
+  `OCCASIONALLY`), `precipMinBase`/`precipMaxTop`, accumulation/visibility fields; CB
+  `cbMinBase`/`cbMaxTop`, `cbMinVis`/`cbMaxVis`, `cb_const_wind`, `cb_gust`, `cb_sand_storm`,
+  `cb_heavy_hail`. In the sample CB sits directly under CLOUD.
 
 ## Satellite (seconds)
 
-- Satellites 8, 9. Channels `IR10.8` and `FLC` (a `source`); no color channel in Python. Sectors
-  `modeq`, `noaeq` (default), `naseq`, `srneq`.
-- `filterBy` → `SatImage[] { imgTime (s), satelliteId, fileName, … }`; `getImageBy?name` → a 1024²
+- Real archive (`getBy?start&end`, every image of every source): satellites 8 (`IR10.8`, `IR12.0`,
+  `IR3.9`, `IR8.7`, `IR9.7`, `IR1.6`, `WV6.2`, `WV7.3`, `VIS0.6`, `HRV`, `DUST`, `FLC`; 5 min) and 9
+  (`IR10.8`, `WV6.2`, `WV7.3`, `VIS0.6`, `HRV`, `DUST`, `FLC`; 15 min) as `.xml` files; satellite 12
+  (MTG: `COLORED`, `AIRMASS`, `DAY`, `DUST`, `FOG`, `FLC`, `LIAF`, `IR10.5`, `VIS0.9`; 10 min) as
+  ready `.png` files. Sectors `modeq`, `noaeq` (default), `naseq`, `srneq`; sector bounds also list
+  satellite 10.
+- `filterBy` → `SatImage[] { imgTime (s), satelliteId (a string, "9"), fileName, … }`; `getImageBy?name` → a 1024²
   PNG, linear lat/lon over the sector box, raw unless `equalize=true`. IR calibration on the raw
   image: `°C = gray // 2 − 80` (`radar/common/processing/cleaning.py`).
 - Bounds: `/satellite-sectors/get-all` → per satellite, per sector, per date (we take the latest).
+- `getWrapData?file_name` → the image as a 1024² `Wrap` of gray 0–255; `getAllIRPresets` → 40 IR
+  color presets, each a JSON string `{ id, colors: [{ min, max, minColor, maxColor }] }` (°C).
 - `getConfiguration` → `LimitedSatConf[]` — a schedule (`channel, startDateTime, startHour,
   endDateTime, endHour, satellite`), ported from MagenS's getConfigurationNativ logic.
   `getConfigurationNative` is broken.
 
 ## Radar (seconds)
+
+- Radars: `/radar_configuration/get_radars` → `{ name, type, resolution, angle, … }[]`: rain
+  `merged` (PPI), `meron`/`ramon`/`mekorot` (MAX), `h5cy`, `cyprus`, `larnaca`, `paphos`, `eilat`,
+  `eilatNew`, `hatay`, `ersrum`, `sanliufra` (SCAN); birds `mergedBIRD`, `meronBIRD`, `eilatBIRD`.
+  The live list (`get_live_radar`) is emptied while the radars are off for the summer (sampled
+  `["x"]`), so `get_time_range_to_live_radars` returns `{}` then — expected.
 
 - `get_time_range_to_live_radars` → `{ "<time s>": RadarEntity[] }` (`{ time, fileName, radarName,
   radarType, fileVersion (1 cartesian, 2 polar, 3 bird) }`); `…_to_radars?names` and
@@ -106,7 +130,7 @@ hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-
 - Frames: only `get_recent?name` (latest) or the heavy `POST get_wrap_for_entities` (recomputes
   from XML). Wrap of rain mm/h, no nulls: 0 = no echo, **negative = cleaned echo** (clutter/noise —
   the magnitude is real). Bird frames (`fileVersion: 3`) have no negatives; cell = height, unit
-  ASSUMED meters.
+  ASSUMED meters (the sampled eilatBIRD frame peaks at 4162).
 
 ## Observations
 
@@ -123,9 +147,14 @@ hzy-liba `src/components/…` unless noted. Our asks: [backend-asks.md](backend-
 
 ## Not used yet
 
-- Real radiosondes (`/sonde`): `get-times`, `get-by-time`, `get-latest-sonde`, `get-nearest-sonde`
-  → levels like `AirLevelData` + `time` (−9999 = null; a real 0 also becomes −9999). Stations:
-  `/places/get-sonde-stations`.
+- Real radiosondes (`/sonde`, seconds): `get-times`, `get-latest-times`, `get-relevant-stations`,
+  `get-by-time`, `get-latest-sonde`, `get-nearest-sonde` → `{ real, interp }`, each a list of levels
+  like `AirLevelData` + `time`, unsorted, `windDir` in degrees (−9999 = null; a real 0 also becomes
+  −9999). Stations: `/places/get-sonde-stations` → `{ block_station, station_call, place }`.
+- Also sampled, unused: `/timeline` (forecaster timeline: flat events per place), `/new-warnings`,
+  `/warnings`, `/base-status` (status + latest observation per base), `/bl-view` (base64 PNG images),
+  `/observations/getByBlockAndTimeRange` (full METAR rows per station), `/places/*`,
+  `/images/*` (rendered bird-forecast and base-status pictures).
 
 ## Open
 
