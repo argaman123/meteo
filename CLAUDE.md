@@ -43,7 +43,8 @@ by ~25 rotating juniors over 6 years — a mess. The Python backend is being reb
   an option whose description mentions committing. Leave unapproved work out of a commit.
 - Never touch the git index unless he asks. No `git add`, `reset`, `restore --staged`, `mv`, `rm`,
   `stash` or `checkout <rev> --` — move and delete files with plain `mv`/`rm`. Staged = he has
-  scanned it (still open to edits, not locked); unstaged = not reviewed yet.
+  scanned it (still open to edits, not locked); unstaged = not reviewed yet. An extension
+  auto-stages files he skips reading (docs) — staged text is never another author's work.
 - His code is his: suggest, never redesign it. He edits mid-review — re-read before editing, adopt
   his renames, never revert. Prettier only on files you created; match his hand formatting.
 - `// TODO: UNVERIFIED CODE BELOW` marks code he hasn't read — never remove or move it (extend it
