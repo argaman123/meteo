@@ -1,8 +1,6 @@
-import type { Layer as DeckLayer } from '@deck.gl/core';
-import { PathStyleExtension, PathStyleExtensionProps } from '@deck.gl/extensions';
-import { PathLayer } from '@deck.gl/layers';
 import { rgba } from '../../utils/color-scale';
 import { Look, LookKind } from '../base/look';
+import { LineOverlay, Overlay } from '../base/overlay';
 import { OUTLINE_COLOR } from '../map-service';
 
 export interface PathInput {
@@ -13,34 +11,15 @@ export interface PathInput {
 export class Path extends Look<PathInput> {
   readonly kind = LookKind.Lines;
 
-  deckLayer(id: string, input: PathInput): DeckLayer[] {
+  buildLook(input: PathInput): Overlay[] {
+    const last = input.points[input.points.length - 1];
     return [
-      new PathLayer<PathInput>({
-        id: `${id}-outline`,
-        data: [input],
-        getPath: (path) => path.points,
-        getColor: rgba(OUTLINE_COLOR, 200),
-        getWidth: 5,
-        widthUnits: 'pixels',
-      }),
-      new PathLayer<PathInput>({
-        id: `${id}-line`,
-        data: [input],
-        getPath: (path) => path.points,
-        getColor: rgba('#ffffff', 255),
-        getWidth: 2.5,
-        widthUnits: 'pixels',
-      }),
-      new PathLayer<[number, number][], PathStyleExtensionProps<[number, number][]>>({
-        id: `${id}-next`,
-        data: input.nextPoint ? [[input.points[input.points.length - 1], input.nextPoint]] : [],
-        getPath: (leg) => leg,
-        getColor: rgba('#ffffff', 200),
-        getWidth: 2,
-        widthUnits: 'pixels',
-        getDashArray: [4, 3],
-        extensions: [new PathStyleExtension({ dash: true })],
-      }),
+      new LineOverlay([{ path: input.points, color: rgba(OUTLINE_COLOR, 200), width: 5 }]),
+      new LineOverlay([{ path: input.points, color: rgba('#ffffff', 255), width: 2.5 }]),
+      new LineOverlay(
+        input.nextPoint ? [{ path: [last, input.nextPoint], color: rgba('#ffffff', 200), width: 2 }] : [],
+        true,
+      ),
     ];
   }
 }

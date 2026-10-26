@@ -26,3 +26,7 @@
 16. **Observation clouds** — a station is colored by its largest layer cover?
 17. **Sounding תיקון** — true height minus what a 1013-set altimeter reads; is that the sign forecasters expect?
 18. **Meteogram isotachs** — the marked wind lines are 25 and 45 kt?
+
+## Config
+
+19. **CORS origins** — add `http://localhost:4200` and the new site's nginx host to `origins` in `src/main.py` (the browser calls the backend directly).

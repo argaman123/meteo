@@ -197,7 +197,7 @@ export class MapService {
 
   private async applyStyle(id: BasemapId): Promise<void> {
     const style = await this.loadBasemapStyle(id);
-    this.map?.setStyle(style);
+    this.map?.setStyle(style, { diff: false });
   }
 
   private async loadBasemapStyle(id: BasemapId): Promise<maplibregl.StyleSpecification> {

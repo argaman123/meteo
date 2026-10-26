@@ -6,7 +6,7 @@
     "schematicCollections": [
       "angular-eslint"
     ],
-    "analytics": "870a03a8-79b1-48ac-93af-0c27c35f92d2"
+    "analytics": false
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -29,10 +29,18 @@
               }
             ],
             "styles": ["src/styles.css"],
-            "allowedCommonJsDependencies": ["maplibre-gl", "earcut"]
+            "allowedCommonJsDependencies": ["maplibre-gl", "earcut"],
+            "webWorkerTsConfig": "tsconfig.worker.json"
           },
           "configurations": {
             "production": {
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "public",
+                  "ignore": ["fixtures/**"]
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -50,11 +58,16 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
+              "sourceMap": true
+            },
+            "fixtures": {
+              "optimization": false,
+              "extractLicenses": false,
               "sourceMap": true,
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",
-                  "with": "src/environments/environment.development.ts"
+                  "with": "src/environments/environment.fixtures.ts"
                 }
               ]
             }
@@ -69,6 +82,9 @@
             },
             "development": {
               "buildTarget": "meteo:build:development"
+            },
+            "fixtures": {
+              "buildTarget": "meteo:build:fixtures"
             }
           },
           "defaultConfiguration": "development"

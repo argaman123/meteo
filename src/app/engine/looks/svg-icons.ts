@@ -1,9 +1,7 @@
-import { Signal } from '@angular/core';
-import type { Layer as DeckLayer } from '@deck.gl/core';
-import { IconLayer } from '@deck.gl/layers';
+import { Signal, signal } from '@angular/core';
 import { Provider } from '../../objects/provider';
-import { rgba } from '../../utils/color-scale';
 import { Legend, Look, LookKind } from '../base/look';
+import { IconOverlay, IconScaling, Overlay } from '../base/overlay';
 import { OUTLINE_COLOR } from '../map-service';
 
 interface IconPoint {
@@ -16,42 +14,65 @@ export interface SvgIconsInput {
   points: IconPoint[];
 }
 
-interface IconPart {
-  point: IconPoint;
-  outline: boolean;
-}
-
 export class SvgIcons extends Look<SvgIconsInput> {
   readonly kind = LookKind.Points;
-  private readonly outlineColor = rgba(OUTLINE_COLOR);
+  private readonly loaded = signal(0);
+  private readonly outline: HTMLImageElement;
+  private readonly fill: HTMLImageElement;
 
   constructor(
     provider: Provider<SvgIconsInput>,
-    private readonly icon: string,
+    icon: string,
     private readonly size: number,
     override readonly legend: Signal<Legend | null>,
   ) {
     super(provider);
+    this.outline = this.loadIcon(`${icon}-outline`);
+    this.fill = this.loadIcon(icon);
   }
 
-  deckLayer(id: string, input: SvgIconsInput): DeckLayer {
-    const outlineIcon = this.iconFile(`${this.icon}-outline`);
-    const fillIcon = this.iconFile(this.icon);
-    return new IconLayer<IconPart>({
-      id,
-      data: input.points.flatMap((point) => [
-        { point, outline: true },
-        { point, outline: false },
-      ]),
-      getIcon: (part) => (part.outline ? outlineIcon : fillIcon),
-      getPosition: ({ point }) => [point.lon, point.lat],
-      getColor: (part) => (part.outline ? this.outlineColor : rgba(part.point.color)),
-      getSize: this.size,
-      sizeUnits: 'pixels',
-    });
+  buildLook(input: SvgIconsInput): Overlay[] {
+    if (this.loaded() < 2) return [];
+    return [
+      new IconOverlay(
+        input.points.map((point) => ({
+          position: [point.lon, point.lat],
+          sprite: { key: point.color, create: () => this.createIcon(point.color) },
+          size: this.size,
+          angle: 0,
+          opacity: 1,
+        })),
+        IconScaling.Pixels,
+      ),
+    ];
   }
 
-  private iconFile(name: string) {
-    return { id: name, url: `icons/${name}.svg`, width: 64, height: 64, mask: true };
+  private createIcon(color: string): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(this.tinted(this.outline, OUTLINE_COLOR), 0, 0);
+    context.drawImage(this.tinted(this.fill, color), 0, 0);
+    return canvas;
+  }
+
+  private tinted(image: HTMLImageElement, color: string): HTMLCanvasElement {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const context = canvas.getContext('2d')!;
+    context.drawImage(image, 0, 0, 64, 64);
+    context.globalCompositeOperation = 'source-in';
+    context.fillStyle = color;
+    context.fillRect(0, 0, 64, 64);
+    return canvas;
+  }
+
+  private loadIcon(name: string): HTMLImageElement {
+    const image = new window.Image(64, 64);
+    image.onload = () => this.loaded.update((count) => count + 1);
+    image.src = `icons/${name}.svg`;
+    return image;
   }
 }

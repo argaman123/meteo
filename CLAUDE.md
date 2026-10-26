@@ -56,6 +56,8 @@ by ~25 rotating juniors over 6 years — a mess. The Python backend is being reb
   Build the simplest concrete version first to prove the plumbing, in the shape it will grow into.
 - Execute inline, never subagent-per-task. Docs meant for humans (backend asks) are one-liners.
 - Review lists and reading orders cover product code only (never `dev/` or `docs/`).
+- After every change, set Vet's review plan (`set_review_plan`): changed files in reading order,
+  a short summary each, notes on the key functions — so a big batch shows what to look at and where.
 - **The tree breathes**: place things generally right; when a file or folder gets crowded, propose
   a reorganization — he decides, every time. Never restructure silently.
 - **Docs are ours** (he doesn't read them). He makes us do trivial edits so we learn his taste:
@@ -66,8 +68,8 @@ by ~25 rotating juniors over 6 years — a mess. The Python backend is being reb
 ## 3. Stack (locked — rationale in docs/decisions.md)
 
 Angular 22 (standalone, zoneless, signals-first, SPA) · spartan/ui on CDK + Tailwind · one signal
-`@Service` per domain · MapLibre GL + deck.gl + luma.gl with first-party looks (flat; globe as a
-setting) · Turf.js, d3-scale/color/interpolate · no i18n framework, RTL mandatory · Chrome 112
+`@Service` per domain · MapLibre GL only, first-party looks drawn through our own overlay bridge
+(flat; globe as a setting) · Turf.js, d3-scale/color/interpolate · no i18n framework, RTL mandatory · Chrome 112
 floor · light/manual testing + strict TS + ESLint/Prettier, no committed tests · open internet in
 development, closed network at delivery (all runtime assets self-hosted, deps vendored at cutover).
 
@@ -78,7 +80,7 @@ locked conventions win where they differ.
 
 ## 4. Architecture rules
 
-1. **Engine boundary.** maplibre, deck.gl and luma.gl are imported only in `src/app/engine/`.
+1. **Engine boundary.** maplibre is imported only in `src/app/engine/`.
    `MapService` owns the map and is the library boundary.
 2. **A layer is a definition, not engine code.** A layer of an existing look = one file in
    `layers/` + a registry entry. Layers read platform state only through `Inputs`.
@@ -106,8 +108,9 @@ src/app/
   pages/daily-forecast/  # תחזית יומית: fixed polygon maps per time (forecast-map/) + service
   services/          # cross-domain services: TimeService, PlayerService, LevelService,
                      #   ScreenshotService
-  engine/            # map-service.ts, overlay-service.ts, globe-occlusion.ts, base/ (Look,
-                     #   AnimatedLayer, GridIcons, PointIcons, sprite-cache), looks/ (one per look)
+  engine/            # map-service.ts, overlay-service.ts, base/ (Look, Overlay, GridIcons,
+                     #   PointIcons, background worker), looks/ (one per look), maplibre/ (one
+                     #   renderer per overlay kind + the per-look FeatureSource)
   layers/            # layers-service.ts, registry.ts, base/ (Layer, LoopLayer, LayerGroup,
                      #   Shortcut), one folder per kind: model/, polygons/, satellite/, radar/,
                      #   birds/, lightning/, observations/, general/ (coordinates, measurement)
@@ -119,8 +122,8 @@ src/app/
                      #   controls, contours, interpolation, color-scale, thermodynamics, wind,
                      #   coordinates (text formats), text…)
   dev/               # quarantine: fixture backend + perf HUD — product code never imports it
-                     #   (pages may mount dev widgets; environment.development.ts registers the
-                     #   fixture interceptor, prod swaps the file out)
+                     #   (pages may mount dev widgets; environment.fixtures.ts registers the
+                     #   fixture interceptor — `npm run start:fixtures` only)
 src/spartan/         # spartan Helm components copied in — ours to fix, imported @spartan-ng/helm/*
 public/              # basemaps/, fonts/, icons/ (SVG pairs), fixtures/ (dev data)
 docs/                # see §10
@@ -148,7 +151,8 @@ convention by default; a deviation needs a stated reason up front.
 one name everywhere (`colorScale`). Methods are verb + explicit noun (`showLayer`, `buildImage`);
 state uses "active" (`activeLayers`, `isLookActive`), actions use show/hide. `-Of`/`-At` only for
 cheap reads (`valueAt`, `textOf`); work functions state the act (`create…`, `calc…`, `find…`, `is…`;
-never `paint…`); a name says what it returns (`loopIdOf`). Names describe the thing, not its one
+never `paint…`); a name says what it returns (`loopIdOf`). A method names what it makes for its owner (`buildLook`), not a generic word
+(`createShapes`); a vocabulary is named by its role (`LineOverlay`), not by a generic noun (`LinesShape`). Names describe the thing, not its one
 use; no container words (member, slot, item); no jargon he doesn't use ("strike", "rasterize"; a
 dark border is an "outline", never a casing or halo); old-app vocabulary for domain names
 (`EventAppearance`, `eights`); wire enums named after the wire value (`SatelliteChannel.IR10_8`);
@@ -209,7 +213,8 @@ data completeness before polish — never hide a needed value for a prettier lay
 - `ng build` is the type gate (tsc skips templates; its bundle-budget warning doesn't matter).
   `ng serve` keeps serving the last good bundle after a failed rebuild — check its logs before
   trusting a live check; restart it after file moves and dependency changes.
-- Use the lead's dev server on :4200 (`attach` in `.claude/launch.json`); start your own only when
+- Use the lead's dev server on :4200 (`attach` in `.claude/launch.json`; fixtures = `npm run
+  start:fixtures`, real backend = `npm run start` with `BACKEND_URL` in `environment.ts`); start your own only when
   it's down, and stop it after.
 - Map visuals: Playwright MCP renders WebGL headless. The embedded browser pane can't composite,
   and its `read_page` can click the buttons it reads — use evaluate + screenshots. A long-lived
@@ -226,6 +231,7 @@ data completeness before polish — never hide a needed value for a prettier lay
 - Target 60 fps with ≤ 5 layers + 1 animation on an integrated GPU at 1080p; match or beat the old
   Cesium app. Quality knobs and the perf HUD are the insurance; perf concerns about visuals are
   flagged, never silently applied.
+- Optimize only a measured cost; never trade plain code (a small array, a loop) for micro-speed.
 - Use good libraries freely now; prefer ones that survive the cutover audit (no phone-home, CDN or
   telemetry). Runtime assets are self-hosted. Details: docs/dev/vendored-dependencies.md.
 
@@ -234,8 +240,6 @@ data completeness before polish — never hide a needed value for a prettier lay
 - A `[class]` string binding on `hlmBtn` drops the variant classes — per-key `[class.x]` or a new
   variant in our button copy. Butted against another surface, `hlmBtn` needs `border-0` (its color
   stops inside a transparent border) and `active:not-aria-[haspopup]:translate-y-0` (press shift).
-- `AnimatedLayer`: the rAF loop stays bound to the first deck instance — `step()` reads `state`
-  only. Per-frame accessors on identity-stable data need `updateTriggers`.
 - `httpResource`/`resource` inside an effect or computed → NG0602.
 - A computed returning a fresh object that feeds a resource request refetches silently forever —
   give it a value `equal`.
@@ -245,7 +249,6 @@ data completeness before polish — never hide a needed value for a prettier lay
 - A child of a backdrop-blurred element can't frost the page — put the frost on an
   `absolute inset-0 -z-10` layer inside an `isolate` card.
 - spartan's `transition-all` animates a moving `left` — position through a plain wrapper div.
-- `CollisionFilterExtension` hides every label under the two `beforeId` layer groups.
 - maplibre `Marker.addTo` removes the marker first — calling it again kills a drag.
 - App settings defined in a file the registry imports → an import cycle crashes boot ("Class
   extends value undefined") — keep them in the import-light `settings-controls.ts`.
@@ -253,6 +256,10 @@ data completeness before polish — never hide a needed value for a prettier lay
 - Wind trails: fade alpha only (rgb pinned to the ink) and floor the decay at 8-bit, or old trails
   gray out and residue stays on the map.
 - HMR leaves orphan rAF loops — refresh before judging performance.
+- After repeated GPU crashes Chrome silently draws on SwiftShader (2–7 fps) until restarted —
+  check the WebGL renderer before judging slowness.
+- MapLibre drops a symbol layer whose `icon-size` reaches 255 — zoom-growing icons cap their curve.
+- An overlay renderer touches the map only once the style is loaded (`style.load` re-adds).
 - Edit Hebrew files with UTF-8-safe tools only (a PowerShell `-replace` once mangled them).
 
 ## 10. Where things live

@@ -1,18 +1,7 @@
-import type { Layer as DeckLayer } from '@deck.gl/core';
-import { IconLayer } from '@deck.gl/layers';
 import { VectorField } from '../../objects/grid';
-import { rgba } from '../../utils/color-scale';
-import { AnimatedLayer, AnimatedState } from '../base/animated-layer';
 import { Look, LookKind } from '../base/look';
+import { AnimationFrame, AnimationOverlay, Overlay } from '../base/overlay';
 import { inkColor } from '../map-service';
-
-export class WaveCrests extends Look<VectorField> {
-  readonly kind = LookKind.Particles;
-
-  deckLayer(id: string, field: VectorField): DeckLayer {
-    return new WaveCrestLayer({ id, ...field });
-  }
-}
 
 interface Crest {
   position: [number, number];
@@ -24,52 +13,58 @@ interface Crest {
   shown: boolean;
 }
 
-interface State extends AnimatedState {
-  field: VectorField;
-  crests: Crest[];
-  icon: string;
-}
-
-class WaveCrestLayer extends AnimatedLayer<VectorField> {
-  static override layerName = 'WaveCrestLayer';
-  declare state: State;
+export class WaveCrests extends Look<VectorField> {
+  readonly kind = LookKind.Particles;
   private readonly columns = 40;
   private readonly rows = 30;
+  private last?: { field: VectorField; crests: Crest[] } = undefined;
+  private icons = new Map<string, HTMLCanvasElement>();
 
-  rebuild(): void {
-    const field = { u: this.props.u, v: this.props.v };
-    const crests = Array.from({ length: this.columns * this.rows }, (_, slot) =>
-      this.spawn(field, slot),
-    );
-    for (const crest of crests) crest.age = Math.random() * crest.life;
-    this.setState({ field, crests, icon: this.state.icon ?? crestIcon() });
+  override release(): void {
+    this.last = undefined;
+    this.icons.clear();
   }
 
-  override renderLayers(): DeckLayer {
-    const ink = inkColor();
-    const { tick } = this.state;
-    return new IconLayer<Crest>(this.getSubLayerProps({ id: 'crests' }), {
-      data: this.state.crests,
-      getPosition: (crest) => crest.position,
-      getIcon: () => ({
-        url: this.state.icon,
-        width: 64,
-        height: 32,
-        anchorX: 32,
-        anchorY: 16,
-        mask: true,
+  buildLook(field: VectorField): Overlay[] {
+    if (this.last?.field !== field) this.last = { field, crests: this.createCrests(field) };
+    const { crests } = this.last;
+    const icon = this.iconOf(inkColor());
+    return [
+      new AnimationOverlay(field.u.bounds, (context, frame) => {
+        this.step(field, crests, frame.deltaSeconds);
+        this.paint(context, frame, crests, icon);
       }),
-      getAngle: (crest) => -crest.bearing,
-      getSize: (crest) => crest.size,
-      getColor: (crest) =>
-        rgba(ink, crest.shown ? Math.round(160 * Math.sin((Math.PI * crest.age) / crest.life)) : 0),
-      sizeUnits: 'pixels',
-      updateTriggers: { getPosition: tick, getAngle: tick, getSize: tick, getColor: [tick, ink] },
-    });
+    ];
   }
 
-  step(deltaSeconds: number): void {
-    const { field, crests } = this.state;
+  private createCrests(field: VectorField): Crest[] {
+    const crests = Array.from({ length: this.columns * this.rows }, (_, slot) => this.spawn(field, slot));
+    for (const crest of crests) crest.age = Math.random() * crest.life;
+    return crests;
+  }
+
+  private paint(
+    context: CanvasRenderingContext2D,
+    frame: AnimationFrame,
+    crests: Crest[],
+    icon: HTMLCanvasElement,
+  ): void {
+    for (const crest of crests) {
+      if (!crest.shown) continue;
+      const alpha = Math.round(160 * Math.sin((Math.PI * crest.age) / crest.life)) / 255;
+      if (alpha <= 0) continue;
+      const [x, y] = frame.toCanvas(crest.position[0], crest.position[1]);
+      const height = crest.size * frame.pixelRatio;
+      context.save();
+      context.globalAlpha = alpha;
+      context.translate(x, y);
+      context.rotate((crest.bearing * Math.PI) / 180);
+      context.drawImage(icon, -height, -height / 2, height * 2, height);
+      context.restore();
+    }
+  }
+
+  private step(field: VectorField, crests: Crest[], deltaSeconds: number): void {
     crests.forEach((crest, index) => {
       crest.age += deltaSeconds;
       crest.position = [
@@ -104,18 +99,27 @@ class WaveCrestLayer extends AnimatedLayer<VectorField> {
       shown: length > 0,
     };
   }
+
+  private iconOf(ink: string): HTMLCanvasElement {
+    let icon = this.icons.get(ink);
+    if (!icon) {
+      icon = createCrestIcon(ink);
+      this.icons.set(ink, icon);
+    }
+    return icon;
+  }
 }
 
-function crestIcon(): string {
+function createCrestIcon(ink: string): HTMLCanvasElement {
   const canvas = document.createElement('canvas');
   canvas.width = 64;
   canvas.height = 32;
   const context = canvas.getContext('2d')!;
-  context.strokeStyle = '#ffffff';
+  context.strokeStyle = ink;
   context.lineWidth = 3;
   context.lineCap = 'round';
   context.beginPath();
   context.arc(32, 70, 60, Math.PI * 1.33, Math.PI * 1.67);
   context.stroke();
-  return canvas.toDataURL();
+  return canvas;
 }

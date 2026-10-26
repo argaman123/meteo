@@ -17,21 +17,13 @@ import { syntheticPointEvents, syntheticPolygons } from './synthetic-polygons';
 import { radarTimeRange, syntheticRadarWrap } from './synthetic-radar';
 import { birdDetections, birdRadarTimeRange, syntheticBirdRadarWrap } from './synthetic-birds';
 import { lightningObservations } from './synthetic-lightning';
+import { BACKEND_PATHS } from '../../backend';
 import { syntheticObservations } from './synthetic-observations';
 import { satImages, satelliteSectors, syntheticSatelliteImage } from './synthetic-satellite';
 import { EcmwfWeather } from './ecmwf-weather';
 
 const ARTIFICIAL_LATENCY_MS = 150;
 const STEP_HOURS = 3;
-const BACKEND_PATHS = [
-  '/model/',
-  '/polygon/',
-  '/satellite/',
-  '/satellite-sectors/',
-  '/radar/',
-  '/observations/',
-  '/surface/',
-];
 const AIR_COLUMN_PRESSURES = [1000, 925, 850, 700, 600, 500, 400, 300, 250, 200, 150, 100];
 
 const RUN_TIME =

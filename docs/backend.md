@@ -8,7 +8,10 @@ responses the lead captured: `~/Desktop/for_argos/<area>/<route>.json` (first li
 
 ## Rules (lead)
 
-- Call the real routes; the dev fixture answers them ([fixtures.md](fixtures.md)).
+- Call the real routes; the dev fixture answers them ([fixtures.md](fixtures.md)). On the network,
+  the browser calls `BACKEND_URL` (`src/environments/environment.ts`) directly — `backendUrlInterceptor`
+  (`src/app/backend.ts`) prefixes every `BACKEND_PATHS` request. Not landed yet (empty on real
+  data): wind U/V (ask 1), meteogram clouds (ask 2), sounding table (ask 3), bird radar (ask 6).
   **`/api/*` is never the right request.**
 - Each backend-vs-us difference is the lead's call, case by case — never a blanket rule.
 - An ask is written in the backend's own idiom (snake_case `get_…_between_times`,
@@ -40,7 +43,7 @@ responses the lead captured: `~/Desktop/for_argos/<area>/<route>.json` (first li
   endpoints.
 - **Time units differ per component**: models, polygons, birds, `getDataByParam` = ms; satellite,
   radar, lightning, sondes = seconds. Sending ms to a seconds endpoint returns empty, not an error.
-- No auth; CORS is an allow-list (`src/main.py`) — add our origin or proxy.
+- No auth; CORS is an allow-list (`src/main.py`) — every host serving the frontend must be on it (ask 19).
 - Most data routes send gzip JSON with a manual `Content-Encoding: gzip`; equalized satellite PNGs
   are brotli; `air_column*` is plain text.
 - Errors are mostly a generic 500; only `as_intended` routes return 400/404.

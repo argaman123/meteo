@@ -1,6 +1,8 @@
 import { Component, DestroyRef, computed, effect, inject, signal } from '@angular/core';
+import { MapService } from '../../engine/map-service';
 import { LayersService } from '../../layers/layers-service';
 import { formatLocalTime } from '../../utils/time';
+import { runBenchmark } from './benchmark';
 
 const hourFormat = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
 
@@ -11,6 +13,7 @@ const hourFormat = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '
 })
 export class PerfHud {
   private layersService = inject(LayersService);
+  private mapService = inject(MapService);
 
   readonly visible = signal(true);
   protected fps = signal(0);
@@ -50,6 +53,7 @@ export class PerfHud {
       if (this.visible()) this.startLoop();
     });
     inject(DestroyRef).onDestroy(() => cancelAnimationFrame(this.frameHandle));
+    Object.assign(window, { meteoBenchmark: () => runBenchmark(this.mapService, this.layersService) });
   }
 
   toggle(): void {

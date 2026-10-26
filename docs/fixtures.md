@@ -1,9 +1,10 @@
 # Dev fixture backend — `src/app/dev/fixture-backend/` (never ships)
 
-- An HTTP interceptor registered only by `environment.development.ts` (production swaps the file
-  via `fileReplacements`, so no mock ships). It answers the REAL backend paths: `BACKEND_PATHS`
-  prefixes + a `ROUTES` regex table in `fixture-backend.ts`; anything else passes through.
-  Cutover = delete the interceptor and proxy the paths.
+- An HTTP interceptor registered only by `environment.fixtures.ts` (the `fixtures` configuration,
+  `npm run start:fixtures`); every other build has none, so no mock ships. It answers the REAL
+  backend paths: `BACKEND_PATHS` (`src/app/backend.ts`) + a `ROUTES` regex table in
+  `fixture-backend.ts`; anything else passes through. Every other build prefixes those paths with
+  `BACKEND_URL` instead (`environment.ts`). The production build leaves `public/fixtures/` out.
 - Fixtures mirror the real wire exactly, including each asked shape in
   [backend-asks.md](backend-asks.md) until it lands. Unmatched route → 404, handler error → 500.
 - The lead judges looks through fixture data: made-up data must look physically plausible, and a

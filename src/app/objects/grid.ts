@@ -16,6 +16,10 @@ export class Grid<I = unknown> {
     readonly data: Float32Array,
   ) {}
 
+  static fromValues(bounds: Bounds, width: number, height: number, data: Float32Array): Grid<null> {
+    return new Grid(null, bounds, width, height, data);
+  }
+
   static fromWrap<I>(wrap: Wrap<I>): Grid<I> {
     const height = wrap.values.length;
     const width = height > 0 ? wrap.values[0].length : 0;

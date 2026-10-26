@@ -1,6 +1,4 @@
 import { Signal, signal } from '@angular/core';
-import type { Layer as DeckLayer } from '@deck.gl/core';
-import { IconLayer, PathLayer, SolidPolygonLayer } from '@deck.gl/layers';
 import { booleanPointInPolygon } from '@turf/boolean-point-in-polygon';
 import { buffer } from '@turf/buffer';
 import { centerOfMass } from '@turf/center-of-mass';
@@ -9,8 +7,8 @@ import polylabel from 'polylabel';
 import { Bounds } from '../../types/wrap';
 import { Rgba, rgba } from '../../utils/color-scale';
 import { Legend, Look, LookKind } from '../base/look';
+import { AreaOverlay, IconOverlay, IconScaling, Line, LineOverlay, Overlay } from '../base/overlay';
 import { MAP_FONT, OUTLINE_COLOR, inkColor } from '../map-service';
-import { LabelIcon, SpriteCache } from '../base/sprite-cache';
 import { Provider } from '../../objects/provider';
 
 export enum PolygonPattern {
@@ -38,17 +36,12 @@ export interface PolygonsView {
   zoom: number;
 }
 
-interface StyledLine {
-  path: [number, number][];
-  color: Rgba;
-  width: number;
-}
-
 interface PolygonLabel {
   position: [number, number];
   preferredPosition: [number, number];
   coordinates: [number, number][];
-  icon: LabelIcon;
+  key: string;
+  canvas: HTMLCanvasElement;
   width: number;
   height: number;
 }
@@ -56,7 +49,7 @@ interface PolygonLabel {
 export class Polygons extends Look<PolygonsView> {
   readonly kind = LookKind.Polygons;
   override readonly legend: Signal<Legend>;
-  private readonly sprites = new SpriteCache();
+  private readonly labelCanvases = new Map<string, HTMLCanvasElement>();
   private readonly patternAxes: Record<PolygonPattern, (0 | 1)[]> = {
     [PolygonPattern.Solid]: [],
     [PolygonPattern.Horizontal]: [1],
@@ -70,10 +63,10 @@ export class Polygons extends Look<PolygonsView> {
   }
 
   override release(): void {
-    this.sprites.clear();
+    this.labelCanvases.clear();
   }
 
-  deckLayer(id: string, view: PolygonsView): DeckLayer[] {
+  buildLook(view: PolygonsView): Overlay[] {
     const defaultOutline = rgba(inkColor(), 160);
     const [west, south, east, north] = view.frame;
     const frame: [number, number][] = [
@@ -84,7 +77,7 @@ export class Polygons extends Look<PolygonsView> {
       [west, south],
     ];
     const innerBorders = view.polygons.flatMap((shape) =>
-      this.createInnerBorders(shape.coordinates, 2).map((path): StyledLine => {
+      this.createInnerBorders(shape.coordinates, 2).map((path): Line => {
         const [r, g, b] = shape.fill;
         return { path, color: [r, g, b, 120], width: 7 };
       }),
@@ -92,7 +85,7 @@ export class Polygons extends Look<PolygonsView> {
     const patterns = view.polygons.flatMap((shape) =>
       this.patternAxes[shape.pattern]
         .flatMap((axis) => this.createLinePattern(shape.coordinates, axis, 0.12))
-        .map((path): StyledLine => {
+        .map((path): Line => {
           const [r, g, b, alpha] = shape.fill;
           return { path, color: [r, g, b, Math.min(255, alpha + 70)], width: 5 };
         }),
@@ -101,66 +94,45 @@ export class Polygons extends Look<PolygonsView> {
       .filter((shape) => shape.text.length > 0)
       .map((shape): PolygonLabel => {
         const preferred = this.calcLabelPosition(shape.coordinates);
-        const icon = this.sprites.spriteOf(`${shape.text.join('\n')}|${shape.fill.join(',')}`, () =>
-          this.createLabelIcon(shape),
-        );
+        const key = `${shape.text.join('\n')}|${shape.fill.join(',')}`;
+        let canvas = this.labelCanvases.get(key);
+        if (!canvas) {
+          canvas = this.createLabelIcon(shape);
+          this.labelCanvases.set(key, canvas);
+        }
         return {
           position: [preferred[0], preferred[1]],
           preferredPosition: preferred,
           coordinates: shape.coordinates,
-          icon,
-          width: icon.width / 2,
-          height: icon.height / 2,
+          key,
+          canvas,
+          width: canvas.width / 2,
+          height: canvas.height / 2,
         };
       });
     this.spreadLabels(labels, view.zoom, (south + north) / 2);
     return [
-      new SolidPolygonLayer<StyledPolygon>({
-        id: `${id}-areas`,
-        data: view.polygons,
-        getPolygon: (shape) => shape.coordinates,
-        getFillColor: (shape) => shape.fill,
-      }),
-      new PathLayer<StyledLine>({
-        id: `${id}-patterns`,
-        data: patterns,
-        getPath: (line) => line.path,
-        getColor: (line) => line.color,
-        getWidth: (line) => line.width,
-        widthUnits: 'pixels',
-      }),
-      new PathLayer<[number, number][]>({
-        id: `${id}-frame`,
-        data: [frame],
-        getPath: (path) => path,
-        getColor: rgba('#94a3b8', 180),
-        getWidth: 1.5,
-        widthUnits: 'pixels',
-      }),
-      new PathLayer<StyledPolygon>({
-        id: `${id}-outlines`,
-        data: view.polygons,
-        getPath: (shape) => shape.coordinates,
-        getColor: (shape) => shape.outline ?? defaultOutline,
-        getWidth: (shape) => shape.outlineWidth ?? 1,
-        widthUnits: 'pixels',
-        updateTriggers: { getColor: defaultOutline },
-      }),
-      new PathLayer<StyledLine>({
-        id: `${id}-inner-borders`,
-        data: innerBorders,
-        getPath: (line) => line.path,
-        getColor: (line) => line.color,
-        getWidth: (line) => line.width,
-        widthUnits: 'pixels',
-      }),
-      new IconLayer<PolygonLabel>({
-        id: `${id}-texts`,
-        data: labels,
-        getPosition: (label) => label.position,
-        getIcon: (label) => label.icon,
-        getSize: (label) => label.height,
-      }),
+      new AreaOverlay(view.polygons.map((shape) => ({ polygon: shape.coordinates, color: shape.fill }))),
+      new LineOverlay(patterns),
+      new LineOverlay([{ path: frame, color: rgba('#94a3b8', 180), width: 1.5 }]),
+      new LineOverlay(
+        view.polygons.map((shape) => ({
+          path: shape.coordinates,
+          color: shape.outline ?? defaultOutline,
+          width: shape.outlineWidth ?? 1,
+        })),
+      ),
+      new LineOverlay(innerBorders),
+      new IconOverlay(
+        labels.map((label) => ({
+          position: label.position,
+          sprite: { key: label.key, create: () => label.canvas },
+          size: label.height,
+          angle: 0,
+          opacity: 1,
+        })),
+        IconScaling.Pixels,
+      ),
     ];
   }
 

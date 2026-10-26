@@ -1,7 +1,8 @@
 import { Signal, computed } from '@angular/core';
 import { Provider } from '../../objects/provider';
 import { Legend, LookKind } from '../base/look';
-import { PointIcon, PointIcons } from '../base/point-icons';
+import { PointIcons } from '../base/point-icons';
+import { Sprite } from '../base/overlay';
 import { MAP_FONT, OUTLINE_COLOR } from '../map-service';
 
 export interface LabelsInput {
@@ -19,7 +20,7 @@ export class Labels extends PointIcons<LabelsInput['points'][number]> {
     this.legend = computed(legendOf);
   }
 
-  protected iconOf({ text, color }: LabelsInput['points'][number]): PointIcon {
+  protected spriteOf({ text, color }: LabelsInput['points'][number]): Sprite {
     return {
       key: `${color} ${text}`,
       create: () => createLabel(text, 16, 500, color, `${OUTLINE_COLOR}e6`, 3),

@@ -1,14 +1,13 @@
-import type { Layer as DeckLayer } from '@deck.gl/core';
-import { IconLayer, PathLayer } from '@deck.gl/layers';
 import { interpolateRgb } from 'd3-interpolate';
 import { Grid } from '../../objects/grid';
 import { Provider } from '../../objects/provider';
 import { rgba } from '../../utils/color-scale';
-import { ContourLine, LevelPicker, contourLines } from '../../utils/contours';
+import { ContourLine, LevelPicker } from '../../utils/contours';
 import { Control, color as colorControl } from '../../utils/controls';
+import { BackgroundResult, traceContoursInBackground } from '../base/background';
 import { Look, LookKind } from '../base/look';
+import { IconOverlay, IconScaling, LineOverlay, Overlay } from '../base/overlay';
 import { OUTLINE_COLOR } from '../map-service';
-import { SpriteCache } from '../base/sprite-cache';
 import { createLabel } from './labels';
 
 interface ContourLabel {
@@ -19,9 +18,11 @@ interface ContourLabel {
 
 export class Contours extends Look<Grid> {
   readonly kind = LookKind.Contours;
-  private readonly sprites = new SpriteCache();
 
   override readonly controls: Control[];
+  private readonly lines = new BackgroundResult((grid: Grid) =>
+    traceContoursInBackground(grid, this.levels(grid)),
+  );
 
   constructor(
     provider: Provider<Grid>,
@@ -34,41 +35,32 @@ export class Contours extends Look<Grid> {
   }
 
   override release(): void {
-    this.sprites.clear();
+    this.lines.clear();
   }
 
-  deckLayer(id: string, grid: Grid): DeckLayer[] {
+  buildLook(grid: Grid): Overlay[] {
+    const traced = this.lines.requestResult(grid);
+    if (!traced) return [];
     const labelColor = interpolateRgb(this.color, '#ffffff')(0.5);
-    const lines = contourLines(grid.data, grid.width, grid.height, grid.bounds, this.levels(grid));
-    const labels = this.placeLabels(lines, grid.bounds[2] - grid.bounds[0]);
+    const lines = traced.output;
+    const [west, , east] = traced.input.bounds;
+    const labels = this.placeLabels(lines, east - west);
     return [
-      new PathLayer<ContourLine>({
-        id: `${id}-outline`,
-        data: lines,
-        getPath: (line) => line.path,
-        getColor: rgba(OUTLINE_COLOR, 200),
-        getWidth: 3.5,
-        widthUnits: 'pixels',
-      }),
-      new PathLayer<ContourLine>({
-        id: `${id}-lines`,
-        data: lines,
-        getPath: (line) => line.path,
-        getColor: rgba(this.color),
-        getWidth: 1.5,
-        widthUnits: 'pixels',
-      }),
-      new IconLayer<ContourLabel>({
-        id: `${id}-labels`,
-        data: labels,
-        getPosition: (label) => label.position,
-        getIcon: (label) =>
-          this.sprites.spriteOf(label.text, () =>
-            createLabel(label.text, 12, 700, labelColor, OUTLINE_COLOR, 4),
-          ),
-        getAngle: (label) => label.angle,
-        getSize: 18,
-      }),
+      new LineOverlay(lines.map((line) => ({ path: line.path, color: rgba(OUTLINE_COLOR, 200), width: 3.5 }))),
+      new LineOverlay(lines.map((line) => ({ path: line.path, color: rgba(this.color), width: 1.5 }))),
+      new IconOverlay(
+        labels.map((label) => ({
+          position: label.position,
+          sprite: {
+            key: `${label.text} ${labelColor}`,
+            create: () => createLabel(label.text, 12, 700, labelColor, OUTLINE_COLOR, 4),
+          },
+          size: 18,
+          angle: -label.angle,
+          opacity: 1,
+        })),
+        IconScaling.Pixels,
+      ),
     ];
   }
 

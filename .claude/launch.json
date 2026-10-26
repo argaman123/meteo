@@ -8,7 +8,7 @@
     {
       "name": "meteo",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["start"],
+      "runtimeArgs": ["run", "start:fixtures"],
       "port": 4200,
       "autoPort": true
     }

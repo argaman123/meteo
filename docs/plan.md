@@ -10,8 +10,8 @@ the old site.
 
 | Task | Area | Priority | What's left |
 |---|---|---|---|
-| Flight route | Interaction | High | Click a route on the map → the weather along it (clouds met, wind strength…). Study the old app's feature and MagenS (`flight_limit`, `points_data_between_heights_and_times_in_feet`, `data_by_route_edge`) first; the Python route becomes a backend ask |
-| Cross-section | Interaction | High | Right-click menu item → a graph rising like the meteogram: one colored line per active parameter at the level-rail level, along the time line |
+| Flight route (parked) | Interaction | High | Stash "parked: flight route": waypoints from the chooser, ~40 samples, rail level + bar time, wind / tail-head / cross / temp / RH read from the map routes + polygon clouds, a side-view drawer. The lead wants a planner people use, not raw data — rejected: per-leg table, stacked lane charts, summary cards, notable-spot lists, text over lines or on the map. Resume only with a new concept |
+| Cross-section (parked) | Interaction | Low | Built as גרף זמן and parked in a stash ("parked: time graph") — the lead wasn't sold on the look or the usage. Resume only on demand: `git stash apply`, rebuild, then re-mock the layout |
 | Skew-T (parked) | Interaction | High | Branch `skew-t` (91292d5); the lead checks it at the old site on his next visit: CIN, virtual-temperature CAPE, mixing-ratio labels, Hebrew name, 150 mb top. Resume: rebase on main, drop its `utils/wind-barbs.ts` (now in `utils/wind.ts`), expect conflicts in point-menu/home-page/units/thermodynamics |
 | Warnings | Warnings | High | Sidebar of current + coming warnings with green/yellow/red, alerts on new/changed ones, warning polygons as a map layer. Backend: `/warnings` and `/new-warnings` — study which one viewers read in the old app first |
 | Flight areas | Interaction | High | Predefined drawings from `/places/flight-areas/get` (e.g. an airport's airstrip); pick any number to show on top of all layers |
@@ -23,5 +23,4 @@ the old site.
 | גריד מבצעי overlay | Units/Geo | Low | The formats exist (display and search input); left: the גריד מבצעי grid lines on the map |
 | Animatable non-loop layers | Time | Low | Play button for model and polygon layers: step through forecast hours (prefetch the next maps) |
 | Polygons: styles session | Looks | Low | A quick session: we propose fill, pattern, outline and chip styles we think fit (a droplets pattern for rain among them), the lead picks |
-| Boot draw cost | Engine | Low | First draw blocks ~450 ms. Measure what costs what first, then pick: one layer per frame (simple) or contour tracing in a Web Worker (no freeze, but async — a result that lands after a time/level change must be dropped) |
 | Comments pass | Platform | Someday | Code comments are banned until then |

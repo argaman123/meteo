@@ -1,9 +1,9 @@
 import { Signal, signal } from '@angular/core';
-import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Provider } from '../../objects/provider';
 import { ColorStop } from '../../utils/color-scale';
 import { Control } from '../../utils/controls';
 import { Quantity, Unit, format } from '../../utils/units';
+import { Overlay } from './overlay';
 
 export enum LookKind {
   Image,
@@ -52,6 +52,6 @@ export abstract class Look<I> {
   readonly controls: Control[] = [];
   readonly legend: Signal<Legend | null> = signal(null);
   constructor(readonly provider: Provider<I>) {}
-  abstract deckLayer(id: string, input: I): DeckLayer | DeckLayer[];
+  abstract buildLook(input: I): Overlay[];
   release(): void {}
 }

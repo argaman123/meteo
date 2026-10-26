@@ -9,10 +9,13 @@ phone-home/CDN/telemetry) and carried in.
 
 1. On the online machine, install/update as usual (`npm install <pkg>`), commit the resulting
    `package.json` + `package-lock.json`.
-2. Before carrying, populate a complete tarball cache next to the repo:
+2. Before carrying, fill a tarball cache next to the repo with the **Windows** builds of the native
+   tools (esbuild, lightningcss, Tailwind oxide) — a plain `npm ci` on the Mac caches only macOS
+   ones, and the offline install then fails. From the repo root:
 
-   ```powershell
-   npm ci --cache .npm-cache
+   ```sh
+   rm -rf /tmp/win-cache && mkdir /tmp/win-cache && cp package.json package-lock.json /tmp/win-cache/
+   (cd /tmp/win-cache && npm ci --cache "$OLDPWD/.npm-cache" --os=win32 --cpu=x64 --ignore-scripts)
    ```
 
 3. Hand-carry the repo **including `.npm-cache`** (and excluding `node_modules`, which is rebuilt).
@@ -24,6 +27,18 @@ phone-home/CDN/telemetry) and carried in.
 
 5. Adding a package later: repeat from step 1 outside, re-carry the changed `.npm-cache` delta +
    lockfile.
+
+## Carrying the project in
+
+Carry: the repo without `node_modules/` (git clone or copy), `.npm-cache/`,
+`public/basemaps/*.pmtiles` (gitignored), and the Node 24 Windows installer (nodejs.org,
+`node-v24.x-x64.msi`; the `win-x64.zip` needs no admin rights). `public/fixtures/` is not needed.
+
+On the PC: install Node, `node -v` (24.15+ or 22.22+), `npm ci --offline --cache .npm-cache`, set
+`BACKEND_URL` in `src/environments/environment.ts`, `npm run start` → http://localhost:4200 on
+real data (the backend must allow that origin — `origins` in hzy-liba's `src/main.py`). Build:
+`npm run build` (or `npx ng build`) → `dist/meteo/browser`; nginx serves it
+(`tools/nginx/meteo.conf`: set `root`; the nginx host must be on the backend's `origins` too).
 
 `.npm-cache/` is not committed to git — it travels alongside the repo on the carry medium.
 
@@ -45,9 +60,9 @@ phone-home/CDN/telemetry) and carried in.
 | `pmtiles` CLI | `tools/bin/pmtiles.exe` (gitignored) | github.com/protomaps/go-pmtiles releases | Download the Windows x86_64 release binary |
 | Chrome for Testing 113 (browser-floor smoke tests) | `tools/cft/` (gitignored) | `npx @puppeteer/browsers install chrome@113 --path tools/cft` | Re-run the same command |
 
-Weather layers render through first-party looks over `@deck.gl/layers` + `@luma.gl` (wind
-trails). `weatherlayers-gl` was removed (2026-06), which also dropped its `geotiff` /
-`@scarf/scarf` install-time telemetry transitive.
+Weather layers render through first-party looks drawn with MapLibre's own sources and layers (wind
+trails: our own WebGL2 custom layer). `weatherlayers-gl` and deck.gl/luma.gl were removed;
+`weatherlayers-gl` also dropped its `geotiff` / `@scarf/scarf` install-time telemetry transitive.
 
 `@maskito/core` + `angular` + `kit` (Taiga UI team, Apache-2.0, no telemetry) for the coordinate
 form's input masks.

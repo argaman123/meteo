@@ -3,7 +3,7 @@
 A meteorological viewer for a closed internal network: a 2D map layered with colorful, animated
 weather data (models, satellite, radar, observations, forecaster polygons) plus point tools
 (meteogram, sounding table, distance measuring). A ground-up rebuild of an Angular 10 app on
-Angular 22 + MapLibre + deck.gl, built to stay simple and consistent for rotating developers.
+Angular 22 + MapLibre, built to stay simple and consistent for rotating developers.
 
 ## Start here
 
@@ -17,8 +17,15 @@ Angular 22 + MapLibre + deck.gl, built to stay simple and consistent for rotatin
 npm install
 npm run ecmwf:fetch    # real ECMWF fixture data into public/fixtures/ecmwf (gitignored, ~290 MB)
 npm run basemap:fetch  # basemap tiles (see docs/dev/vendored-dependencies.md)
-npm start              # http://localhost:4200
+npm run start:fixtures # http://localhost:4200 on fixture data
 ```
 
-Also: `npm run build`, `npm run lint`, `npm run typecheck`, `npm run serve:dist`. The perf HUD is
-on by default; Ctrl+Alt+P toggles it.
+`npm run start` serves against the real backend: set `BACKEND_URL` in
+`src/environments/environment.ts`. Also:
+`npm run build` (output `dist/meteo/browser`, served by nginx — sample in `tools/nginx/meteo.conf`),
+`npm run lint`, `npm run typecheck`, `npm run serve:dist`. The perf HUD is on by default;
+Ctrl+Alt+P toggles it.
+
+## Run inside the network (Windows, offline)
+
+See [docs/dev/vendored-dependencies.md](docs/dev/vendored-dependencies.md#carrying-the-project-in).

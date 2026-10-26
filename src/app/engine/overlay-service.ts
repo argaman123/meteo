@@ -1,48 +1,99 @@
 import { Service } from '@angular/core';
 import maplibregl from 'maplibre-gl';
-import { MapLibreOverlay } from '@deck.gl/maplibre';
-import type { Layer as DeckLayer } from '@deck.gl/core';
 import { Look, LookKind } from './base/look';
-import { GlobeOcclusion } from './globe-occlusion';
+import { FeatureSource } from './maplibre/feature-source';
+import { OverlayRenderer } from './maplibre/overlay-renderer';
+
+// TODO: UNVERIFIED CODE BELOW
+const BORDERS_LAYER = 'coastline';
 
 @Service()
 export class OverlayService {
-  private overlay: MapLibreOverlay | null = null;
-  private layers = new Map<Look<unknown>, DeckLayer | DeckLayer[]>();
+  private map: maplibregl.Map | null = null;
+  private styleReady = false;
+  private renderers = new Map<Look<unknown>, OverlayRenderer[]>();
+  private sources = new Map<Look<unknown>, FeatureSource>();
   private ids = new Map<Look<unknown>, string>();
   private counter = 0;
-  // deck.gl workaround (#10519): on the globe, depth hides colors and lines, culling hides icons.
-  // Remove once deck fixes it.
-  private readonly globeParameters = {
-    depthCompare: 'always',
-    depthWriteEnabled: false,
-    cullMode: 'none',
-  } as const;
-  // deck.gl workaround (#10750): hides the globe's far side. Remove once deck fixes it.
-  private readonly globeOcclusion = new GlobeOcclusion();
+  private rendererCounter = 0;
 
   attach(map: maplibregl.Map): void {
-    this.overlay = new MapLibreOverlay({ interleaved: true, layers: [] });
-    map.addControl(this.overlay);
+    this.map = map;
+    this.styleReady = map.isStyleLoaded() === true;
+    map.on('styledataloading', () => (this.styleReady = false));
+    map.on('webglcontextlost', () => (this.styleReady = false));
+    map.on('style.load', () => this.restore());
   }
 
   detach(): void {
-    for (const look of this.layers.keys()) look.release();
-    this.overlay = null;
-    this.layers.clear();
+    for (const look of [...this.renderers.keys()]) this.remove(look);
+    this.map = null;
+    this.renderers.clear();
+    this.sources.clear();
     this.ids.clear();
     this.counter = 0;
   }
 
   draw(look: Look<unknown>, data: unknown): void {
-    this.layers.set(look, look.deckLayer(this.idFor(look), look.provider.provide(data)));
-    this.apply();
+    const map = this.map;
+    if (!map) return;
+    const id = this.idFor(look);
+    let source = this.sources.get(look);
+    if (!source) {
+      source = new FeatureSource(map, `look-${id}`);
+      this.sources.set(look, source);
+    }
+    const overlays = look.buildLook(look.provider.provide(data));
+    const previous = this.renderers.get(look) ?? [];
+    const renderers = overlays.map((overlay, index) => {
+      const kept = previous[index];
+      if (kept?.isFor(overlay)) return kept;
+      kept?.destroy();
+      return overlay.createRenderer(map, `look-${id}-${this.rendererCounter++}`, source);
+    });
+    for (const stale of previous.slice(overlays.length)) stale.destroy();
+    overlays.forEach((overlay, index) => renderers[index].setOverlay(overlay));
+    this.renderers.set(look, renderers);
+    if (!this.styleReady) return;
+    for (const renderer of renderers) renderer.stage();
+    source.commit();
+    for (const renderer of renderers) renderer.show();
+    this.order();
   }
 
   remove(look: Look<unknown>): void {
-    if (!this.layers.delete(look)) return;
+    const renderers = this.renderers.get(look);
+    if (!renderers) return;
+    for (const renderer of renderers) renderer.destroy();
+    this.sources.get(look)?.destroy();
+    this.renderers.delete(look);
+    this.sources.delete(look);
     look.release();
-    this.apply();
+  }
+
+  private restore(): void {
+    this.styleReady = true;
+    for (const [look, renderers] of this.renderers) {
+      for (const renderer of renderers) renderer.stage();
+      this.sources.get(look)?.commit();
+      for (const renderer of renderers) renderer.restore();
+    }
+    this.order();
+  }
+
+  private order(): void {
+    const map = this.map;
+    if (!map || !this.styleReady) return;
+    const ranked = [...this.renderers.entries()].sort(([a], [b]) => a.kind - b.kind);
+    const underBorders = map.getLayer(BORDERS_LAYER) ? BORDERS_LAYER : undefined;
+    for (const [look, renderers] of ranked) {
+      const beforeId = look.kind < LookKind.Borders ? underBorders : undefined;
+      for (const renderer of renderers) {
+        for (const layerId of renderer.layerIds()) {
+          if (map.getLayer(layerId)) map.moveLayer(layerId, beforeId);
+        }
+      }
+    }
   }
 
   private idFor(look: Look<unknown>): string {
@@ -52,27 +103,5 @@ export class OverlayService {
       this.ids.set(look, id);
     }
     return id;
-  }
-
-  private apply(): void {
-    const ordered = [...this.layers.entries()]
-      .sort(([a], [b]) => a.kind - b.kind)
-      .flatMap(([look, layer]) =>
-        look.kind < LookKind.Borders ? this.slotUnderBorders([layer].flat()) : layer,
-      )
-      // deck.gl workarounds (#10519, #10750): remove once deck fixes them.
-      .map((layer) =>
-        layer.clone({
-          parameters: this.globeParameters,
-          extensions: [...layer.props.extensions, this.globeOcclusion],
-        }),
-      );
-    this.overlay?.setProps({ layers: ordered });
-  }
-
-  private slotUnderBorders(layers: DeckLayer[]): DeckLayer[] {
-    return layers.map((layer) =>
-      (layer as DeckLayer<{ beforeId?: string }>).clone({ beforeId: 'coastline' }),
-    );
   }
 }

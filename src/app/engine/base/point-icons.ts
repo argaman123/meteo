@@ -1,36 +1,25 @@
-import type { Layer as DeckLayer } from '@deck.gl/core';
-import { IconLayer } from '@deck.gl/layers';
 import { Look } from './look';
-import { SpriteCache } from './sprite-cache';
-
-export interface PointIcon {
-  key: string;
-  create: () => HTMLCanvasElement;
-}
+import { IconOverlay, IconScaling, Overlay, Sprite } from './overlay';
 
 export abstract class PointIcons<P extends { lon: number; lat: number }> extends Look<{
   points: P[];
 }> {
   protected abstract readonly size: number;
-  private readonly sprites = new SpriteCache();
 
-  protected abstract iconOf(point: P): PointIcon;
+  protected abstract spriteOf(point: P): Sprite;
 
-  override release(): void {
-    this.sprites.clear();
-  }
-
-  deckLayer(id: string, input: { points: P[] }): DeckLayer {
-    return new IconLayer<P>({
-      id,
-      data: input.points,
-      getPosition: (point) => [point.lon, point.lat],
-      getIcon: (point) => {
-        const icon = this.iconOf(point);
-        return this.sprites.spriteOf(icon.key, icon.create);
-      },
-      getSize: this.size,
-      sizeUnits: 'pixels',
-    });
+  buildLook(input: { points: P[] }): Overlay[] {
+    return [
+      new IconOverlay(
+        input.points.map((point) => ({
+          position: [point.lon, point.lat],
+          sprite: this.spriteOf(point),
+          size: this.size,
+          angle: 0,
+          opacity: 1,
+        })),
+        IconScaling.Pixels,
+      ),
+    ];
   }
 }

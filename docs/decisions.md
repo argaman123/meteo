@@ -6,9 +6,9 @@ Locked unless the lead reopens them. Each: the decision and why.
 |---|---|---|
 | Framework | Angular 22 — standalone, zoneless, signals-first; client-side SPA, no SSR | Current Angular; WebGL needs the browser |
 | State | One `@Service` per domain holding its signals + the methods that change them; no NgRx, no stores layer | The mainstream Angular pattern (cf. ngx-maplibre-gl's MapService); one inject per domain |
-| Map engine | MapLibre GL + deck.gl (interleaved), first-party looks, all behind `engine/` | Popular and learnable, light on 8 GB machines, custom WebGL headroom; the boundary is the lock-in hedge |
-| Weather rendering | First-party looks on deck.gl primitives (WeatherLayers GL removed 2026-06) | Customization, readability, no vendor risk — a vendor globe bug drew false data |
-| Globe / 3D | Flat by default; globe as a setting (deck 9.4 + `@deck.gl/maplibre`, depth and culling overridden per layer); no 3D terrain/pitch | Every look checked on the globe; flat stays the solid floor |
+| Map engine | MapLibre GL only, first-party looks behind `engine/` (looks → overlays → `engine/maplibre/` renderers on MapLibre's own sources/layers; one plain-WebGL custom layer for wind trails) | The most used, maintained and stable part of the stack; deck.gl's icon atlas crashed the site PC's NVIDIA driver and only its newest line gets fixes |
+| Weather rendering | First-party looks on our overlay vocabulary (WeatherLayers GL and deck.gl removed) | Customization, readability, no vendor risk — a vendor globe bug drew false data |
+| Globe / 3D | Flat by default; globe as a setting (MapLibre's native globe; the trails layer projects through `projectTile`); no 3D terrain/pitch | Flat stays the solid floor; the lead doesn't need 3D |
 | Components | spartan/ui (brain from npm + Helm copied into `src/spartan/`) on CDK + Tailwind | shadcn model: in-repo code, junior-readable, RTL/theme-fixable, trivially vendored |
 | Styling | Tailwind utilities + spartan's CSS-variable theme; dark default | Control-room norm; one color system |
 | i18n | No translation framework; each element authored in its language; bidi/RTL mandatory | Mixed Hebrew/English per element, no live toggle |
@@ -32,15 +32,15 @@ Locked unless the lead reopens them. Each: the decision and why.
 
 ## Stack maturity (honest record)
 
-The 2D path of MapLibre + deck.gl is mature and widely deployed. The globe path is young: it
-works on deck 9.4 only with our per-layer depth/culling override, and deck's globe fixes are still
-landing. Treat 2D as the solid floor. Any future
+MapLibre is mature, widely deployed and actively maintained (Mapbox GL lineage since 2013); its
+globe projection is newer than its flat one. The overlay bridge (`engine/maplibre/`) is our own code
+on MapLibre's public API, lead-marked unverified. Treat 2D as the solid floor. Any future
 stack-level recommendation states its maturity and risk, not just strengths.
 
 ## Engine alternatives considered
 
-Mapbox GL (license + phones home), Leaflet / OpenLayers (no GPU particles), deck.gl `GlobeView` as
-the engine (experimental), CesiumJS (heavier on 8 GB, mismatched to 2D-style data layers), Esri
+Mapbox GL (license + phones home), Leaflet / OpenLayers (no GPU particles), deck.gl (dropped: its
+icon atlas crashed an older NVIDIA driver, and only its newest line gets fixes), CesiumJS (heavier on 8 GB, mismatched to 2D-style data layers), Esri
 ArcGIS SDK as the engine (not used).
 
 ## Engine spike (2026-06-10)
