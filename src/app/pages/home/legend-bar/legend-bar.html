@@ -1,0 +1,42 @@
+@if (layerLegends().length) {
+  <div class="flex w-36 flex-col gap-1 rounded-xl border bg-background/70 backdrop-blur-lg p-1.5 shadow-float"
+       animate.enter="animate-pop-in" animate.leave="animate-pop-out">
+    @for (card of layerLegends(); track card.legend) {
+      <button hlmBtn size="sm" class="min-w-0 justify-between gap-2"
+              [variant]="openLegend() === card.legend ? 'default' : 'ghost'"
+              [attr.aria-expanded]="openLegend() === card.legend" (click)="toggleLegend(card.legend)">
+        <span class="truncate">{{ card.title }}</span>
+        <span class="flex shrink-0 items-center gap-1.5">
+          @if (openLegend() !== card.legend) {
+            <span class="h-2 w-6 rounded-full" [style.background]="sliverBackground(card.legend)"></span>
+          }
+          <ng-icon name="lucideChevronDown" class="transition-transform" [class.rotate-90]="openLegend() !== card.legend"/>
+        </span>
+      </button>
+      @if (openLegend() === card.legend) {
+        @switch (card.legend.type) {
+          @case (LegendType.Gradient) {
+            <div class="flex justify-center gap-2 py-1">
+              <div class="h-56 w-4 rounded-full" [style.background]="gradientBackground(card.legend)"></div>
+              <div dir="ltr" class="flex h-56 flex-col-reverse justify-between text-end text-xs font-medium tabular-nums">
+                @for (stop of card.legend.stops; track $index) {
+                  <span>{{ stop.label }}</span>
+                }
+              </div>
+            </div>
+          }
+          @case (LegendType.Swatches) {
+            <div class="flex flex-col-reverse gap-1 py-1 ps-2">
+              @for (stop of card.legend.stops; track $index) {
+                <div class="flex items-center gap-1.5 text-xs">
+                  <span class="size-3 shrink-0 rounded-[4px]" [style.background]="stop.color"></span>
+                  <span dir="auto">{{ stop.label }}</span>
+                </div>
+              }
+            </div>
+          }
+        }
+      }
+    }
+  </div>
+}

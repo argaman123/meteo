@@ -1,0 +1,26 @@
+# Plan — the task pool
+
+Everything the destination app still needs, one list. Priorities are rough and dynamic: adjust
+them as the app evolves, or ask. The lead picks the next task — never infer it. One small task at
+a time: questions, build, verify with the lead, commit on his word. A finished item leaves the
+pool; its current state goes into the area doc. Waiting on the backend or real data is never a
+task: it is one line in [backend-asks.md](backend-asks.md), which the lead hands over. Never
+offer a backend layer of an existing look as a row; the lead brings special-looking layers from
+the old app.
+
+| Task | Area | Priority | What's left |
+|---|---|---|---|
+| Flight route (parked) | Interaction | High | Stash "parked: flight route": waypoints from the chooser, ~40 samples, rail level + bar time, wind / tail-head / cross / temp / RH read from the map routes + polygon clouds, a side-view drawer. The lead wants a planner people use, not raw data — rejected: per-leg table, stacked lane charts, summary cards, notable-spot lists, text over lines or on the map. Resume only with a new concept |
+| Cross-section (parked) | Interaction | Low | Built as גרף זמן and parked in a stash ("parked: time graph") — the lead wasn't sold on the look or the usage. Resume only on demand: `git stash apply`, rebuild, then re-mock the layout |
+| Skew-T (parked) | Interaction | High | Branch `skew-t` (91292d5); the lead checks it against the old app: CIN, virtual-temperature CAPE, mixing-ratio labels, Hebrew name, 150 mb top. Resume: rebase on main, drop its `utils/wind-barbs.ts` (now in `utils/wind.ts`), expect conflicts in point-menu/home-page/units/thermodynamics |
+| Warnings | Warnings | High | Sidebar of current + coming warnings with green/yellow/red, alerts on new/changed ones, warning polygons as a map layer. Backend: `/warnings` and `/new-warnings` — study which one viewers read in the old app first |
+| Flight areas | Interaction | High | Predefined drawings from `/places/flight-areas/get` (e.g. an airport's airstrip); pick any number to show on top of all layers |
+| Site status | Warnings | High | A list of selected sites, each colored by its current status (`/base-status`); hovering a site shows all its latest data and the report time |
+| Polygon authoring | Interaction | High | Huge: meteorologists draw and edit polygon maps on the meteorologist site. Study the old app's editor and the backend's save/publish routes first |
+| Forecaster timeline | Tables | Med | A must, and a large separate UI: the published `/timeline` forecasts per area over time (clouds, fog, rain, CB with chances). Needs thorough study of the old app before any build |
+| Meteorologist site | Platform | Med | A second UI beside the client site: its own pages and look on the same layers, services and engine; TS changes kept minimal (new pages, no forks of shared code) |
+| Real radiosondes | Interaction | Med | Launch stations on the map (`/places/get-sonde-stations`); clicking one shows its real measured sounding (`/sonde/get-nearest-sonde`) as a table and a Skew-T-like graph — shares the parked Skew-T |
+| גריד מבצעי overlay | Units/Geo | Low | The formats exist (display and search input); left: the גריד מבצעי grid lines on the map |
+| Animatable non-loop layers | Time | Low | Play button for model and polygon layers: step through forecast hours (prefetch the next maps) |
+| Polygons: styles session | Looks | Low | A quick session: we propose fill, pattern, outline and chip styles we think fit (a droplets pattern for rain among them), the lead picks |
+| Comments pass | Platform | Someday | Code comments are banned until then |

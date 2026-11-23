@@ -1,0 +1,21 @@
+<hlm-tabs [tab]="placeSearchService.entryFormat()" (tabActivated)="selectFormat($event)">
+  <hlm-tabs-list class="w-full" aria-label="סוג נ.צ.">
+    @for (format of formats; track format.value) {
+      <button class="flex-1" [hlmTabsTrigger]="format.value">{{ format.label }}</button>
+    }
+  </hlm-tabs-list>
+</hlm-tabs>
+<div class="flex items-center gap-2">
+  <button hlmBtn size="sm" [disabled]="!point()" (click)="showPoint()">הצג נ.צ.</button>
+  <input
+    #field
+    hlmInput
+    dir="ltr"
+    inputmode="numeric"
+    class="h-8 flex-1 tabular-nums"
+    [maskito]="mask().options"
+    [value]="text()"
+    (input)="text.set(field.value)"
+    (keydown.enter)="showPoint()"
+  />
+</div>

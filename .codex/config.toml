@@ -1,0 +1,14 @@
+[mcp_servers.angular-cli]
+command = "npx"
+args = ["--no-install", "ng", "mcp", "--read-only", "--local-only"]
+startup_timeout_sec = 60
+
+[mcp_servers.spartan-ui]
+command = "npx"
+args = ["-y", "@spartan-ng/mcp"]
+startup_timeout_sec = 120
+
+[mcp_servers.playwright]
+command = "npx"
+args = ["-y", "@playwright/mcp@latest"]
+startup_timeout_sec = 120

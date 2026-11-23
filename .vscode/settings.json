@@ -1,0 +1,11 @@
+{
+    "changeReview.runConfigurations": [
+        {
+            "id": "2c6daaf6-2445-44f1-9d24-21b13a2d14e5",
+            "name": "angular",
+            "command": "npm run start",
+            "cwd": ".",
+            "folder": "meteo"
+        }
+    ]
+}

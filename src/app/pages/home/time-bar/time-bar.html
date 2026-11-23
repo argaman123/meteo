@@ -1,0 +1,84 @@
+<div class="relative flex items-center gap-2 bg-card pt-1.5">
+  <div dir="ltr" class="flex shrink-0 flex-col gap-1 self-end px-2">
+    <div class="flex items-center gap-1">
+      <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="אחורה 3 שעות"
+              hlmTooltip="אחורה 3 שעות" position="top" (click)="timeService.jumpBy(-3)">
+        <ng-icon name="lucideChevronLeft"/>3h
+      </button>
+      <span class="h-4 w-px shrink-0 bg-border"></span>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 px-1" aria-label="מפה קודמת"
+              hlmTooltip="מפה קודמת (חץ שמאלה)" position="top" (click)="timeService.stepBack()">
+        <ng-icon name="lucideChevronLeft"/>
+      </button>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 px-1" aria-label="מפה הבאה"
+              hlmTooltip="מפה הבאה (חץ ימינה)" position="top" (click)="timeService.stepForward()">
+        <ng-icon name="lucideChevronRight"/>
+      </button>
+      <span class="h-4 w-px shrink-0 bg-border"></span>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 px-1.5 text-xs" aria-label="קדימה 3 שעות"
+              hlmTooltip="קדימה 3 שעות" position="top" (click)="timeService.jumpBy(3)">
+        3h<ng-icon name="lucideChevronRight"/>
+      </button>
+    </div>
+    <div class="flex gap-1">
+      <button hlmBtn variant="ghost" size="sm" class="h-6 flex-1 px-1.5 text-xs" aria-label="אחורה 24 שעות"
+              hlmTooltip="אחורה 24 שעות" position="top" (click)="timeService.jumpBy(-24)">
+        <ng-icon name="lucideChevronLeft"/>24h
+      </button>
+      <button hlmBtn variant="ghost" size="sm" class="h-6 flex-1 px-1.5 text-xs" aria-label="קדימה 24 שעות"
+              hlmTooltip="קדימה 24 שעות" position="top" (click)="timeService.jumpBy(24)">
+        24h<ng-icon name="lucideChevronRight"/>
+      </button>
+    </div>
+  </div>
+  <app-loop-pill data-screenshot-skip />
+  <div class="relative flex-1">
+    <ng-content />
+    <div dir="ltr" class="relative h-12 cursor-grab overflow-hidden select-none active:cursor-grabbing [mask-image:linear-gradient(to_right,transparent,black_1.5rem,black_calc(100%-1.5rem),transparent)]"
+         (wheel)="onWheel($event)" (pointerdown)="onPointerDown($event)"
+         (pointermove)="onPointerMove($event)" (pointerup)="onPointerUp($event)"
+         (pointercancel)="onPointerUp($event)" (pointerleave)="onPointerLeave()">
+      <div class="absolute top-5 bottom-0 bg-linear-to-t from-orange-500/25 to-orange-500/0 to-75%" [style.left.%]="pastBand().left"
+           [style.width.%]="pastBand().width"></div>
+      <div class="absolute top-5 bottom-0 bg-linear-to-t from-sky-500/25 to-sky-500/0 to-75%" [style.left.%]="futureBand().left"
+           [style.width.%]="futureBand().width"></div>
+      <div class="absolute inset-x-0 top-5 border-t"></div>
+      @for (position of stopMarkers(); track $index) {
+        <span class="absolute bottom-0 h-1.5 w-px bg-foreground/30" [style.left.%]="position"></span>
+      }
+      @for (tick of ticks(); track tick.time) {
+        <div class="absolute top-px flex -translate-x-1/2 flex-col items-center gap-0.5"
+             [style.left.%]="tick.position">
+          <span class="text-xs leading-4 whitespace-nowrap tabular-nums"
+                [class]="tick.major ? 'font-bold text-foreground' : 'font-medium text-muted-foreground'">
+            {{ tick.label }}
+          </span>
+          <span class="w-px" [class]="tick.major ? 'h-5 bg-foreground/60' : 'h-3 bg-border'"></span>
+        </div>
+      }
+      @if (hoverPreview(); as preview) {
+        <div class="pointer-events-none absolute inset-y-0 w-px bg-foreground/25" [style.left.%]="preview.position"></div>
+        <div class="pointer-events-none absolute bottom-0.5 -translate-x-1/2 rounded bg-card/80 px-1 text-[10px] tabular-nums text-foreground/80" [style.left.%]="preview.position">{{ preview.label }}</div>
+      }
+      <div class="absolute inset-y-0 w-px bg-emerald-400 shadow-[0_0_6px_rgb(52_211_153/0.7)]" [style.left.%]="nowPosition()"></div>
+      <div class="absolute inset-y-0 w-0.5 -translate-x-1/2 cursor-ew-resize bg-primary"
+           [style.left.%]="handlePosition()">
+        <span class="absolute top-5 left-1/2 size-[18px] -translate-1/2 rounded-full border-2 border-background bg-primary shadow-[0_0_8px_rgb(0_0_0/0.5)]"></span>
+      </div>
+    </div>
+    @if (isHandleInView()) {
+      <div data-screenshot-skip class="absolute bottom-full mb-3 -translate-x-1/2" [style.left.%]="labelPosition()">
+        <button hlmBtn size="sm" dir="rtl" aria-label="חזרה לעכשיו"
+                class="h-auto min-h-8 flex-col gap-0 py-1 text-sm font-medium tabular-nums shadow-float"
+                [class.animate-pulse]="layersService.isLoading()"
+                [variant]="isLive() ? 'default' : 'secondary'" (click)="timeService.jumpToNow()">
+          <span>{{ timeLabel() }}</span>
+          @if (playingLine(); as line) {
+            <span class="text-xs leading-4 font-normal opacity-80">{{ line }}</span>
+          }
+        </button>
+      </div>
+      <span data-screenshot-skip class="absolute bottom-full h-3 w-0.5 -translate-x-1/2 bg-primary" [style.left.%]="handlePosition()"></span>
+    }
+  </div>
+</div>

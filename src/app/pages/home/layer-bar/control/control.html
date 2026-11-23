@@ -1,0 +1,64 @@
+@let current = control();
+@switch (current.type) {
+  @case (ControlType.Color) {
+    <span class="flex w-9 justify-center">
+      <span class="size-4 rounded-[4px]" [style.background]="current.color"></span>
+    </span>
+  }
+  @case (ControlType.Toggle) {
+    <span class="flex w-9 justify-center">
+      <hlm-switch size="sm" [attr.aria-label]="current.label ?? 'אפשרות'"
+                  [checked]="current()" (checkedChange)="current.set($event)"/>
+    </span>
+  }
+  @case (ControlType.Percent) {
+    <hlm-popover class="contents">
+      <button hlmPopoverTrigger hlmBtn variant="chip" size="chip" aria-label="שקיפות">
+        {{ current() * 100 | number: '1.0-0' }}%
+      </button>
+      <hlm-popover-content *hlmPopoverPortal class="w-44 p-3">
+        <hlm-slider aria-label="שקיפות" [min]="0" [max]="1" [step]="0.05" [value]="[current()]"
+          (valueChange)="setPercent(current, $any($event))"/>
+      </hlm-popover-content>
+    </hlm-popover>
+  }
+  @case (ControlType.Options) {
+    @switch (current.presentation) {
+      @case (OptionsPresentation.Table) {
+        <div class="flex flex-wrap gap-1">
+          @for (choice of current.choices; track choice.value) {
+            <button hlmBtn size="sm" class="h-6 grow px-2 text-xs"
+                    [variant]="choice.value === current() ? 'default' : 'ghost'"
+                    [attr.aria-pressed]="choice.value === current()"
+                    (click)="current.set(choice.value)">
+              {{ choice.label }}
+            </button>
+          }
+        </div>
+      }
+      @case (OptionsPresentation.Select) {
+        <button hlmBtn variant="chip" size="chip" [attr.aria-label]="current.label ?? 'אפשרויות'"
+                [hlmDropdownMenuTrigger]="choicesMenu">
+          {{ optionLabel(current) }}
+        </button>
+        <ng-template #choicesMenu>
+          <hlm-dropdown-menu>
+            @for (choice of current.choices; track choice.value) {
+              <button hlmDropdownMenuRadio [checked]="choice.value === current()"
+                      [keepOpen]="false" (triggered)="current.set(choice.value)">
+                <hlm-dropdown-menu-radio-indicator/>
+                {{ choice.label }}
+              </button>
+            }
+          </hlm-dropdown-menu>
+        </ng-template>
+      }
+      @default {
+        <button hlmBtn variant="chip" size="chip" [attr.aria-label]="current.label ?? 'אפשרויות'"
+                (click)="cycleOptions(current)">
+          {{ optionLabel(current) }}
+        </button>
+      }
+    }
+  }
+}

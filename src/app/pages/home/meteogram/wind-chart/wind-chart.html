@@ -1,0 +1,10 @@
+<app-meteogram-frame
+  [hoverText]="hoverText"
+  [loading]="column.isLoading()"
+  [message]="column.error() ? 'אין נתונים' : null"
+>
+  @if (speed(); as windSpeed) {
+    <app-meteogram-colormap [data]="windSpeed" [colorScale]="colorScale" [contours]="contours" />
+  }
+  <canvas #arrowCanvas class="absolute inset-0 size-full"></canvas>
+</app-meteogram-frame>

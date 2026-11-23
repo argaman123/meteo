@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <radialGradient id="storm" cx="128" cy="128" r="120" gradientUnits="userSpaceOnUse">
+      <stop offset="0.28" stop-color="#8ccaf7"/>
+      <stop offset="1" stop-color="#6d8ef0"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(128 128) rotate(-90) translate(-128 -128)">
+    <path fill="url(#storm)" fill-rule="evenodd" d="M158.32,45.36l9.41-35.3A8,8,0,0,0,158.32.18,195.87,195.87,0,0,0,99.67,25.27C60.63,50.37,40,85.89,40,128a88.11,88.11,0,0,0,57.68,82.64l-9.41,35.3a8,8,0,0,0,9.41,9.88,195.87,195.87,0,0,0,58.65-25.09C195.37,205.63,216,170.11,216,128A88.1,88.1,0,0,0,158.32,45.36ZM128,162a34,34,0,1,0,0-68a34,34,0,1,0,0,68Z"/>
+  </g>
+</svg>

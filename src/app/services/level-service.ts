@@ -1,0 +1,70 @@
+import { Service, computed, signal } from '@angular/core';
+import { feetAtPressure } from '../utils/thermodynamics';
+
+export type Level = number | string;
+export type LevelKind = 'heights' | 'pressures';
+
+@Service()
+export class LevelService {
+  private readonly heightLevels: (Level | null)[] = [
+    null,
+    ...Array.from({ length: 40 }, (_, index) => (index + 1) * 1000),
+  ];
+  private readonly pressureLevels: (Level | null)[] = [
+    null,
+    '1000',
+    '925',
+    '850',
+    '700',
+    '500',
+    '400',
+    '300',
+    '250',
+    '200',
+  ];
+
+  readonly kind = signal<LevelKind>('heights');
+  readonly levels = computed(() =>
+    this.kind() === 'heights' ? this.heightLevels : this.pressureLevels,
+  );
+  readonly activeLevel = signal<Level | null>(null);
+
+  setLevel(level: Level | null): void {
+    this.activeLevel.set(level);
+  }
+
+  stepUp(): void {
+    const levels = this.levels();
+    const next = levels.indexOf(this.activeLevel()) + 1;
+    if (next < levels.length) this.setLevel(levels[next]);
+  }
+
+  stepDown(): void {
+    const levels = this.levels();
+    const previous = levels.indexOf(this.activeLevel()) - 1;
+    if (previous >= 0) this.setLevel(levels[previous]);
+  }
+
+  setKind(kind: LevelKind): void {
+    if (kind === this.kind()) return;
+    this.kind.set(kind);
+    this.setLevel(this.nearestLevel(this.activeLevel()));
+  }
+
+  private nearestLevel(current: Level | null): Level | null {
+    if (current === null) return null;
+    const currentFeet = this.feetOf(current);
+    const candidates = this.levels().filter((level) => level !== null);
+    return candidates.reduce((nearest, level) =>
+      Math.abs(this.feetOf(level) - currentFeet) < Math.abs(this.feetOf(nearest) - currentFeet)
+        ? level
+        : nearest,
+    );
+  }
+
+  feetOf(level: Level | null): number {
+    if (level === null) return 0;
+    if (typeof level === 'number') return level;
+    return feetAtPressure(Number(level));
+  }
+}

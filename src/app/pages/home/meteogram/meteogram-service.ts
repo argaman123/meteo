@@ -1,0 +1,92 @@
+import { HttpResourceRequest, httpResource } from '@angular/common/http';
+import { Service, computed, inject, linkedSignal, signal, untracked } from '@angular/core';
+import { modelAtPoint } from '../../../layers/model/model-layer';
+import { layers } from '../../../layers/registry';
+import { MeteogramData } from '../../../objects/meteogram-data';
+import { Sounding, SoundingLevel } from '../../../objects/sounding';
+import { TimeRange, TimeService } from '../../../services/time-service';
+import { PointEvents } from '../../../types/polygons';
+import { AirColumnTime } from '../../../types/sounding';
+import { hoursToMs } from '../../../utils/time';
+import { PointService } from '../point-menu/point-service';
+
+export enum MeteogramTab {
+  Temperature = 'temperature',
+  Wind = 'wind',
+  Clouds = 'clouds',
+}
+
+export interface MeteogramColumn {
+  temperature: MeteogramData;
+  u: MeteogramData;
+  v: MeteogramData;
+}
+
+@Service()
+export class MeteogramService {
+  private timeService = inject(TimeService);
+  private pointService = inject(PointService);
+
+  readonly topFt = 45_000;
+  readonly tab = signal(MeteogramTab.Temperature);
+  private openedTabs = linkedSignal({
+    source: this.pointService.point,
+    computation: () => [untracked(this.tab)],
+  });
+
+  readonly range = computed<TimeRange>(
+    () => {
+      const { backHours, forwardHours } = layers.temperature.timeWindow;
+      const hour = Math.floor(this.timeService.now() / hoursToMs(1)) * hoursToMs(1);
+      return { start: hour - hoursToMs(backHours), end: hour + hoursToMs(forwardHours) };
+    },
+    { equal: (a, b) => a.start === b.start && a.end === b.end },
+  );
+
+  readonly column = httpResource(() => this.columnRequest(), {
+    parse: (columns) => this.columnOf(columns as AirColumnTime[]),
+  });
+  readonly clouds = httpResource<PointEvents[]>(() => this.cloudsRequest());
+
+  showTab(tab: MeteogramTab): void {
+    this.tab.set(tab);
+    this.openedTabs.update((tabs) => (tabs.includes(tab) ? tabs : [...tabs, tab]));
+  }
+
+  private columnRequest(): HttpResourceRequest | undefined {
+    const point = this.pointService.point();
+    const opened = this.openedTabs();
+    if (!point || !(opened.includes(MeteogramTab.Temperature) || opened.includes(MeteogramTab.Wind))) {
+      return undefined;
+    }
+    const [lon, lat] = point;
+    const { start, end } = this.range();
+    return {
+      url: '/model/air_column_in_between',
+      params: { model: modelAtPoint(lon, lat), lat, lon, start, end },
+    };
+  }
+
+  private columnOf(columns: AirColumnTime[]): MeteogramColumn {
+    const soundings = columns.map((column) => Sounding.fromAirColumn(column));
+    const heightsFt = Array.from({ length: this.topFt / 1000 + 1 }, (_, index) => index * 1000);
+    const section = (valueOf: (level: SoundingLevel) => number) =>
+      MeteogramData.fromSoundings(soundings, heightsFt, valueOf);
+    return {
+      temperature: section((level) => level.temperature),
+      u: section((level) => level.u),
+      v: section((level) => level.v),
+    };
+  }
+
+  private cloudsRequest(): HttpResourceRequest | undefined {
+    const point = this.pointService.point();
+    if (!point || !this.openedTabs().includes(MeteogramTab.Clouds)) return undefined;
+    const [lon, lat] = point;
+    const { start, end } = this.range();
+    return {
+      url: '/polygon/get_point_events_between_times',
+      params: { lat, lon, start_time: start, end_time: end },
+    };
+  }
+}

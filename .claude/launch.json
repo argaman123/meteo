@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "attach",
+      "url": "http://localhost:9993"
+    },
+    {
+      "name": "meteo",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "start:fixtures"],
+      "port": 9993,
+      "autoPort": true
+    }
+  ]
+}

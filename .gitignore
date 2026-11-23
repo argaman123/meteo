@@ -1,0 +1,39 @@
+# OS
+Thumbs.db
+.DS_Store
+
+# Node / Angular
+node_modules/
+dist/
+.angular/
+out-tsc/
+*.log
+npm-debug.log*
+yarn-error.log
+coverage/
+
+# Vendored build artifacts (recreated by npm run basemap:fetch)
+public/basemaps/*.pmtiles
+tools/bin/
+tools/cft/
+tools/.venv/
+public/fixtures/ecmwf/
+public/fixtures/ecmwf-download/
+tools/.places-download/
+.npm-cache/
+
+# Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.idea/
+*.swp
+.playwright-mcp/
+
+# Loose reference photos / scratch images dropped in the repo root (real assets live in public/)
+/*.jpg
+/*.jpeg
+/*.png

@@ -1,0 +1,22 @@
+@if (visible()) {
+  <div
+    class="pointer-events-none fixed end-[calc(var(--sounding-table-width,0px)+0.75rem)] top-15 z-50 rounded-xl border bg-background/70 backdrop-blur-lg px-2.5 py-1.5 font-mono text-[11px] leading-4 tabular-nums text-muted-foreground shadow-float-sm"
+  >
+    <div dir="ltr" class="text-end text-foreground/80">
+      {{ fps() }} fps
+      @if (heapMb() !== null) {
+        · {{ heapMb() }} MB
+      }
+    </div>
+    <svg viewBox="0 0 60 16" class="mt-1 h-4 w-full text-foreground/50" preserveAspectRatio="none">
+      <polyline [attr.points]="sparkPoints()" fill="none" stroke="currentColor" stroke-width="1"/>
+    </svg>
+    @if (layerTimes().length) {
+      <div class="mt-1 flex flex-col gap-0.5 border-t pt-1">
+        @for (line of layerTimes(); track line.name) {
+          <div [class.opacity-50]="!line.relevant">{{ line.name }} · {{ line.time }}</div>
+        }
+      </div>
+    }
+  </div>
+}

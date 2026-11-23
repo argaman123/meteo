@@ -1,0 +1,77 @@
+<hlm-popover class="contents" align="end">
+  <button hlmPopoverTrigger hlmBtn variant="secondary" size="sm" class="w-9 px-0" aria-label="הגדרות">
+    <ng-icon name="lucideSettings"/>
+  </button>
+  <hlm-popover-content *hlmPopoverPortal
+                       class="w-56 gap-0 rounded-xl border bg-background/70 p-2 ring-0 shadow-float backdrop-blur-lg">
+    <h2 class="px-1 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70">יחידות</h2>
+    @for (control of units; track control) {
+      <div class="flex items-center gap-2 px-1 py-1 text-sm">
+        <span class="grow">{{ control.label }}</span>
+        <div dir="ltr" class="flex gap-1">
+          @for (choice of control.choices; track choice.value) {
+            <button hlmBtn size="sm" class="h-6 px-2 text-xs"
+                    [variant]="choice.value === control() ? 'default' : 'ghost'"
+                    [attr.aria-pressed]="choice.value === control()"
+                    (click)="control.set(choice.value)">
+              {{ choice.label }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+    <div class="flex items-center gap-2 px-1 py-1 text-sm">
+      <span class="grow">{{ coordinateFormat.label }}</span>
+      <button hlmBtn size="sm" class="h-6 px-2 text-xs" [attr.aria-label]="coordinateFormat.label"
+              [hlmDropdownMenuTrigger]="coordinateFormatMenu">
+        {{ coordinateFormatLabel() }}
+        <ng-icon name="lucideChevronDown" class="text-xs opacity-70"/>
+      </button>
+      <ng-template #coordinateFormatMenu>
+        <hlm-dropdown-menu>
+          <button hlmDropdownMenuRadio [checked]="!layersService.isLayerActive(coordinates)"
+                  [keepOpen]="false" (triggered)="layersService.hideLayer(coordinates)">
+            <hlm-dropdown-menu-radio-indicator/>
+            כבוי
+          </button>
+          @for (choice of coordinateFormat.choices; track choice.value) {
+            <button hlmDropdownMenuRadio
+                    [checked]="layersService.isLayerActive(coordinates) && coordinateFormat() === choice.value"
+                    [keepOpen]="false"
+                    (triggered)="layersService.isLayerActive(coordinates) || layersService.showLayer(coordinates); coordinateFormat.set(choice.value)">
+              <hlm-dropdown-menu-radio-indicator/>
+              {{ choice.label }}
+            </button>
+          }
+        </hlm-dropdown-menu>
+      </ng-template>
+    </div>
+    <h2 class="px-1 pt-2 pb-1 text-[11px] font-semibold tracking-wider text-muted-foreground/70">תצוגה</h2>
+    <div class="flex items-center gap-2 px-1 py-1 text-sm">
+      <span class="grow">{{ quality.label }}</span>
+      <div class="flex gap-1">
+        @for (choice of quality.choices; track choice.value) {
+          <button hlmBtn size="sm" class="h-6 px-2 text-xs"
+                  [variant]="choice.value === quality() ? 'default' : 'ghost'"
+                  [attr.aria-pressed]="choice.value === quality()"
+                  (click)="setQuality(choice.value)">
+            {{ choice.label }}
+          </button>
+        }
+      </div>
+    </div>
+    <div class="flex items-center gap-2 px-1 py-1 text-sm">
+      <span class="grow">{{ projection.label }}</span>
+      <div class="flex gap-1">
+        @for (choice of projection.choices; track choice.value) {
+          <button hlmBtn size="sm" class="h-6 px-2 text-xs"
+                  [variant]="choice.value === projection() ? 'default' : 'ghost'"
+                  [attr.aria-pressed]="choice.value === projection()"
+                  (click)="mapService.setProjection(choice.value)">
+            {{ choice.label }}
+          </button>
+        }
+      </div>
+    </div>
+  </hlm-popover-content>
+</hlm-popover>
